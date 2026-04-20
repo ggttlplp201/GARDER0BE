@@ -1,0 +1,134 @@
+import { useState, useEffect } from 'react';
+import { parseImageUrls, maybeConvertHeic, removeBg } from '../lib/imageUtils';
+import { ITEM_TYPES } from '../lib/constants';
+
+export default function EditItemModal({ item, onClose, onSave }) {
+  const [fields, setFields] = useState({ name: '', color: '', brand: '', type: 'Shirt', size: '', price: '', urlInput: '' });
+  const [editImgs, setEditImgs] = useState([]);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!item) return;
+    const lastDash = (item.name || '').lastIndexOf(' - ');
+    setFields({
+      name:     lastDash >= 0 ? item.name.slice(0, lastDash) : (item.name || ''),
+      color:    lastDash >= 0 ? item.name.slice(lastDash + 3) : '',
+      brand:    item.brand || '',
+      type:     item.type  || 'Shirt',
+      size:     item.size  || '',
+      price:    item.price || '',
+      urlInput: '',
+    });
+    setEditImgs(parseImageUrls(item.image_url).map(url => ({ src: url, blob: null, storedUrl: url })));
+  }, [item]);
+
+  function set(key, val) { setFields(f => ({ ...f, [key]: val })); }
+
+  async function handleFileUpload(e) {
+    const raws = Array.from(e.target.files); if (!raws.length) return;
+    e.target.value = '';
+    const newImgs = [];
+    for (const raw of raws) {
+      const file = await maybeConvertHeic(raw);
+      const blob = await removeBg(file, raw.name);
+      newImgs.push({ src: URL.createObjectURL(blob), blob, storedUrl: null });
+    }
+    setEditImgs(prev => [...prev, ...newImgs]);
+  }
+
+  function addUrlImg() {
+    const url = fields.urlInput.trim(); if (!url) return;
+    setEditImgs(prev => [...prev, { src: url, blob: null, storedUrl: null }]);
+    set('urlInput', '');
+  }
+
+  function removeImg(idx) { setEditImgs(prev => prev.filter((_, i) => i !== idx)); }
+  function moveImg(idx, dir) {
+    const n = idx + dir;
+    if (n < 0 || n >= editImgs.length) return;
+    const next = [...editImgs];
+    [next[idx], next[n]] = [next[n], next[idx]];
+    setEditImgs(next);
+  }
+
+  async function handleSave() {
+    if (!fields.name.trim()) return;
+    setSaving(true);
+    try { await onSave(item.id, fields, editImgs, item); onClose(); }
+    catch (err) { alert('Error saving changes: ' + err.message); }
+    finally { setSaving(false); }
+  }
+
+  if (!item) return null;
+
+  return (
+    <div className="modal-bg open" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="modal">
+        <h2>EDIT ITEM</h2>
+        <div className="field">
+          <label>Item Name</label>
+          <input value={fields.name} onChange={e => set('name', e.target.value)} autoFocus />
+        </div>
+        <div className="field">
+          <label>Color</label>
+          <input value={fields.color} onChange={e => set('color', e.target.value)} placeholder="e.g. Black" />
+        </div>
+        <div className="field">
+          <label>Brand</label>
+          <input value={fields.brand} onChange={e => set('brand', e.target.value)} placeholder="e.g. Acne Studios" />
+        </div>
+        <div className="field">
+          <label>Type</label>
+          <select value={fields.type} onChange={e => set('type', e.target.value)}>
+            {ITEM_TYPES.map(t => <option key={t}>{t}</option>)}
+          </select>
+        </div>
+        <div className="field">
+          <label>Size</label>
+          <input value={fields.size} onChange={e => set('size', e.target.value)} placeholder="e.g. M, L, 42" />
+        </div>
+        <div className="field">
+          <label>Purchase Price ($)</label>
+          <input type="number" min="0" value={fields.price} onChange={e => set('price', e.target.value)} placeholder="0" />
+        </div>
+        <div className="field">
+          <label>Photos</label>
+          {editImgs.length > 0 && (
+            <div className="img-gallery" style={{ marginBottom: 10 }}>
+              {editImgs.map((img, idx) => (
+                <div key={idx} className="img-thumb">
+                  <img src={img.src} alt="" />
+                  <button className="img-thumb-x" onClick={() => removeImg(idx)}>×</button>
+                  {editImgs.length > 1 && <>
+                    <button className="img-thumb-move img-thumb-ml" onClick={() => moveImg(idx, -1)} style={idx === 0 ? { opacity: 0.3, pointerEvents: 'none' } : {}}>‹</button>
+                    <button className="img-thumb-move img-thumb-mr" onClick={() => moveImg(idx, 1)} style={idx === editImgs.length-1 ? { opacity: 0.3, pointerEvents: 'none' } : {}}>›</button>
+                  </>}
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="img-url-row" style={{ marginBottom: 6 }}>
+            <label className="img-add-files">
+              + ADD IMAGES
+              <input type="file" accept="image/*,.heic,.heif" multiple onChange={handleFileUpload} style={{ display: 'none' }} />
+            </label>
+            <input
+              className="img-url-input"
+              value={fields.urlInput}
+              onChange={e => set('urlInput', e.target.value)}
+              placeholder="or paste URL"
+              onKeyDown={e => e.key === 'Enter' && addUrlImg()}
+            />
+            <button className="img-url-add" onClick={addUrlImg}>ADD</button>
+          </div>
+        </div>
+        <div className="modal-actions">
+          <button className="btn-cancel" onClick={onClose}>CANCEL</button>
+          <button className="btn-add" onClick={handleSave} disabled={saving}>
+            {saving ? 'SAVING...' : 'SAVE CHANGES'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
