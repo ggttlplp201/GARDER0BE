@@ -1,5 +1,5 @@
 import heic2any from 'heic2any';
-import { REMOVE_BG_API_KEY, SUPABASE_ANON_KEY, CLAUDE_TAG_URL, STORAGE } from './constants';
+import { API_URL, REMOVE_BG_API_KEY, SUPABASE_ANON_KEY, CLAUDE_TAG_URL, STORAGE } from './constants';
 import { sb } from './supabase';
 
 export function parseImageUrls(raw) {
@@ -21,20 +21,34 @@ export async function maybeConvertHeic(file) {
 }
 
 export async function removeBg(file, rawName) {
-  if (REMOVE_BG_API_KEY === 'demo') return file;
   try {
     const fd = new FormData();
-    fd.append('image_file', file, rawName);
-    fd.append('size', 'auto');
-    const res = await fetch('https://api.remove.bg/v1.0/removebg', {
-      method: 'POST', headers: { 'X-Api-Key': REMOVE_BG_API_KEY }, body: fd,
-    });
-    if (res.ok) return await res.blob();
+    fd.append('file', file, rawName);
+    if (API_URL) {
+      const res = await fetch(`${API_URL}/remove-bg`, { method: 'POST', body: fd });
+      if (res.ok) return await res.blob();
+    } else {
+      // fallback: call remove.bg directly from browser
+      fd.append('size', 'auto');
+      const res = await fetch('https://api.remove.bg/v1.0/removebg', {
+        method: 'POST', headers: { 'X-Api-Key': REMOVE_BG_API_KEY }, body: fd,
+      });
+      if (res.ok) return await res.blob();
+    }
   } catch {}
   return file;
 }
 
 export async function autoTagWithClaude(blob) {
+  if (API_URL) {
+    const fd = new FormData();
+    fd.append('file', blob, 'item.jpg');
+    const resp = await fetch(`${API_URL}/tag`, { method: 'POST', body: fd });
+    if (!resp.ok) throw new Error(await resp.text());
+    return await resp.json();
+  }
+
+  // fallback: call Supabase Edge Function directly
   const base64 = await new Promise((res, rej) => {
     const r = new FileReader();
     r.onload = () => res(r.result.split(',')[1]);
