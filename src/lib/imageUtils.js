@@ -1,4 +1,3 @@
-import heic2any from 'heic2any';
 import { API_URL, REMOVE_BG_API_KEY, SUPABASE_ANON_KEY, CLAUDE_TAG_URL, STORAGE } from './constants';
 import { sb } from './supabase';
 
@@ -13,6 +12,7 @@ export async function maybeConvertHeic(file) {
                  /\.(heic|heif)$/i.test(file.name);
   if (!isHeic) return file;
   try {
+    const heic2any = (await import('heic2any')).default;
     const result = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.92 });
     return Array.isArray(result) ? result[0] : result;
   } catch {
