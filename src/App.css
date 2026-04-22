@@ -1,6 +1,6 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: Arial, sans-serif; background: white; color: black; min-height: 100vh; }
-.root { padding: 28px 36px 80px; width: 100%; position: relative; }
+.root { padding: 28px 36px 100px; width: 100%; position: relative; }
 
 .header-row { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 20px; gap: 24px; }
 h1 { font-size: 2rem; font-weight: bold; margin-bottom: 2px; }
@@ -129,8 +129,13 @@ h1 { font-size: 2rem; font-weight: bold; margin-bottom: 2px; }
   .card-shine { display: none !important; }
 }
 
-.bottom-bar { position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 1.5px solid black; z-index: 40; }
-.total-bar { padding: 8px 36px; display: flex; justify-content: space-between; font-size: 13px; font-weight: bold; width: 100%; }
+.bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 1.5px solid black; z-index: 40; }
+.bottom-nav-total { padding: 7px 36px; display: flex; justify-content: space-between; font-size: 12px; font-weight: bold; border-bottom: 1px solid #eee; letter-spacing: 0.04em; }
+.bottom-nav-tabs { display: flex; }
+.bottom-nav-tab { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 9px 0; background: none; border: none; cursor: pointer; font-size: 10px; font-weight: bold; letter-spacing: 0.08em; font-family: Arial, sans-serif; color: #aaa; border-right: 1px solid #eee; transition: color 0.15s, background 0.15s; }
+.bottom-nav-tab:last-child { border-right: none; }
+.bottom-nav-tab.active { color: black; background: #f8f8f8; }
+.bottom-nav-tab:hover { color: black; }
 
 .player { display: flex; align-items: center; gap: 14px; flex-shrink: 0; border: 1.5px solid black; padding: 10px 14px; }
 .disc-wrap { position: relative; flex-shrink: 0; width: 48px; height: 48px; transform-style: preserve-3d; transition: transform 0.1s ease; cursor: default; }
@@ -260,17 +265,11 @@ input[type=range].vol-slider::-webkit-slider-thumb { -webkit-appearance: none; a
 .btn-cancel { background: white; color: black; }
 .btn-cancel:hover { background: #f0f0f0; }
 
-/* Explore button */
-.explore-btn { padding: 9px 18px; border: 1.5px solid black; background: white; font-size: 12px; font-weight: bold; letter-spacing: 0.06em; cursor: pointer; font-family: Arial, sans-serif; white-space: nowrap; }
-.explore-btn:hover { background: black; color: white; }
-
-/* Explore modal */
-.explore-modal { background: white; border: 2px solid black; width: min(680px, 100%); max-height: 90vh; overflow-y: auto; display: flex; flex-direction: column; padding: 28px 28px 24px; }
-.explore-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
+/* Explore page */
+.explore-page { padding: 28px 36px 100px; max-width: 800px; margin: 0 auto; }
+.explore-page-header { margin-bottom: 20px; }
 .explore-title { font-size: 1.2rem; font-weight: bold; letter-spacing: 0.06em; }
 .explore-subtitle { font-size: 11px; color: #999; letter-spacing: 0.08em; margin-top: 2px; }
-.explore-close { background: none; border: none; font-size: 24px; font-weight: bold; cursor: pointer; line-height: 1; color: black; padding: 0; }
-.explore-close:hover { opacity: 0.5; }
 .explore-grid { display: flex; flex-direction: column; gap: 2px; }
 .explore-card { display: flex; align-items: center; gap: 14px; padding: 12px 10px; cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: background 0.1s; }
 .explore-card:hover { background: #f8f8f8; }
@@ -303,7 +302,7 @@ input[type=range].vol-slider::-webkit-slider-thumb { -webkit-appearance: none; a
 
 /* ── Mobile ─────────────────────────────────────── */
 @media (max-width: 640px) {
-  .root { padding: 16px 16px 80px; }
+  .root { padding: 16px 16px 100px; }
 
   .header-row { margin-bottom: 14px; }
   h1 { font-size: 1.6rem; }
@@ -326,7 +325,8 @@ input[type=range].vol-slider::-webkit-slider-thumb { -webkit-appearance: none; a
 
   .cards-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
 
-  .total-bar { padding: 8px 16px; font-size: 12px; }
+  .bottom-nav-total { padding: 7px 16px; font-size: 11px; }
+  .explore-page { padding: 20px 16px 100px; }
 
   .lightbox-panel { flex-direction: column; max-height: 95vh; }
   .lb-img-area { flex: 0 0 auto; border-right: none; border-bottom: 1.5px solid black; aspect-ratio: 1/1; width: 100%; }

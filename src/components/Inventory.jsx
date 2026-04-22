@@ -7,7 +7,6 @@ import ProfilePanel from './ProfilePanel';
 import Lightbox from './Lightbox';
 import AddItemModal from './AddItemModal';
 import EditItemModal from './EditItemModal';
-import ExploreModal from './ExploreModal';
 import { useItems } from '../hooks/useItems';
 import { ITEM_TYPES } from '../lib/constants';
 import { usePlayer } from '../hooks/usePlayer';
@@ -36,23 +35,22 @@ function groupKey(item, sortBy) {
   return (item.brand || 'Uncategorized').trim().toLowerCase();
 }
 
-export default function Inventory({ user, onSignOut }) {
+export default function Inventory({ user, onSignOut, onTotalChange }) {
   const { items, loading, fetchItems, addItem, editItem, removeItem } = useItems(user);
   const player = usePlayer();
 
-  const [sortBy, setSortBy]           = useState('brand');
-  const [search, setSearch]           = useState('');
-  const [filterType, setFilterType]   = useState('');
+  const [sortBy, setSortBy]             = useState('brand');
+  const [search, setSearch]             = useState('');
+  const [filterType, setFilterType]     = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [filterMissing, setFilterMissing] = useState(false);
   const [filterRecent, setFilterRecent]   = useState(false);
-  const [filterPrice, setFilterPrice] = useState('');
-  const [profileOpen, setProfileOpen] = useState(false);
-  const [avatarUrl, setAvatarUrl]     = useState('');
-  const [lbItem, setLbItem]           = useState(null);
-  const [addOpen, setAddOpen]         = useState(false);
-  const [editItem_, setEditItem_]     = useState(null);
-  const [exploreOpen, setExploreOpen] = useState(false);
+  const [filterPrice, setFilterPrice]   = useState('');
+  const [profileOpen, setProfileOpen]   = useState(false);
+  const [avatarUrl, setAvatarUrl]       = useState('');
+  const [lbItem, setLbItem]             = useState(null);
+  const [addOpen, setAddOpen]           = useState(false);
+  const [editItem_, setEditItem_]       = useState(null);
 
   useEffect(() => {
     fetchItems();
@@ -84,8 +82,7 @@ export default function Inventory({ user, onSignOut }) {
 
   function exportCSV() {
     const cols = ['name','brand','type','size','price','status','condition','purchase_date','created_at'];
-    const rows = [cols, ...items.map(item => cols.map(c => `"${String(item[c] ?? '').replace(/"/g, '""')}"`))]
-      .map(r => r.join(','));
+    const rows = [cols, ...items.map(item => cols.map(c => `"${String(item[c] ?? '').replace(/"/g, '""')}"`))].map(r => r.join(','));
     const url = URL.createObjectURL(new Blob([rows.join('\n')], { type: 'text/csv' }));
     const a = document.createElement('a');
     a.href = url; a.download = `garderobe-${new Date().toISOString().slice(0,10)}.csv`;
@@ -103,6 +100,10 @@ export default function Inventory({ user, onSignOut }) {
   const rawGroups = [...new Set(sorted.map(i => groupKey(i, sortBy)))];
   const groups    = sortBy === 'price' ? PRICE_ORDER.filter(g => rawGroups.includes(g)) : rawGroups;
   const total     = items.filter(i => (i.status || 'owned') === 'owned').reduce((s, i) => s + (parseFloat(i.price) || 0), 0);
+
+  useEffect(() => {
+    onTotalChange?.(total);
+  }, [total, onTotalChange]);
 
   async function handleAdd(fields, pending) {
     await addItem(fields, pending);
@@ -145,7 +146,6 @@ export default function Inventory({ user, onSignOut }) {
 
         <div className="controls-row">
           <button className="add-btn" style={{ marginBottom: 0 }} onClick={() => setAddOpen(true)}>+ ADD NEW ITEM</button>
-          <button className="explore-btn" onClick={() => setExploreOpen(true)}>EXPLORE</button>
           <div className="sort-wrap">
             <span>SORT BY</span>
             <select value={sortBy} onChange={e => setSortBy(e.target.value)}>
@@ -179,7 +179,7 @@ export default function Inventory({ user, onSignOut }) {
         {!loading && items.length === 0 && <p className="empty">No items yet. Add your first piece.</p>}
         {!loading && items.length > 0 && filtered.length === 0 && <p className="empty">No items match the current filters.</p>}
 
-<div id="catalog">
+        <div id="catalog">
           {groups.map(group => {
             const groupItems = sorted.filter(i => groupKey(i, sortBy) === group);
             return (
@@ -204,15 +204,6 @@ export default function Inventory({ user, onSignOut }) {
 
         <div className="page-copyright">© Leon Meng. All rights reserved.</div>
       </div>
-
-      {items.length > 0 && (
-        <div className="bottom-bar">
-          <div className="total-bar">
-            <span>COLLECTION VALUE</span>
-            <span>${total.toLocaleString()}</span>
-          </div>
-        </div>
-      )}
 
       <ProfilePanel
         open={profileOpen}
@@ -244,8 +235,6 @@ export default function Inventory({ user, onSignOut }) {
           onSave={handleEdit}
         />
       )}
-
-      <ExploreModal open={exploreOpen} onClose={() => setExploreOpen(false)} />
     </>
   );
 }
