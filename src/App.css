@@ -14,17 +14,17 @@
   --panel-bg: #ffffff;
 }
 html.dark {
-  --bg: #313338;
-  --bg2: #2b2d31;
-  --bg3: #232428;
-  --border: #3f4147;
-  --border-light: #3a3c41;
-  --text: #dbdee1;
-  --text2: #b5bac1;
-  --text3: #80848e;
-  --card-bg: #2b2d31;
-  --input-bg: #1e1f22;
-  --panel-bg: #2b2d31;
+  --bg: #0d0d0d;
+  --bg2: #141414;
+  --bg3: #1a1a1a;
+  --border: #3a3a3a;
+  --border-light: #282828;
+  --text: #e8e8e8;
+  --text2: #a0a0a0;
+  --text3: #606060;
+  --card-bg: #141414;
+  --input-bg: #111111;
+  --panel-bg: #111111;
 }
 
 body { font-family: Arial, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; transition: background 0.2s, color 0.2s; }
