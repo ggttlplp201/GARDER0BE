@@ -42,7 +42,6 @@ export default function Inventory({ user, onSignOut, onTotalChange }) {
   const [sortBy, setSortBy]             = useState('brand');
   const [search, setSearch]             = useState('');
   const [filterType, setFilterType]     = useState('');
-  const [filterStatus, setFilterStatus] = useState('');
   const [filterRecent, setFilterRecent]   = useState(false);
   const [filterPrice, setFilterPrice]   = useState('');
   const [profileOpen, setProfileOpen]   = useState(false);
@@ -70,7 +69,6 @@ export default function Inventory({ user, onSignOut, onTotalChange }) {
       if (!item.name?.toLowerCase().includes(q) && !item.brand?.toLowerCase().includes(q)) return false;
     }
     if (filterType && item.type !== filterType) return false;
-    if (filterStatus && (item.status || 'owned') !== filterStatus) return false;
     if (filterRecent && new Date(item.created_at).getTime() < RECENT_CUTOFF) return false;
     if (filterPrice === 'u100' && (parseFloat(item.price) || 0) >= 100) return false;
     if (filterPrice === '100-500' && ((parseFloat(item.price) || 0) < 100 || (parseFloat(item.price) || 0) > 500)) return false;
@@ -150,7 +148,6 @@ export default function Inventory({ user, onSignOut, onTotalChange }) {
               {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
           </div>
-          {items.length > 0 && <button className="export-btn" onClick={exportCSV}>EXPORT CSV</button>}
         </div>
 
         <div className="filter-row">
@@ -158,11 +155,6 @@ export default function Inventory({ user, onSignOut, onTotalChange }) {
           <select className="filter-select" value={filterType} onChange={e => setFilterType(e.target.value)}>
             <option value="">ALL TYPES</option>
             {ITEM_TYPES.map(t => <option key={t}>{t}</option>)}
-          </select>
-          <select className="filter-select" value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
-            <option value="">OWNED + WISHLIST</option>
-            <option value="owned">OWNED</option>
-            <option value="wishlist">WISHLIST</option>
           </select>
           <select className="filter-select" value={filterPrice} onChange={e => setFilterPrice(e.target.value)}>
             <option value="">ANY PRICE</option>
@@ -208,6 +200,7 @@ export default function Inventory({ user, onSignOut, onTotalChange }) {
         onClose={() => setProfileOpen(false)}
         onSignOut={onSignOut}
         avatarUrl={avatarUrl}
+        onExportCSV={items.length > 0 ? exportCSV : null}
         onAvatarChange={url => {
           setAvatarUrl(url);
           const key = `garderobe-profile-${user?.id || 'guest'}`;

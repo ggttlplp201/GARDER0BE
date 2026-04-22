@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { sb } from '../lib/supabase';
 import { parseImageUrls } from '../lib/imageUtils';
 
@@ -47,7 +47,64 @@ function PublicItemCard({ item }) {
   );
 }
 
-function ProfileView({ profile, onBack }) {
+function SocialButtons({ user, profileId, onRequestSent }) {
+  const [liked, setLiked]         = useState(false);
+  const [reqStatus, setReqStatus] = useState(null); // null | 'pending' | 'accepted'
+
+  useEffect(() => {
+    if (!user || user.id === profileId) return;
+    Promise.all([
+      sb.from('profile_likes').select('id').eq('user_id', user.id).eq('liked_user_id', profileId).maybeSingle(),
+      sb.from('friend_requests')
+        .select('id, status, from_user_id')
+        .or(`and(from_user_id.eq.${user.id},to_user_id.eq.${profileId}),and(from_user_id.eq.${profileId},to_user_id.eq.${user.id})`)
+        .maybeSingle(),
+    ]).then(([{ data: l }, { data: r }]) => {
+      setLiked(!!l);
+      setReqStatus(r?.status || null);
+    });
+  }, [user, profileId]);
+
+  if (!user || user.id === profileId) return null;
+
+  async function toggleLike() {
+    if (liked) {
+      await sb.from('profile_likes').delete().eq('user_id', user.id).eq('liked_user_id', profileId);
+      setLiked(false);
+    } else {
+      await sb.from('profile_likes').insert({ user_id: user.id, liked_user_id: profileId });
+      setLiked(true);
+    }
+  }
+
+  async function sendRequest() {
+    if (reqStatus) return;
+    await sb.from('friend_requests').insert({ from_user_id: user.id, to_user_id: profileId, status: 'pending' });
+    setReqStatus('pending');
+    onRequestSent?.();
+  }
+
+  const reqLabel = reqStatus === 'accepted' ? 'FRIENDS' : reqStatus === 'pending' ? 'REQUESTED' : '+ ADD';
+
+  return (
+    <div className="social-buttons">
+      <button className={`social-btn like${liked ? ' active' : ''}`} onClick={e => { e.stopPropagation(); toggleLike(); }}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill={liked ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2">
+          <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+        </svg>
+      </button>
+      <button
+        className={`social-btn add-friend${reqStatus ? ' sent' : ''}`}
+        onClick={e => { e.stopPropagation(); sendRequest(); }}
+        disabled={!!reqStatus}
+      >
+        {reqLabel}
+      </button>
+    </div>
+  );
+}
+
+function ProfileView({ profile, user, onBack }) {
   const [items, setItems]     = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -64,11 +121,12 @@ function ProfileView({ profile, onBack }) {
       <button className="explore-back" onClick={onBack}>← BACK</button>
       <div className="explore-profile-header">
         <Avatar url={profile.avatar_url} size={64} />
-        <div>
+        <div style={{ flex: 1 }}>
           <div className="explore-profile-name">{profile.username || 'Anonymous'}</div>
           {profile.location  && <div className="explore-profile-meta">{profile.location}</div>}
           {profile.bio       && <div className="explore-profile-bio">{profile.bio}</div>}
         </div>
+        <SocialButtons user={user} profileId={profile.id} />
       </div>
       <div className="explore-profile-stats">
         <span>{owned.length} owned</span>
@@ -85,17 +143,23 @@ function ProfileView({ profile, onBack }) {
   );
 }
 
-export default function ExplorePage() {
+export default function ExplorePage({ user, externalProfile, onExternalProfileClear }) {
   const [profiles, setProfiles]               = useState([]);
   const [loading, setLoading]                 = useState(true);
   const [search, setSearch]                   = useState('');
   const [selectedProfile, setSelectedProfile] = useState(null);
 
   useEffect(() => {
+    if (externalProfile) setSelectedProfile(externalProfile);
+  }, [externalProfile]);
+
+  const load = useCallback(() => {
     setLoading(true);
     sb.from('profiles').select('*').eq('is_public', true).order('updated_at', { ascending: false })
       .then(({ data }) => { setProfiles(data || []); setLoading(false); });
   }, []);
+
+  useEffect(() => { load(); }, [load]);
 
   const filtered = profiles.filter(p => {
     if (!search) return true;
@@ -103,6 +167,11 @@ export default function ExplorePage() {
     return (p.username || '').toLowerCase().includes(q) ||
            (p.location  || '').toLowerCase().includes(q);
   });
+
+  function handleBack() {
+    setSelectedProfile(null);
+    onExternalProfileClear?.();
+  }
 
   return (
     <div className="explore-page">
@@ -131,12 +200,13 @@ export default function ExplorePage() {
                   <div className="explore-card-name">{p.username || 'Anonymous'}</div>
                   {p.location && <div className="explore-card-meta">{p.location}</div>}
                 </div>
+                <SocialButtons user={user} profileId={p.id} />
               </div>
             ))}
           </div>
         </>
       ) : (
-        <ProfileView profile={selectedProfile} onBack={() => setSelectedProfile(null)} />
+        <ProfileView profile={selectedProfile} user={user} onBack={handleBack} />
       )}
     </div>
   );

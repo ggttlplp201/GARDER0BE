@@ -26,7 +26,7 @@ async function resizeImage(file, maxSize = 400) {
   });
 }
 
-export default function ProfilePanel({ open, user, onClose, onSignOut, avatarUrl, onAvatarChange }) {
+export default function ProfilePanel({ open, user, onClose, onSignOut, avatarUrl, onAvatarChange, onExportCSV }) {
   const [profile, setProfile]     = useState({});
   const [isPublic, setIsPublic]   = useState(false);
   const [saveError, setSaveError] = useState('');
@@ -142,6 +142,7 @@ export default function ProfilePanel({ open, user, onClose, onSignOut, avatarUrl
         {saveError && <div className="auth-error" style={{ marginBottom: 8 }}>{saveError}</div>}
         <button className="profile-save-btn" onClick={save}>SAVE CHANGES</button>
         <div className="profile-user-email">{user?.email || ''}</div>
+        {onExportCSV && <button className="profile-export-btn" onClick={onExportCSV}>EXPORT COLLECTION AS CSV</button>}
         <button className="profile-signout-btn" onClick={onSignOut}>SIGN OUT</button>
       </div>
     </>

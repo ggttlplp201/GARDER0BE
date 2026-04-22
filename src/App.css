@@ -49,7 +49,9 @@ h1 { font-size: 2rem; font-weight: bold; margin-bottom: 2px; }
 .profile-save-btn { width: 100%; padding: 11px; font-size: 13px; font-weight: bold; letter-spacing: 0.05em; background: black; color: white; border: none; cursor: pointer; font-family: Arial, sans-serif; margin-top: 8px; }
 .profile-save-btn:hover { background: #333; }
 .profile-user-email { font-size: 11px; color: #999; text-align: center; margin-top: 8px; margin-bottom: 6px; word-break: break-all; }
-.profile-signout-btn { width: 100%; padding: 10px; margin-top: 10px; font-size: 12px; font-weight: bold; letter-spacing: 0.05em; background: white; color: black; border: 1.5px solid black; cursor: pointer; font-family: Arial, sans-serif; }
+.profile-export-btn { width: 100%; padding: 10px; margin-top: 10px; font-size: 11px; font-weight: bold; letter-spacing: 0.05em; background: white; color: #555; border: 1.5px solid #ccc; cursor: pointer; font-family: Arial, sans-serif; }
+.profile-export-btn:hover { border-color: black; color: black; }
+.profile-signout-btn { width: 100%; padding: 10px; margin-top: 6px; font-size: 12px; font-weight: bold; letter-spacing: 0.05em; background: white; color: black; border: 1.5px solid black; cursor: pointer; font-family: Arial, sans-serif; }
 .profile-signout-btn:hover { background: black; color: white; }
 
 /* Player — in-flow, right-aligned, below header */
@@ -287,7 +289,40 @@ input[type=range].vol-slider::-webkit-slider-thumb { -webkit-appearance: none; a
 .explore-grid { display: flex; flex-direction: column; gap: 2px; }
 .explore-card { display: flex; align-items: center; gap: 14px; padding: 12px 10px; cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: background 0.1s; }
 .explore-card:hover { background: #f8f8f8; }
-.explore-card-info { min-width: 0; }
+.explore-card-info { min-width: 0; flex: 1; }
+
+/* Social buttons */
+.social-buttons { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.social-btn { border: 1.5px solid black; background: white; cursor: pointer; font-size: 11px; font-weight: bold; font-family: Arial, sans-serif; letter-spacing: 0.04em; display: flex; align-items: center; justify-content: center; transition: background 0.15s, color 0.15s; }
+.social-btn.like { width: 32px; height: 32px; border-radius: 50%; padding: 0; }
+.social-btn.like:hover, .social-btn.like.active { background: black; color: white; }
+.social-btn.like.active svg { stroke: white; fill: white; }
+.social-btn.add-friend { padding: 6px 10px; }
+.social-btn.add-friend:hover:not(:disabled) { background: black; color: white; }
+.social-btn.add-friend.sent { opacity: 0.5; cursor: default; }
+
+/* Friends page */
+.friends-tabs { display: flex; border-bottom: 1.5px solid black; margin-bottom: 20px; }
+.friends-tab { flex: 1; background: none; border: none; padding: 10px 0; font-size: 12px; font-weight: bold; letter-spacing: 0.08em; cursor: pointer; font-family: Arial, sans-serif; display: flex; align-items: center; justify-content: center; gap: 6px; border-bottom: 3px solid transparent; margin-bottom: -1.5px; }
+.friends-tab.active { border-bottom-color: black; }
+.friends-tab:hover:not(.active) { opacity: 0.5; }
+.friends-count { font-size: 11px; background: #f0f0f0; padding: 1px 6px; }
+.friends-badge { font-size: 10px; background: black; color: white; padding: 1px 5px; border-radius: 999px; }
+.friends-section-label { font-size: 10px; font-weight: bold; letter-spacing: 0.1em; color: #999; margin: 16px 0 8px; }
+.friends-row { display: flex; align-items: center; gap: 14px; padding: 12px 0; border-bottom: 1px solid #f0f0f0; }
+.friends-row-info { flex: 1; min-width: 0; }
+.friends-row-name { font-size: 13px; font-weight: bold; }
+.friends-row-meta { font-size: 11px; color: #888; margin-top: 2px; }
+.friends-row-arrow { font-size: 18px; color: #bbb; }
+.friends-row-actions { display: flex; gap: 6px; }
+.friend-btn { border: 1.5px solid black; background: white; font-size: 11px; font-weight: bold; cursor: pointer; font-family: Arial, sans-serif; letter-spacing: 0.04em; padding: 5px 10px; }
+.friend-btn.accept:hover { background: black; color: white; }
+.friend-btn.decline { border-color: #ccc; color: #999; }
+.friend-btn.decline:hover { background: #f0f0f0; }
+.friend-btn.cancel { border-color: #ccc; color: #999; font-size: 10px; }
+
+/* Nav badge */
+.nav-badge { position: absolute; top: -5px; right: -7px; background: black; color: white; font-size: 9px; font-weight: bold; padding: 1px 4px; border-radius: 999px; line-height: 1.4; }
 .explore-card-name { font-size: 13px; font-weight: bold; }
 .explore-card-meta { font-size: 11px; color: #888; margin-top: 2px; }
 
