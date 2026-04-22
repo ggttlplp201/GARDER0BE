@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { parseImageUrls, maybeConvertHeic, removeBg } from '../lib/imageUtils';
 import { ITEM_TYPES } from '../lib/constants';
+import BrandInput from './BrandInput';
 
 export default function EditItemModal({ item, onClose, onSave }) {
-  const [fields, setFields] = useState({ name: '', color: '', brand: '', type: 'Shirt', size: '', price: '', urlInput: '', status: 'owned', condition: '', purchase_date: '' });
+  const [fields, setFields] = useState({ name: '', color: '', brand: '', type: 'Shirt', size: '', price: '', urlInput: '', status: 'owned', condition: '' });
   const [editImgs, setEditImgs] = useState([]);
   const [saving, setSaving] = useState(false);
   const [error, setError]   = useState('');
@@ -22,7 +23,6 @@ export default function EditItemModal({ item, onClose, onSave }) {
       urlInput: '',
       status:          item.status          || 'owned',
       condition:       item.condition       || '',
-      purchase_date:   item.purchase_date   || '',
     });
     setEditImgs(parseImageUrls(item.image_url).map(url => ({ src: url, blob: null, storedUrl: url })));
   }, [item]);
@@ -93,7 +93,7 @@ export default function EditItemModal({ item, onClose, onSave }) {
         </div>
         <div className="field">
           <label>Brand</label>
-          <input value={fields.brand} onChange={e => set('brand', e.target.value)} placeholder="e.g. Acne Studios" />
+          <BrandInput value={fields.brand} onChange={v => set('brand', v)} />
         </div>
         <div className="field">
           <label>Type</label>
@@ -122,10 +122,6 @@ export default function EditItemModal({ item, onClose, onSave }) {
             <option value="">—</option>
             {['New','Excellent','Good','Fair','Poor'].map(c => <option key={c}>{c}</option>)}
           </select>
-        </div>
-        <div className="field">
-          <label>Purchase Date</label>
-          <input type="date" value={fields.purchase_date} onChange={e => set('purchase_date', e.target.value)} />
         </div>
         <div className="field">
           <label>Photos</label>

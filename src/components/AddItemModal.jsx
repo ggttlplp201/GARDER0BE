@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import ImageUploadZone from './ImageUploadZone';
+import BrandInput from './BrandInput';
 import { ITEM_TYPES } from '../lib/constants';
 
-const DEFAULT_FIELDS = { name: '', color: '', brand: '', type: 'Shirt', size: '', price: '', urlInput: '', status: 'owned', condition: '', purchase_date: '' };
+const DEFAULT_FIELDS = { name: '', color: '', brand: '', type: 'Shirt', size: '', price: '', urlInput: '', status: 'owned', condition: '' };
 
 export default function AddItemModal({ open, onClose, onAdd }) {
   const [fields, setFields]   = useState(DEFAULT_FIELDS);
@@ -62,7 +63,7 @@ export default function AddItemModal({ open, onClose, onAdd }) {
         </div>
         <div className="field">
           <label>Brand</label>
-          <input value={fields.brand} onChange={e => set('brand', e.target.value)} placeholder="e.g. Acne Studios" />
+          <BrandInput value={fields.brand} onChange={v => set('brand', v)} />
         </div>
         <div className="field">
           <label>Type</label>
@@ -92,10 +93,6 @@ export default function AddItemModal({ open, onClose, onAdd }) {
             <option value="">—</option>
             {['New','Excellent','Good','Fair','Poor'].map(c => <option key={c}>{c}</option>)}
           </select>
-        </div>
-        <div className="field">
-          <label>Purchase Date</label>
-          <input type="date" value={fields.purchase_date} onChange={e => set('purchase_date', e.target.value)} />
         </div>
         <ImageUploadZone
           pending={pending}

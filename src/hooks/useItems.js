@@ -40,7 +40,6 @@ export function useItems(user) {
       image_url, user_id: user.id,
       status: fields.status || 'owned',
       condition: fields.condition || null,
-      purchase_date: fields.purchase_date || null,
     });
     if (error) throw new Error(error.message);
     await fetchItems();
@@ -73,7 +72,6 @@ export function useItems(user) {
       size: fields.size, price: parseFloat(fields.price) || 0, image_url,
       status: fields.status || 'owned',
       condition: fields.condition || null,
-      purchase_date: fields.purchase_date || null,
     }).eq('id', id);
     if (error) throw new Error(error.message);
     await fetchItems();

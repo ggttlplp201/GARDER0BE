@@ -127,7 +127,7 @@ export default function ProfilePanel({ open, user, onClose, onSignOut, avatarUrl
         </label>
 
         {saveError && <div className="auth-error" style={{ marginBottom: 8 }}>{saveError}</div>}
-        <button className="profile-save-btn" onClick={save}>SAVE PROFILE</button>
+        <button className="profile-save-btn" onClick={save}>SAVE CHANGES</button>
         <div className="profile-user-email">{user?.email || ''}</div>
         <button className="profile-signout-btn" onClick={onSignOut}>SIGN OUT</button>
       </div>
