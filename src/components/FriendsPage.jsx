@@ -119,7 +119,7 @@ export default function FriendsPage({ user, onViewProfile }) {
                   <Avatar url={r.profile?.avatar_url} />
                   <div className="friends-row-info">
                     <div className="friends-row-name">{r.profile?.username || 'Anonymous'}</div>
-                    {r.profile?.location && <div className="friends-row-meta">{r.profiles.location}</div>}
+                    {r.profile?.location && <div className="friends-row-meta">{r.profile.location}</div>}
                   </div>
                   <div className="friends-row-actions">
                     <button className="friend-btn accept" onClick={() => accept(r.id)}>✓</button>
@@ -137,7 +137,7 @@ export default function FriendsPage({ user, onViewProfile }) {
                   <Avatar url={r.profile?.avatar_url} />
                   <div className="friends-row-info">
                     <div className="friends-row-name">{r.profile?.username || 'Anonymous'}</div>
-                    {r.profile?.location && <div className="friends-row-meta">{r.profiles.location}</div>}
+                    {r.profile?.location && <div className="friends-row-meta">{r.profile.location}</div>}
                   </div>
                   <button className="friend-btn cancel" onClick={() => cancel(r.id)}>CANCEL</button>
                 </div>
