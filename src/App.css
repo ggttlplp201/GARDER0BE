@@ -87,7 +87,7 @@ h1 { font-size: 2rem; font-weight: bold; margin-bottom: 2px; }
 
 /* Player — in-flow, right-aligned, below header */
 .player-col { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; margin-bottom: 20px; }
-.player-quote { font-size: 10px; color: #999; font-style: italic; text-align: right; max-width: 500px; }
+.player-quote { font-size: 10px; color: var(--text3); font-style: italic; text-align: right; max-width: 500px; }
 
 .add-btn { display: inline-block; padding: 9px 20px; border: 2px solid var(--border); background: var(--bg); color: var(--text); font-size: 13px; font-weight: bold; cursor: pointer; letter-spacing: 0.05em; white-space: nowrap; }
 .add-btn:hover { background: var(--text); color: var(--bg); }
@@ -178,7 +178,7 @@ h1 { font-size: 2rem; font-weight: bold; margin-bottom: 2px; }
 .bottom-nav-tab.active { color: var(--text); background: var(--bg2); }
 .bottom-nav-tab:hover { color: var(--text); }
 
-.player { display: flex; align-items: center; gap: 14px; flex-shrink: 0; border: 1.5px solid black; padding: 10px 14px; }
+.player { display: flex; align-items: center; gap: 14px; flex-shrink: 0; border: 1.5px solid var(--border); padding: 10px 14px; background: var(--bg); }
 .disc-wrap { position: relative; flex-shrink: 0; width: 48px; height: 48px; transform-style: preserve-3d; transition: transform 0.1s ease; cursor: default; }
 .disc { width: 48px; height: 48px; border-radius: 50%; background-image: url('https://xvqgrxoccucycagzizae.supabase.co/storage/v1/object/public/music/disc.png'); background-size: cover; background-position: center; position: relative; display: block; }
 .disc-shine { position: absolute; inset: 0; border-radius: 50%; pointer-events: none; opacity: 0; transition: opacity 0.15s; }
@@ -186,18 +186,18 @@ h1 { font-size: 2rem; font-weight: bold; margin-bottom: 2px; }
 .disc.playing { animation: spin 3s linear infinite; }
 .track-info { min-width: 0; }
 .track-name { font-size: 12px; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px; }
-.track-sub  { font-size: 10px; color: #666; margin-top: 2px; }
-.track-meta { font-size: 10px; color: #aaa; margin-top: 1px; letter-spacing: 0.04em; }
+.track-sub  { font-size: 10px; color: var(--text2); margin-top: 2px; }
+.track-meta { font-size: 10px; color: var(--text3); margin-top: 1px; letter-spacing: 0.04em; }
 .controls { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
-.ctrl-btn { background: none; border: 1.5px solid black; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 11px; padding: 0; transition: background 0.15s; }
-.ctrl-btn:hover { background: black; color: white; }
+.ctrl-btn { background: none; border: 1.5px solid var(--border); color: var(--text); width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 11px; padding: 0; transition: background 0.15s; }
+.ctrl-btn:hover { background: var(--text); color: var(--bg); }
 .ctrl-btn svg { pointer-events: none; }
 .progress-wrap { display: flex; flex-direction: column; gap: 4px; width: 140px; flex-shrink: 0; }
-.progress-bar-bg { width: 100%; height: 3px; background: #ddd; cursor: pointer; position: relative; }
-.progress-bar-fill { height: 100%; background: black; pointer-events: none; }
-.time-row { display: flex; justify-content: space-between; font-size: 10px; color: #888; }
+.progress-bar-bg { width: 100%; height: 3px; background: var(--border-light); cursor: pointer; position: relative; }
+.progress-bar-fill { height: 100%; background: var(--text); pointer-events: none; }
+.time-row { display: flex; justify-content: space-between; font-size: 10px; color: var(--text3); }
 .volume-wrap { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
-input[type=range].vol-slider { -webkit-appearance: none; appearance: none; width: 64px; height: 3px; background: #ddd; outline: none; cursor: pointer; }
+input[type=range].vol-slider { -webkit-appearance: none; appearance: none; width: 64px; height: 3px; background: var(--border-light); outline: none; cursor: pointer; }
 input[type=range].vol-slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 12px; height: 12px; background: black; border-radius: 50%; cursor: pointer; }
 
 .page-copyright { text-align: center; font-size: 10px; color: #bbb; letter-spacing: 0.06em; pointer-events: none; margin-top: 36px; padding-bottom: 20px; }
