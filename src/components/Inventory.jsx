@@ -7,6 +7,7 @@ import ProfilePanel from './ProfilePanel';
 import Lightbox from './Lightbox';
 import AddItemModal from './AddItemModal';
 import EditItemModal from './EditItemModal';
+import ExploreModal from './ExploreModal';
 import { useItems } from '../hooks/useItems';
 import { ITEM_TYPES } from '../lib/constants';
 import { usePlayer } from '../hooks/usePlayer';
@@ -51,6 +52,7 @@ export default function Inventory({ user, onSignOut }) {
   const [lbItem, setLbItem]           = useState(null);
   const [addOpen, setAddOpen]         = useState(false);
   const [editItem_, setEditItem_]     = useState(null);
+  const [exploreOpen, setExploreOpen] = useState(false);
 
   useEffect(() => {
     fetchItems();
@@ -143,6 +145,7 @@ export default function Inventory({ user, onSignOut }) {
 
         <div className="controls-row">
           <button className="add-btn" style={{ marginBottom: 0 }} onClick={() => setAddOpen(true)}>+ ADD NEW ITEM</button>
+          <button className="explore-btn" onClick={() => setExploreOpen(true)}>EXPLORE</button>
           <div className="sort-wrap">
             <span>SORT BY</span>
             <select value={sortBy} onChange={e => setSortBy(e.target.value)}>
@@ -241,6 +244,8 @@ export default function Inventory({ user, onSignOut }) {
           onSave={handleEdit}
         />
       )}
+
+      <ExploreModal open={exploreOpen} onClose={() => setExploreOpen(false)} />
     </>
   );
 }

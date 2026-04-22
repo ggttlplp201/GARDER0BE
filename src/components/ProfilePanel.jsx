@@ -1,17 +1,41 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { sb } from '../lib/supabase';
 import { maybeConvertHeic } from '../lib/imageUtils';
 import { STORAGE } from '../lib/constants';
 
-const PROFILE_KEYS = ['p-name','p-fav-brand','p-fav-designer','p-fav-season',
-                      'p-aesthetic','p-size-clothes','p-size-shoes',
-                      'p-grail','p-grail-brand','p-grail-budget','p-location','p-bio'];
+const PROFILE_KEYS = ['p-name', 'p-fav-brand', 'p-location', 'p-bio'];
+
+async function resizeImage(file, maxSize = 400) {
+  return new Promise(resolve => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const size = Math.min(img.width, img.height);
+      const sx   = (img.width  - size) / 2;
+      const sy   = (img.height - size) / 2;
+      const canvas = document.createElement('canvas');
+      canvas.width  = maxSize;
+      canvas.height = maxSize;
+      canvas.getContext('2d').drawImage(img, sx, sy, size, size, 0, 0, maxSize, maxSize);
+      URL.revokeObjectURL(url);
+      canvas.toBlob(blob => resolve(blob || file), 'image/jpeg', 0.9);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
+    img.src = url;
+  });
+}
 
 export default function ProfilePanel({ open, user, onClose, onSignOut, avatarUrl, onAvatarChange }) {
-  const [profile, setProfile] = useState({});
-
+  const [profile, setProfile]     = useState({});
+  const [isPublic, setIsPublic]   = useState(false);
   const [saveError, setSaveError] = useState('');
+  const [uploading, setUploading] = useState(false);
   const storageKey = `garderobe-profile-${user?.id || 'guest'}`;
+  const fileInputRef = useRef(null);
+
+  function tryLocalProfile(key) {
+    try { return JSON.parse(localStorage.getItem(key) || '{}'); } catch { return {}; }
+  }
 
   useEffect(() => {
     if (!open) return;
@@ -20,14 +44,12 @@ export default function ProfilePanel({ open, user, onClose, onSignOut, avatarUrl
         const meta = u?.user_metadata?.profile || {};
         setProfile(Object.keys(meta).length ? meta : tryLocalProfile(storageKey));
       });
+      sb.from('profiles').select('is_public').eq('id', user.id).maybeSingle()
+        .then(({ data }) => { if (data) setIsPublic(data.is_public ?? false); });
     } else {
       setProfile(tryLocalProfile(storageKey));
     }
   }, [open, user, storageKey]);
-
-  function tryLocalProfile(key) {
-    try { return JSON.parse(localStorage.getItem(key) || '{}'); } catch { return {}; }
-  }
 
   function set(key, val) { setProfile(p => ({ ...p, [key]: val })); }
 
@@ -38,6 +60,15 @@ export default function ProfilePanel({ open, user, onClose, onSignOut, avatarUrl
     if (user) {
       const { error } = await sb.auth.updateUser({ data: { profile: cleaned } });
       if (error) { setSaveError('Failed to save profile.'); return; }
+      await sb.from('profiles').upsert({
+        id:         user.id,
+        username:   cleaned['p-name']     || null,
+        bio:        cleaned['p-bio']      || null,
+        location:   cleaned['p-location'] || null,
+        avatar_url: avatarUrl             || null,
+        is_public:  isPublic,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'id' });
     } else {
       localStorage.setItem(storageKey, JSON.stringify(cleaned));
     }
@@ -46,18 +77,20 @@ export default function ProfilePanel({ open, user, onClose, onSignOut, avatarUrl
 
   async function handleAvatarUpload(e) {
     const raw = e.target.files[0]; if (!raw) return;
-    const file = await maybeConvertHeic(raw);
-    const path = `profile/${user.id}/avatar`;
-    const { error } = await sb.storage.from('images').upload(path, file, { contentType: file.type, upsert: true });
-    if (error) { setSaveError('Avatar upload failed.'); return; }
-    const url = `${STORAGE}/images/${path}?t=${Date.now()}`;
-    if (user) {
+    e.target.value = '';
+    setSaveError(''); setUploading(true);
+    try {
+      const converted = await maybeConvertHeic(raw);
+      const resized   = await resizeImage(converted);
+      const path = `profile/${user.id}/avatar`;
+      const { error } = await sb.storage.from('images').upload(path, resized, { contentType: 'image/jpeg', upsert: true });
+      if (error) { setSaveError('Avatar upload failed.'); return; }
+      const url = `${STORAGE}/images/${path}?t=${Date.now()}`;
       await sb.auth.updateUser({ data: { profile: { ...profile, avatarUrl: url } } });
-    } else {
-      const saved = tryLocalProfile(storageKey);
-      localStorage.setItem(storageKey, JSON.stringify({ ...saved, avatarUrl: url }));
+      onAvatarChange(url);
+    } finally {
+      setUploading(false);
     }
-    onAvatarChange(url);
   }
 
   return (
@@ -66,35 +99,31 @@ export default function ProfilePanel({ open, user, onClose, onSignOut, avatarUrl
       <div className={`profile-panel${open ? ' open' : ''}`}>
         <button className="profile-close" onClick={onClose}>×</button>
         <h2>PROFILE</h2>
+
         <div className="profile-avatar-wrap">
-          <div className="profile-avatar-circle">
+          <div className="profile-avatar-circle" onClick={() => fileInputRef.current?.click()} style={{ cursor: 'pointer' }}>
             {avatarUrl
               ? <img src={avatarUrl} alt="avatar" />
               : <svg width="36" height="36" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>
             }
+            <div className="avatar-overlay">{uploading ? '...' : '+'}</div>
           </div>
-          <label className="profile-avatar-upload-btn">
-            CHANGE PHOTO
-            <input type="file" accept="image/*,.heic,.heif" onChange={handleAvatarUpload} style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', width: '100%', height: '100%' }} />
-          </label>
+          <input ref={fileInputRef} type="file" accept="image/*,.heic,.heif" onChange={handleAvatarUpload} style={{ display: 'none' }} />
+          <span style={{ fontSize: 10, color: '#aaa', marginTop: 4, letterSpacing: '0.06em' }}>TAP TO CHANGE</span>
         </div>
 
         <div className="profile-field"><label>NAME</label><input value={profile['p-name'] || ''} onChange={e => set('p-name', e.target.value)} placeholder="Your name" /></div>
-        <div className="profile-section-label">STYLE</div>
         <div className="profile-field"><label>FAVORITE BRAND</label><input value={profile['p-fav-brand'] || ''} onChange={e => set('p-fav-brand', e.target.value)} placeholder="e.g. Maison Margiela" /></div>
-        <div className="profile-field"><label>FAVORITE DESIGNER</label><input value={profile['p-fav-designer'] || ''} onChange={e => set('p-fav-designer', e.target.value)} placeholder="e.g. Rei Kawakubo" /></div>
-        <div className="profile-field"><label>FAVORITE SEASON / COLLECTION</label><input value={profile['p-fav-season'] || ''} onChange={e => set('p-fav-season', e.target.value)} placeholder="e.g. Balenciaga SS17" /></div>
-        <div className="profile-field"><label>AESTHETIC</label><input value={profile['p-aesthetic'] || ''} onChange={e => set('p-aesthetic', e.target.value)} placeholder="e.g. Avant-garde, Minimalist" /></div>
-        <div className="profile-section-label">SIZING</div>
-        <div className="profile-field"><label>CLOTHING SIZE</label><input value={profile['p-size-clothes'] || ''} onChange={e => set('p-size-clothes', e.target.value)} placeholder="e.g. M, L, 48" /></div>
-        <div className="profile-field"><label>FOOTWEAR SIZE</label><input value={profile['p-size-shoes'] || ''} onChange={e => set('p-size-shoes', e.target.value)} placeholder="e.g. EU 42, US 9" /></div>
-        <div className="profile-section-label">WISHLIST</div>
-        <div className="profile-field"><label>GRAIL PIECE</label><input value={profile['p-grail'] || ''} onChange={e => set('p-grail', e.target.value)} placeholder="e.g. Helmut Lang AW02 Astro Parka" /></div>
-        <div className="profile-field"><label>GRAIL BRAND</label><input value={profile['p-grail-brand'] || ''} onChange={e => set('p-grail-brand', e.target.value)} placeholder="e.g. Raf Simons, CP Company" /></div>
-        <div className="profile-field"><label>BUDGET FOR GRAIL ($)</label><input type="number" min="0" value={profile['p-grail-budget'] || ''} onChange={e => set('p-grail-budget', e.target.value)} placeholder="0" /></div>
-        <div className="profile-section-label">ABOUT</div>
         <div className="profile-field"><label>LOCATION</label><input value={profile['p-location'] || ''} onChange={e => set('p-location', e.target.value)} placeholder="e.g. Tokyo, London" /></div>
         <div className="profile-field"><label>BIO</label><textarea rows="3" value={profile['p-bio'] || ''} onChange={e => set('p-bio', e.target.value)} placeholder="A few words about your style..." /></div>
+
+        <div className="profile-section-label">DISCOVERY</div>
+        <label className="profile-public-toggle">
+          <div className={`toggle-track${isPublic ? ' on' : ''}`} onClick={() => setIsPublic(v => !v)}>
+            <div className="toggle-thumb" />
+          </div>
+          <span>{isPublic ? 'PUBLIC — visible in Explore' : 'PRIVATE — only you can see this'}</span>
+        </label>
 
         {saveError && <div className="auth-error" style={{ marginBottom: 8 }}>{saveError}</div>}
         <button className="profile-save-btn" onClick={save}>SAVE PROFILE</button>
