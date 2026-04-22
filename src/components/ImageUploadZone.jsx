@@ -1,7 +1,7 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
 import { maybeConvertHeic, removeBg } from '../lib/imageUtils';
 
-export default function ImageUploadZone({ pending, onChange, fields, onTagApply, isFirstUpload }) {
+export default function ImageUploadZone({ pending, onChange }) {
   const [dzState, setDzState] = useState('');
   const [dzMsg, setDzMsg]     = useState('');
   const inputRef = useRef(null);

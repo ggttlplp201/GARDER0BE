@@ -1,3 +1,4 @@
+/* global process */
 export async function handler(event) {
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, body: 'Method Not Allowed' };
@@ -9,7 +10,7 @@ export async function handler(event) {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
-        'x-api-key': process.env.CLAUDE_API_KEY ?? '',
+        'x-api-key': process.env.CLAUDE_API_KEY || '',
         'anthropic-version': '2023-06-01',
         'content-type': 'application/json',
       },
