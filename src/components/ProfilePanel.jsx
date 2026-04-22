@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { sb } from '../lib/supabase';
 import { maybeConvertHeic } from '../lib/imageUtils';
 import { STORAGE } from '../lib/constants';
+import AvatarCropModal from './AvatarCropModal';
 
 const PROFILE_KEYS = ['p-name', 'p-fav-brand', 'p-location', 'p-bio'];
 
@@ -29,7 +30,8 @@ export default function ProfilePanel({ open, user, onClose, onSignOut, avatarUrl
   const [profile, setProfile]     = useState({});
   const [isPublic, setIsPublic]   = useState(false);
   const [saveError, setSaveError] = useState('');
-  const [uploading, setUploading] = useState(false);
+  const [uploading, setUploading]   = useState(false);
+  const [cropFile, setCropFile]     = useState(null);
   const storageKey = `garderobe-profile-${user?.id || 'guest'}`;
   const fileInputRef = useRef(null);
 
@@ -78,13 +80,17 @@ export default function ProfilePanel({ open, user, onClose, onSignOut, avatarUrl
   async function handleAvatarUpload(e) {
     const raw = e.target.files[0]; if (!raw) return;
     e.target.value = '';
+    const converted = await maybeConvertHeic(raw);
+    setCropFile(converted);
+  }
+
+  async function handleCropConfirm(blob) {
+    setCropFile(null);
     setSaveError(''); setUploading(true);
     try {
-      const converted = await maybeConvertHeic(raw);
-      const resized   = await resizeImage(converted);
       const path = `${user.id}/avatar.jpg`;
       await sb.storage.from('images').remove([path]);
-      const { error } = await sb.storage.from('images').upload(path, resized, { contentType: 'image/jpeg' });
+      const { error } = await sb.storage.from('images').upload(path, blob, { contentType: 'image/jpeg' });
       if (error) { console.error('Avatar upload error:', error); setSaveError(`Upload failed: ${error.message}`); return; }
       const url = `${STORAGE}/images/${path}?t=${Date.now()}`;
       await sb.auth.updateUser({ data: { profile: { ...profile, avatarUrl: url } } });
@@ -96,6 +102,13 @@ export default function ProfilePanel({ open, user, onClose, onSignOut, avatarUrl
 
   return (
     <>
+      {cropFile && (
+        <AvatarCropModal
+          file={cropFile}
+          onConfirm={handleCropConfirm}
+          onCancel={() => setCropFile(null)}
+        />
+      )}
       <div className={`profile-overlay${open ? ' open' : ''}`} onClick={onClose} />
       <div className={`profile-panel${open ? ' open' : ''}`}>
         <button className="profile-close" onClick={onClose}>×</button>
