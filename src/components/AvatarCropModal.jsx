@@ -6,25 +6,25 @@ export default function AvatarCropModal({ file, onConfirm, onCancel }) {
   const [zoom, setZoom]     = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [imgSize, setImgSize] = useState({ w: 0, h: 0 });
+  const [srcUrl, setSrcUrl] = useState(null);
   const imgRef    = useRef(null);
-  const srcUrl    = useRef(null);
   const dragging  = useRef(false);
   const dragStart = useRef({ mx: 0, my: 0, ox: 0, oy: 0 });
 
   useEffect(() => {
-    srcUrl.current = URL.createObjectURL(file);
+    const url = URL.createObjectURL(file);
+    setSrcUrl(url);
     const img = new Image();
     img.onload = () => {
       setImgSize({ w: img.naturalWidth, h: img.naturalHeight });
-      // fit image to fill viewport at zoom=1
       const fit = Math.max(SIZE / img.naturalWidth, SIZE / img.naturalHeight);
       setZoom(fit);
       setOffset({ x: (SIZE - img.naturalWidth  * fit) / 2,
                   y: (SIZE - img.naturalHeight * fit) / 2 });
     };
-    img.src = srcUrl.current;
+    img.src = url;
     imgRef.current = img;
-    return () => URL.revokeObjectURL(srcUrl.current);
+    return () => URL.revokeObjectURL(url);
   }, [file]);
 
   const clampOffset = useCallback((ox, oy, z) => {

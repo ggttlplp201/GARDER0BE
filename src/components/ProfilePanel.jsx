@@ -6,25 +6,6 @@ import AvatarCropModal from './AvatarCropModal';
 
 const PROFILE_KEYS = ['p-name', 'p-fav-brand', 'p-location', 'p-bio'];
 
-async function resizeImage(file, maxSize = 400) {
-  return new Promise(resolve => {
-    const img = new Image();
-    const url = URL.createObjectURL(file);
-    img.onload = () => {
-      const size = Math.min(img.width, img.height);
-      const sx   = (img.width  - size) / 2;
-      const sy   = (img.height - size) / 2;
-      const canvas = document.createElement('canvas');
-      canvas.width  = maxSize;
-      canvas.height = maxSize;
-      canvas.getContext('2d').drawImage(img, sx, sy, size, size, 0, 0, maxSize, maxSize);
-      URL.revokeObjectURL(url);
-      canvas.toBlob(blob => resolve(blob || file), 'image/jpeg', 0.9);
-    };
-    img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
-    img.src = url;
-  });
-}
 
 export default function ProfilePanel({ open, user, onClose, onSignOut, avatarUrl, onAvatarChange, onExportCSV }) {
   const [profile, setProfile]     = useState({});
