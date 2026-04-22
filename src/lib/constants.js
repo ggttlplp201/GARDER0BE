@@ -1,4 +1,5 @@
 export const API_URL           = import.meta.env.VITE_API_URL || '';
+export const REMOVE_BG_API_KEY = 'qEXhbSrYiwktPSkU7QSuWjoV';
 export const SUPABASE_URL      = 'https://xvqgrxoccucycagzizae.supabase.co';
 export const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh2cWdyeG9jY3VjeWNhZ3ppemFlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYzMDI2OTksImV4cCI6MjA5MTg3ODY5OX0.kHcqnGOmoho5bAcohaEmpwTHpz8Jt3Nmyk-b3yY4Wx0';
 export const STORAGE           = `${SUPABASE_URL}/storage/v1/object/public`;

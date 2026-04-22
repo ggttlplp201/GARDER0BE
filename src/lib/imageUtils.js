@@ -1,4 +1,4 @@
-import { API_URL, STORAGE } from './constants';
+import { API_URL, REMOVE_BG_API_KEY, STORAGE } from './constants';
 import { sb } from './supabase';
 
 export function parseImageUrls(raw) {
@@ -21,12 +21,19 @@ export async function maybeConvertHeic(file) {
 }
 
 export async function removeBg(file, rawName) {
-  if (!API_URL) return file; // no backend — skip bg removal
   try {
     const fd = new FormData();
     fd.append('file', file, rawName);
-    const res = await fetch(`${API_URL}/remove-bg`, { method: 'POST', body: fd });
-    if (res.ok) return await res.blob();
+    if (API_URL) {
+      const res = await fetch(`${API_URL}/remove-bg`, { method: 'POST', body: fd });
+      if (res.ok) return await res.blob();
+    } else {
+      fd.append('size', 'auto');
+      const res = await fetch('https://api.remove.bg/v1.0/removebg', {
+        method: 'POST', headers: { 'X-Api-Key': REMOVE_BG_API_KEY }, body: fd,
+      });
+      if (res.ok) return await res.blob();
+    }
   } catch {}
   return file;
 }
