@@ -1,11 +1,9 @@
-import { useRef, useState, useCallback, useEffect } from 'react';
-import { maybeConvertHeic, removeBg, autoTagWithClaude, applyTags } from '../lib/imageUtils';
+import { useRef, useCallback, useEffect } from 'react';
+import { maybeConvertHeic, removeBg } from '../lib/imageUtils';
 
 export default function ImageUploadZone({ pending, onChange, fields, onTagApply, isFirstUpload }) {
   const [dzState, setDzState] = useState('');
   const [dzMsg, setDzMsg]     = useState('');
-  const [aiStatus, setAiStatus] = useState('');
-  const [aiClass, setAiClass]   = useState('');
   const inputRef = useRef(null);
 
   const setDropzone = useCallback((state, msg = '') => {
@@ -15,23 +13,11 @@ export default function ImageUploadZone({ pending, onChange, fields, onTagApply,
 
   async function processFiles(rawFiles) {
     if (!rawFiles.length) return;
-    const shouldTag = isFirstUpload && !fields?.name;
     setDropzone('processing');
     const newItems = [];
     for (const raw of rawFiles) {
       const file = await maybeConvertHeic(raw);
       const blob = await removeBg(file, raw.name);
-      if (shouldTag && raw === rawFiles[0]) {
-        setAiStatus('AI ANALYZING...'); setAiClass('analyzing');
-        autoTagWithClaude(blob)
-          .then(tags => {
-            const patches = applyTags(tags, fields);
-            onTagApply?.(patches);
-            setAiStatus('AI TAGGED ✓'); setAiClass('done');
-            setTimeout(() => { setAiStatus(''); setAiClass(''); }, 3000);
-          })
-          .catch(err => { setAiStatus('ERR: ' + err.message); setAiClass('analyzing'); });
-      }
       newItems.push({ src: URL.createObjectURL(blob), blob, url: null });
     }
     onChange([...pending, ...newItems]);
@@ -78,7 +64,7 @@ export default function ImageUploadZone({ pending, onChange, fields, onTagApply,
 
   return (
     <div className="field">
-      <label>Photos <span className={`ai-tag-status${aiClass ? ' ' + aiClass : ''}`}>{aiStatus}</span></label>
+      <label>Photos</label>
       <div
         className={`img-dropzone${dzState ? ' ' + dzState : ''}`}
         onDragOver={handleDragOver}
