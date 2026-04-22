@@ -27,6 +27,7 @@ export async function removeBg(file, rawName) {
     if (API_URL) {
       const res = await fetch(`${API_URL}/remove-bg`, { method: 'POST', body: fd });
       if (res.ok) return await res.blob();
+      console.warn('remove-bg backend error:', res.status, await res.text());
     } else if (REMOVE_BG_API_KEY) {
       fd.append('size', 'auto');
       const res = await fetch('https://api.remove.bg/v1.0/removebg', {
@@ -35,8 +36,13 @@ export async function removeBg(file, rawName) {
         body: fd,
       });
       if (res.ok) return await res.blob();
+      console.warn('remove.bg error:', res.status, await res.text());
+    } else {
+      console.warn('remove.bg: no API key configured');
     }
-  } catch {}
+  } catch (e) {
+    console.warn('remove.bg exception:', e.message);
+  }
   return file;
 }
 
