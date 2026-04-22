@@ -6,8 +6,9 @@ import BrandInput from './BrandInput';
 export default function EditItemModal({ item, onClose, onSave }) {
   const [fields, setFields] = useState({ name: '', color: '', brand: '', type: 'Shirt', size: '', price: '', urlInput: '', status: 'owned', condition: '' });
   const [editImgs, setEditImgs] = useState([]);
-  const [saving, setSaving] = useState(false);
-  const [error, setError]   = useState('');
+  const [saving, setSaving]     = useState(false);
+  const [error, setError]       = useState('');
+  const [urlLoading, setUrlLoading] = useState(false);
   const blobUrlsRef = useRef([]);
 
   useEffect(() => {
@@ -46,6 +47,7 @@ export default function EditItemModal({ item, onClose, onSave }) {
   async function addUrlImg() {
     const url = fields.urlInput.trim(); if (!url) return;
     set('urlInput', '');
+    setUrlLoading(true);
     try {
       const resp = await fetch(url);
       const rawBlob = await resp.blob();
@@ -55,6 +57,8 @@ export default function EditItemModal({ item, onClose, onSave }) {
       setEditImgs(prev => [...prev, { src, blob, storedUrl: null }]);
     } catch {
       setEditImgs(prev => [...prev, { src: url, blob: null, storedUrl: null }]);
+    } finally {
+      setUrlLoading(false);
     }
   }
 
@@ -160,8 +164,11 @@ export default function EditItemModal({ item, onClose, onSave }) {
               placeholder="or paste URL"
               onKeyDown={e => e.key === 'Enter' && addUrlImg()}
             />
-            <button className="img-url-add" onClick={addUrlImg}>ADD</button>
+            <button className="img-url-add" onClick={addUrlImg} disabled={urlLoading}>
+              {urlLoading ? '...' : 'ADD'}
+            </button>
           </div>
+          {urlLoading && <div className="url-processing">PROCESSING IMAGE...</div>}
         </div>
         {error && <div className="auth-error" style={{ marginBottom: 8 }}>{error}</div>}
         <div className="modal-actions">

@@ -9,8 +9,9 @@ const DEFAULT_FIELDS = { name: '', color: '', brand: '', type: 'Shirt', size: ''
 export default function AddItemModal({ open, onClose, onAdd }) {
   const [fields, setFields]   = useState(DEFAULT_FIELDS);
   const [pending, setPending] = useState([]);
-  const [saving, setSaving]   = useState(false);
-  const [error, setError]     = useState('');
+  const [saving, setSaving]     = useState(false);
+  const [error, setError]       = useState('');
+  const [urlLoading, setUrlLoading] = useState(false);
 
   function set(key, val) { setFields(f => ({ ...f, [key]: val })); }
 
@@ -36,6 +37,7 @@ export default function AddItemModal({ open, onClose, onAdd }) {
   async function addUrlImg() {
     const url = fields.urlInput.trim(); if (!url) return;
     set('urlInput', '');
+    setUrlLoading(true);
     try {
       const resp = await fetch(url);
       const rawBlob = await resp.blob();
@@ -43,8 +45,9 @@ export default function AddItemModal({ open, onClose, onAdd }) {
       const src = URL.createObjectURL(blob);
       setPending(p => [...p, { src, blob, url: null }]);
     } catch {
-      // fallback: use URL as-is if fetch/removeBg fails
       setPending(p => [...p, { src: url, blob: null, url }]);
+    } finally {
+      setUrlLoading(false);
     }
   }
 
@@ -120,8 +123,11 @@ export default function AddItemModal({ open, onClose, onAdd }) {
             placeholder="or paste image URL"
             onKeyDown={e => e.key === 'Enter' && addUrlImg()}
           />
-          <button className="img-url-add" onClick={addUrlImg}>ADD</button>
+          <button className="img-url-add" onClick={addUrlImg} disabled={urlLoading}>
+            {urlLoading ? '...' : 'ADD'}
+          </button>
         </div>
+        {urlLoading && <div className="url-processing">PROCESSING IMAGE...</div>}
 
         {error && <div className="auth-error" style={{ marginBottom: 8 }}>{error}</div>}
         <div className="modal-actions">

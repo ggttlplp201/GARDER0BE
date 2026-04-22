@@ -259,6 +259,7 @@ input[type=range].vol-slider::-webkit-slider-thumb { -webkit-appearance: none; a
 .img-url-input:focus { outline: 2px solid black; }
 .img-url-add { padding: 7px 12px; border: 1.5px solid black; background: white; font-size: 12px; font-weight: bold; cursor: pointer; font-family: Arial, sans-serif; white-space: nowrap; flex-shrink: 0; }
 .img-url-add:hover { background: black; color: white; }
+.url-processing { font-size: 11px; font-weight: bold; letter-spacing: 0.08em; color: #888; margin-top: 6px; }
 .img-add-files { padding: 7px 12px; border: 1.5px solid black; background: white; font-size: 12px; font-weight: bold; cursor: pointer; font-family: Arial, sans-serif; white-space: nowrap; flex-shrink: 0; position: relative; display: inline-block; }
 .img-add-files:hover { background: black; color: white; }
 
