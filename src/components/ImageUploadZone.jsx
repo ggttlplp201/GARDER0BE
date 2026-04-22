@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback } from 'react';
+import { useRef, useState, useCallback, useEffect } from 'react';
 import { maybeConvertHeic, removeBg, autoTagWithClaude, applyTags } from '../lib/imageUtils';
 
 export default function ImageUploadZone({ pending, onChange, fields, onTagApply, isFirstUpload }) {
@@ -53,7 +53,17 @@ export default function ImageUploadZone({ pending, onChange, fields, onTagApply,
     if (files.length) processFiles(files);
   }
 
-  function removeItem(idx) { onChange(pending.filter((_, i) => i !== idx)); }
+  useEffect(() => {
+    return () => {
+      pending.forEach(item => { if (item.src?.startsWith('blob:')) URL.revokeObjectURL(item.src); });
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function removeItem(idx) {
+    const item = pending[idx];
+    if (item?.src?.startsWith('blob:')) URL.revokeObjectURL(item.src);
+    onChange(pending.filter((_, i) => i !== idx));
+  }
   function moveItem(idx, dir) {
     const n = idx + dir;
     if (n < 0 || n >= pending.length) return;

@@ -2,9 +2,11 @@ import { useRef, useState } from 'react';
 import { parseImageUrls } from '../lib/imageUtils';
 
 export default function ItemCard({ item, onRemove, onEdit, onClick }) {
-  const cardRef   = useRef(null);
-  const shineRef  = useRef(null);
-  const [imgIdx, setImgIdx] = useState(0);
+  const cardRef      = useRef(null);
+  const shineRef     = useRef(null);
+  const confirmTimer = useRef(null);
+  const [imgIdx, setImgIdx]         = useState(0);
+  const [confirming, setConfirming] = useState(false);
   const imgUrls   = parseImageUrls(item.image_url);
   const multiImg  = imgUrls.length > 1;
   const dateStr   = item.created_at
@@ -41,19 +43,36 @@ export default function ItemCard({ item, onRemove, onEdit, onClick }) {
     <div
       ref={cardRef}
       className="item-card"
+      role="button"
+      tabIndex={0}
+      aria-label={item.name || 'Untitled item'}
       onClick={handleCardClick}
+      onKeyDown={e => e.key === 'Enter' && handleCardClick(e)}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
     >
-      <button className="card-remove-x" onClick={e => { e.stopPropagation(); onRemove(item.id); }} title="Remove">×</button>
+      <button
+        className={`card-remove-x${confirming ? ' confirming' : ''}`}
+        aria-label={confirming ? 'Confirm delete' : 'Delete item'}
+        onClick={e => {
+          e.stopPropagation();
+          if (confirming) {
+            clearTimeout(confirmTimer.current);
+            onRemove(item.id);
+          } else {
+            setConfirming(true);
+            confirmTimer.current = setTimeout(() => setConfirming(false), 2500);
+          }
+        }}
+      >{confirming ? '?' : '×'}</button>
       <div className="card-image-area">
         {imgUrls.length
           ? <img src={imgUrls[imgIdx]} alt={item.name} />
           : <span style={{ fontSize: 13, color: '#aaa' }}>No image</span>
         }
         {multiImg && <>
-          <button className="card-img-arrow card-img-prev" onClick={e => nav(-1, e)}>‹</button>
-          <button className="card-img-arrow card-img-next" onClick={e => nav(1, e)}>›</button>
+          <button className="card-img-arrow card-img-prev" aria-label="Previous image" onClick={e => nav(-1, e)}>‹</button>
+          <button className="card-img-arrow card-img-next" aria-label="Next image" onClick={e => nav(1, e)}>›</button>
           <div className="card-img-counter">{imgIdx + 1}/{imgUrls.length}</div>
         </>}
         {dateStr && <div className="card-date">{dateStr}</div>}

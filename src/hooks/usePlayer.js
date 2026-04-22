@@ -3,6 +3,7 @@ import { TRACKS } from '../lib/constants';
 
 export function usePlayer() {
   const audioRef      = useRef(new Audio());
+  const trackIdxRef   = useRef(0);
   const [trackIdx, setTrackIdx]   = useState(0);
   const [playing, setPlaying]     = useState(false);
   const [progress, setProgress]   = useState(0);
@@ -24,7 +25,7 @@ export function usePlayer() {
       setTimeCur(fmt(audio.currentTime));
       setTimeDur(fmt(audio.duration));
     };
-    const onEnded = () => loadTrack((trackIdx + 1) % TRACKS.length);
+    const onEnded = () => loadTrack((trackIdxRef.current + 1) % TRACKS.length);
 
     audio.addEventListener('timeupdate', onTimeUpdate);
     audio.addEventListener('ended', onEnded);
@@ -36,6 +37,7 @@ export function usePlayer() {
 
   function loadTrack(idx) {
     const audio = audioRef.current;
+    trackIdxRef.current = idx;
     setTrackIdx(idx);
     audio.src = TRACKS[idx].file;
     setProgress(0); setTimeCur('0:00'); setTimeDur('0:00');

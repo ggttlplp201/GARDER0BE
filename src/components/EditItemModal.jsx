@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { parseImageUrls, maybeConvertHeic, removeBg } from '../lib/imageUtils';
 import { ITEM_TYPES } from '../lib/constants';
 
@@ -6,6 +6,8 @@ export default function EditItemModal({ item, onClose, onSave }) {
   const [fields, setFields] = useState({ name: '', color: '', brand: '', type: 'Shirt', size: '', price: '', urlInput: '' });
   const [editImgs, setEditImgs] = useState([]);
   const [saving, setSaving] = useState(false);
+  const [error, setError]   = useState('');
+  const blobUrlsRef = useRef([]);
 
   useEffect(() => {
     if (!item) return;
@@ -31,7 +33,9 @@ export default function EditItemModal({ item, onClose, onSave }) {
     for (const raw of raws) {
       const file = await maybeConvertHeic(raw);
       const blob = await removeBg(file, raw.name);
-      newImgs.push({ src: URL.createObjectURL(blob), blob, storedUrl: null });
+      const src = URL.createObjectURL(blob);
+      blobUrlsRef.current.push(src);
+      newImgs.push({ src, blob, storedUrl: null });
     }
     setEditImgs(prev => [...prev, ...newImgs]);
   }
@@ -53,16 +57,26 @@ export default function EditItemModal({ item, onClose, onSave }) {
 
   async function handleSave() {
     if (!fields.name.trim()) return;
-    setSaving(true);
+    setSaving(true); setError('');
     try { await onSave(item.id, fields, editImgs, item); onClose(); }
-    catch (err) { alert('Error saving changes: ' + err.message); }
+    catch (err) { setError(err.message || 'Failed to save changes.'); }
     finally { setSaving(false); }
   }
+
+  useEffect(() => {
+    return () => { blobUrlsRef.current.forEach(url => URL.revokeObjectURL(url)); };
+  }, []);
+
+  useEffect(() => {
+    const onKey = e => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onClose]);
 
   if (!item) return null;
 
   return (
-    <div className="modal-bg open" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+    <div className="modal-bg open" role="dialog" aria-modal="true" aria-label="Edit item" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="modal">
         <h2>EDIT ITEM</h2>
         <div className="field">
@@ -122,6 +136,7 @@ export default function EditItemModal({ item, onClose, onSave }) {
             <button className="img-url-add" onClick={addUrlImg}>ADD</button>
           </div>
         </div>
+        {error && <div className="auth-error" style={{ marginBottom: 8 }}>{error}</div>}
         <div className="modal-actions">
           <button className="btn-cancel" onClick={onClose}>CANCEL</button>
           <button className="btn-add" onClick={handleSave} disabled={saving}>

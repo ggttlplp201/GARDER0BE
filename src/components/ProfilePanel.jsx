@@ -10,19 +10,37 @@ const PROFILE_KEYS = ['p-name','p-fav-brand','p-fav-designer','p-fav-season',
 export default function ProfilePanel({ open, user, onClose, onSignOut, avatarUrl, onAvatarChange }) {
   const [profile, setProfile] = useState({});
 
+  const [saveError, setSaveError] = useState('');
   const storageKey = `garderobe-profile-${user?.id || 'guest'}`;
 
   useEffect(() => {
     if (!open) return;
-    try { setProfile(JSON.parse(localStorage.getItem(storageKey) || '{}')); } catch {}
-  }, [open, storageKey]);
+    if (user) {
+      sb.auth.getUser().then(({ data: { user: u } }) => {
+        const meta = u?.user_metadata?.profile || {};
+        setProfile(Object.keys(meta).length ? meta : tryLocalProfile(storageKey));
+      });
+    } else {
+      setProfile(tryLocalProfile(storageKey));
+    }
+  }, [open, user, storageKey]);
+
+  function tryLocalProfile(key) {
+    try { return JSON.parse(localStorage.getItem(key) || '{}'); } catch { return {}; }
+  }
 
   function set(key, val) { setProfile(p => ({ ...p, [key]: val })); }
 
-  function save() {
+  async function save() {
     const cleaned = {};
     PROFILE_KEYS.forEach(k => { cleaned[k] = (profile[k] || '').trim(); });
-    localStorage.setItem(storageKey, JSON.stringify(cleaned));
+    setSaveError('');
+    if (user) {
+      const { error } = await sb.auth.updateUser({ data: { profile: cleaned } });
+      if (error) { setSaveError('Failed to save profile.'); return; }
+    } else {
+      localStorage.setItem(storageKey, JSON.stringify(cleaned));
+    }
     onClose();
   }
 
@@ -31,11 +49,14 @@ export default function ProfilePanel({ open, user, onClose, onSignOut, avatarUrl
     const file = await maybeConvertHeic(raw);
     const path = `profile/${user.id}/avatar`;
     const { error } = await sb.storage.from('images').upload(path, file, { contentType: file.type, upsert: true });
-    if (error) { alert('Avatar upload failed: ' + error.message); return; }
+    if (error) { setSaveError('Avatar upload failed.'); return; }
     const url = `${STORAGE}/images/${path}?t=${Date.now()}`;
-    const saved = JSON.parse(localStorage.getItem(storageKey) || '{}');
-    saved.avatarUrl = url;
-    localStorage.setItem(storageKey, JSON.stringify(saved));
+    if (user) {
+      await sb.auth.updateUser({ data: { profile: { ...profile, avatarUrl: url } } });
+    } else {
+      const saved = tryLocalProfile(storageKey);
+      localStorage.setItem(storageKey, JSON.stringify({ ...saved, avatarUrl: url }));
+    }
     onAvatarChange(url);
   }
 
@@ -75,6 +96,7 @@ export default function ProfilePanel({ open, user, onClose, onSignOut, avatarUrl
         <div className="profile-field"><label>LOCATION</label><input value={profile['p-location'] || ''} onChange={e => set('p-location', e.target.value)} placeholder="e.g. Tokyo, London" /></div>
         <div className="profile-field"><label>BIO</label><textarea rows="3" value={profile['p-bio'] || ''} onChange={e => set('p-bio', e.target.value)} placeholder="A few words about your style..." /></div>
 
+        {saveError && <div className="auth-error" style={{ marginBottom: 8 }}>{saveError}</div>}
         <button className="profile-save-btn" onClick={save}>SAVE PROFILE</button>
         <div className="profile-user-email">{user?.email || ''}</div>
         <button className="profile-signout-btn" onClick={onSignOut}>SIGN OUT</button>

@@ -45,12 +45,15 @@ export default function Inventory({ user, onSignOut }) {
 
   useEffect(() => {
     fetchItems();
+  }, [fetchItems]);
+
+  useEffect(() => {
     const key = `garderobe-profile-${user?.id || 'guest'}`;
     try {
       const p = JSON.parse(localStorage.getItem(key) || '{}');
       if (p.avatarUrl) setAvatarUrl(p.avatarUrl);
     } catch {}
-  }, []);
+  }, [user?.id]);
 
   // Sort & group
   const sorted = [...items].sort((a, b) => {

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import ImageUploadZone from './ImageUploadZone';
 import { ITEM_TYPES } from '../lib/constants';
 
@@ -8,6 +8,7 @@ export default function AddItemModal({ open, onClose, onAdd }) {
   const [fields, setFields]   = useState(DEFAULT_FIELDS);
   const [pending, setPending] = useState([]);
   const [saving, setSaving]   = useState(false);
+  const [error, setError]     = useState('');
 
   function set(key, val) { setFields(f => ({ ...f, [key]: val })); }
 
@@ -17,15 +18,16 @@ export default function AddItemModal({ open, onClose, onAdd }) {
 
   async function handleAdd() {
     if (!fields.name.trim()) return;
-    setSaving(true);
+    setSaving(true); setError('');
     try { await onAdd(fields, pending); handleClose(); }
-    catch (err) { alert('Error saving item: ' + err.message); }
+    catch (err) { setError(err.message || 'Failed to save item.'); }
     finally { setSaving(false); }
   }
 
   function handleClose() {
     setFields(DEFAULT_FIELDS);
     setPending([]);
+    setError('');
     onClose();
   }
 
@@ -35,10 +37,19 @@ export default function AddItemModal({ open, onClose, onAdd }) {
     set('urlInput', '');
   }
 
+  const modalRef = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = e => { if (e.key === 'Escape') handleClose(); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+
   if (!open) return null;
 
   return (
-    <div className="modal-bg open" onClick={e => { if (e.target === e.currentTarget) handleClose(); }}>
+    <div className="modal-bg open" role="dialog" aria-modal="true" aria-label="Add new item" ref={modalRef} onClick={e => { if (e.target === e.currentTarget) handleClose(); }}>
       <div className="modal">
         <h2>ADD NEW ITEM</h2>
         <div className="field">
@@ -87,6 +98,7 @@ export default function AddItemModal({ open, onClose, onAdd }) {
           <button className="img-url-add" onClick={addUrlImg}>ADD</button>
         </div>
 
+        {error && <div className="auth-error" style={{ marginBottom: 8 }}>{error}</div>}
         <div className="modal-actions">
           <button className="btn-cancel" onClick={handleClose}>CANCEL</button>
           <button className="btn-add" onClick={handleAdd} disabled={saving}>
