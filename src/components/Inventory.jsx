@@ -211,7 +211,14 @@ export default function Inventory({ user, onSignOut, onTotalChange }) {
         onClose={() => setProfileOpen(false)}
         onSignOut={onSignOut}
         avatarUrl={avatarUrl}
-        onAvatarChange={url => { setAvatarUrl(url); }}
+        onAvatarChange={url => {
+          setAvatarUrl(url);
+          const key = `garderobe-profile-${user?.id || 'guest'}`;
+          try {
+            const p = JSON.parse(localStorage.getItem(key) || '{}');
+            localStorage.setItem(key, JSON.stringify({ ...p, avatarUrl: url }));
+          } catch {}
+        }}
       />
 
       {lbItem && (
