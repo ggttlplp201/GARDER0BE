@@ -29,11 +29,13 @@ export async function removeBg(file, rawName) {
       if (res.ok) return await res.blob();
       console.warn('remove-bg backend error:', res.status, await res.text());
     } else if (REMOVE_BG_API_KEY) {
-      fd.append('size', 'auto');
+      const bgFd = new FormData();
+      bgFd.append('image_file', file, rawName);
+      bgFd.append('size', 'auto');
       const res = await fetch('https://api.remove.bg/v1.0/removebg', {
         method: 'POST',
         headers: { 'X-Api-Key': REMOVE_BG_API_KEY },
-        body: fd,
+        body: bgFd,
       });
       if (res.ok) return await res.blob();
       console.warn('remove.bg error:', res.status, await res.text());
