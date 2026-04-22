@@ -1,4 +1,4 @@
-import { API_URL, REMOVE_BG_API_KEY, STORAGE } from './constants';
+import { API_URL, STORAGE } from './constants';
 import { sb } from './supabase';
 
 export function parseImageUrls(raw) {
@@ -21,24 +21,25 @@ export async function maybeConvertHeic(file) {
 }
 
 export async function removeBg(file, rawName) {
+  if (!API_URL) return file; // no backend configured — skip silently
   try {
     const fd = new FormData();
     fd.append('file', file, rawName);
-    if (API_URL) {
-      const res = await fetch(`${API_URL}/remove-bg`, { method: 'POST', body: fd });
-      if (res.ok) return await res.blob();
-    } else {
-      fd.append('size', 'auto');
-      const res = await fetch('https://api.remove.bg/v1.0/removebg', {
-        method: 'POST', headers: { 'X-Api-Key': REMOVE_BG_API_KEY }, body: fd,
-      });
-      if (res.ok) return await res.blob();
-    }
+    const res = await fetch(`${API_URL}/remove-bg`, { method: 'POST', body: fd });
+    if (res.ok) return await res.blob();
   } catch {}
   return file;
 }
 
 export async function autoTagWithClaude(blob) {
+  if (API_URL) {
+    const fd = new FormData();
+    fd.append('file', blob, 'item.jpg');
+    const resp = await fetch(`${API_URL}/tag`, { method: 'POST', body: fd });
+    if (!resp.ok) throw new Error(await readApiError(resp, 'AI tagging failed'));
+    return await resp.json();
+  }
+
   const base64 = await new Promise((res, rej) => {
     const r = new FileReader();
     r.onload = () => res(r.result.split(',')[1]);
@@ -46,14 +47,6 @@ export async function autoTagWithClaude(blob) {
     r.readAsDataURL(blob);
   });
   const mediaType = blob.type === 'image/png' ? 'image/png' : 'image/jpeg';
-
-  if (API_URL) {
-    const fd = new FormData();
-    fd.append('file', blob, 'item.jpg');
-    const resp = await fetch(`${API_URL}/tag`, { method: 'POST', body: fd });
-    if (!resp.ok) throw new Error(await resp.text());
-    return await resp.json();
-  }
 
   // Use Supabase JS client to avoid CORS issues
   const { data, error } = await sb.functions.invoke('claude-tag', {
@@ -64,6 +57,16 @@ export async function autoTagWithClaude(blob) {
   const match = raw.match(/\{[\s\S]*\}/);
   if (!match) throw new Error('no JSON in response');
   return JSON.parse(match[0]);
+}
+
+async function readApiError(response, fallback) {
+  const text = await response.text();
+  try {
+    const data = JSON.parse(text);
+    return data.detail || fallback;
+  } catch {
+    return text || fallback;
+  }
 }
 
 const blank = v => !v || /^(unknown|n\/a|none|unidentified|not visible|unclear|-)$/i.test(v.trim());
