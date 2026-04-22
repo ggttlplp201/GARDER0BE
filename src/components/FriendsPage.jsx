@@ -15,12 +15,13 @@ export default function FriendsPage({ user, onViewProfile }) {
   const [friends, setFriends]   = useState([]);
   const [incoming, setIncoming] = useState([]);
   const [outgoing, setOutgoing] = useState([]);
+  const [likes, setLikes]       = useState([]);
   const [loading, setLoading]   = useState(true);
 
   const load = useCallback(async () => {
     if (!user) return;
     setLoading(true);
-    const [{ data: inc }, { data: out }, { data: acc }] = await Promise.all([
+    const [{ data: inc }, { data: out }, { data: acc }, { data: lks }] = await Promise.all([
       sb.from('friend_requests')
         .select('id, from_user_id, profiles!friend_requests_from_user_id_fkey(id, username, avatar_url, location)')
         .eq('to_user_id', user.id).eq('status', 'pending'),
@@ -31,9 +32,15 @@ export default function FriendsPage({ user, onViewProfile }) {
         .select('id, from_user_id, to_user_id, profiles!friend_requests_from_user_id_fkey(id,username,avatar_url,location), to_profiles:profiles!friend_requests_to_user_id_fkey(id,username,avatar_url,location)')
         .or(`from_user_id.eq.${user.id},to_user_id.eq.${user.id}`)
         .eq('status', 'accepted'),
+      sb.from('profile_likes')
+        .select('id, user_id, created_at, profiles!profile_likes_user_id_fkey(id, username, avatar_url)')
+        .eq('liked_user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(20),
     ]);
     setIncoming(inc || []);
     setOutgoing(out || []);
+    setLikes(lks || []);
     setFriends((acc || []).map(r => {
       const isFrom = r.from_user_id === user.id;
       return isFrom ? r.to_profiles : r.profiles;
@@ -71,6 +78,9 @@ export default function FriendsPage({ user, onViewProfile }) {
         </button>
         <button className={`friends-tab${tab === 'requests' ? ' active' : ''}`} onClick={() => setTab('requests')}>
           REQUESTS {pendingCount > 0 && <span className="friends-badge">{pendingCount}</span>}
+        </button>
+        <button className={`friends-tab${tab === 'likes' ? ' active' : ''}`} onClick={() => setTab('likes')}>
+          LIKES {likes.length > 0 && <span className="friends-count">{likes.length}</span>}
         </button>
       </div>
 
@@ -132,6 +142,26 @@ export default function FriendsPage({ user, onViewProfile }) {
           {incoming.length === 0 && outgoing.length === 0 && (
             <p className="empty">No pending requests.</p>
           )}
+        </>
+      )}
+
+      {!loading && tab === 'likes' && (
+        <>
+          {likes.length === 0
+            ? <p className="empty">Nobody has liked your profile yet.</p>
+            : likes.map(l => (
+              <div key={l.id} className="friends-row" onClick={() => l.profiles && onViewProfile(l.profiles)} style={{ cursor: l.profiles ? 'pointer' : 'default' }}>
+                <Avatar url={l.profiles?.avatar_url} />
+                <div className="friends-row-info">
+                  <div className="friends-row-name">{l.profiles?.username || 'Anonymous'}</div>
+                  <div className="friends-row-meta">{new Date(l.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
+                </div>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" style={{ color: '#e05', flexShrink: 0 }}>
+                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                </svg>
+              </div>
+            ))
+          }
         </>
       )}
     </div>

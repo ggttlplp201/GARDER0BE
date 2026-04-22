@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-
-const RECENT_CUTOFF = Date.now() - 30 * 24 * 60 * 60 * 1000;
+import { useTheme } from '../hooks/useTheme';
 import ItemCard from './ItemCard';
 import MusicPlayer from './MusicPlayer';
 import ProfilePanel from './ProfilePanel';
@@ -38,11 +37,12 @@ function groupKey(item, sortBy) {
 export default function Inventory({ user, onSignOut, onTotalChange }) {
   const { items, loading, fetchItems, addItem, editItem, removeItem } = useItems(user);
   const player = usePlayer();
+  const { dark, toggle: toggleTheme } = useTheme();
 
   const [sortBy, setSortBy]             = useState('brand');
   const [search, setSearch]             = useState('');
   const [filterType, setFilterType]     = useState('');
-  const [filterRecent, setFilterRecent]   = useState(false);
+  const [filterWishlist, setFilterWishlist] = useState(false);
   const [filterPrice, setFilterPrice]   = useState('');
   const [profileOpen, setProfileOpen]   = useState(false);
   const [avatarUrl, setAvatarUrl]       = useState('');
@@ -69,7 +69,7 @@ export default function Inventory({ user, onSignOut, onTotalChange }) {
       if (!item.name?.toLowerCase().includes(q) && !item.brand?.toLowerCase().includes(q)) return false;
     }
     if (filterType && item.type !== filterType) return false;
-    if (filterRecent && new Date(item.created_at).getTime() < RECENT_CUTOFF) return false;
+    if (filterWishlist && item.status !== 'wishlist') return false;
     if (filterPrice === 'u100' && (parseFloat(item.price) || 0) >= 100) return false;
     if (filterPrice === '100-500' && ((parseFloat(item.price) || 0) < 100 || (parseFloat(item.price) || 0) > 500)) return false;
     if (filterPrice === '500p' && (parseFloat(item.price) || 0) < 500) return false;
@@ -118,6 +118,12 @@ export default function Inventory({ user, onSignOut, onTotalChange }) {
             <p className="phonetic">/ˈɡärdˌrōb/</p>
             <p className="subtitle">your digital wardrobe for all your grails</p>
           </div>
+          <button className="theme-toggle-btn" onClick={toggleTheme} title="Toggle theme">
+            {dark
+              ? <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+              : <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+            }
+          </button>
           <button className="profile-btn" onClick={() => setProfileOpen(true)} title="Profile">
             {avatarUrl
               ? <img src={avatarUrl} alt="avatar" />
@@ -162,7 +168,7 @@ export default function Inventory({ user, onSignOut, onTotalChange }) {
             <option value="100-500">$100–$500</option>
             <option value="500p">$500+</option>
           </select>
-          <label className="filter-check"><input type="checkbox" checked={filterRecent} onChange={e => setFilterRecent(e.target.checked)} /> RECENT</label>
+          <label className="filter-check"><input type="checkbox" checked={filterWishlist} onChange={e => setFilterWishlist(e.target.checked)} /> WISHLIST</label>
         </div>
 
         {!loading && items.length === 0 && <p className="empty">No items yet. Add your first piece.</p>}
