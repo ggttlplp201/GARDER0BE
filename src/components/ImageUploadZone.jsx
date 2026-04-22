@@ -15,7 +15,7 @@ export default function ImageUploadZone({ pending, onChange, fields, onTagApply,
 
   async function processFiles(rawFiles) {
     if (!rawFiles.length) return;
-    const shouldTag = isFirstUpload && !fields.name;
+    const shouldTag = isFirstUpload && !fields?.name;
     setDropzone('processing');
     const newItems = [];
     for (const raw of rawFiles) {
@@ -26,7 +26,7 @@ export default function ImageUploadZone({ pending, onChange, fields, onTagApply,
         autoTagWithClaude(blob)
           .then(tags => {
             const patches = applyTags(tags, fields);
-            onTagApply(patches);
+            onTagApply?.(patches);
             setAiStatus('AI TAGGED ✓'); setAiClass('done');
             setTimeout(() => { setAiStatus(''); setAiClass(''); }, 3000);
           })
