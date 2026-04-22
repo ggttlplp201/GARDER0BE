@@ -48,7 +48,8 @@ export default function FriendsPage({ user, onViewProfile }) {
     setLikes((lks || []).map(r => ({ ...r, profile: profileMap[r.user_id] || null })));
     setFriends((acc || []).map(r => {
       const otherId = r.from_user_id === user.id ? r.to_user_id : r.from_user_id;
-      return profileMap[otherId] || null;
+      const profile = profileMap[otherId];
+      return profile ? { ...profile, requestId: r.id } : null;
     }).filter(Boolean));
     setLoading(false);
   }, [user]);
@@ -61,6 +62,10 @@ export default function FriendsPage({ user, onViewProfile }) {
   }
   async function decline(id) {
     await sb.from('friend_requests').delete().eq('id', id);
+    load();
+  }
+  async function unfriend(requestId) {
+    await sb.from('friend_requests').delete().eq('id', requestId);
     load();
   }
   async function cancel(id) {
@@ -96,13 +101,15 @@ export default function FriendsPage({ user, onViewProfile }) {
           {friends.length === 0
             ? <p className="empty">No friends yet — find people in Explore.</p>
             : friends.map(f => (
-              <div key={f.id} className="friends-row" onClick={() => onViewProfile(f)} style={{ cursor: 'pointer' }}>
-                <Avatar url={f.avatar_url} />
-                <div className="friends-row-info">
-                  <div className="friends-row-name">{f.username || 'Anonymous'}</div>
-                  {f.location && <div className="friends-row-meta">{f.location}</div>}
+              <div key={f.id} className="friends-row">
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14, flex: 1, cursor: 'pointer', minWidth: 0 }} onClick={() => onViewProfile(f)}>
+                  <Avatar url={f.avatar_url} />
+                  <div className="friends-row-info">
+                    <div className="friends-row-name">{f.username || 'Anonymous'}</div>
+                    {f.location && <div className="friends-row-meta">{f.location}</div>}
+                  </div>
                 </div>
-                <span className="friends-row-arrow">›</span>
+                <button className="friend-btn decline" onClick={() => unfriend(f.requestId)}>UNFRIEND</button>
               </div>
             ))
           }
