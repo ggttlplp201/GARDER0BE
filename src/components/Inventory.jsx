@@ -43,7 +43,6 @@ export default function Inventory({ user, onSignOut, onTotalChange }) {
   const [search, setSearch]             = useState('');
   const [filterType, setFilterType]     = useState('');
   const [filterStatus, setFilterStatus] = useState('');
-  const [filterMissing, setFilterMissing] = useState(false);
   const [filterRecent, setFilterRecent]   = useState(false);
   const [filterPrice, setFilterPrice]   = useState('');
   const [profileOpen, setProfileOpen]   = useState(false);
@@ -72,7 +71,6 @@ export default function Inventory({ user, onSignOut, onTotalChange }) {
     }
     if (filterType && item.type !== filterType) return false;
     if (filterStatus && (item.status || 'owned') !== filterStatus) return false;
-    if (filterMissing && item.image_url) return false;
     if (filterRecent && new Date(item.created_at).getTime() < RECENT_CUTOFF) return false;
     if (filterPrice === 'u100' && (parseFloat(item.price) || 0) >= 100) return false;
     if (filterPrice === '100-500' && ((parseFloat(item.price) || 0) < 100 || (parseFloat(item.price) || 0) > 500)) return false;
@@ -173,7 +171,6 @@ export default function Inventory({ user, onSignOut, onTotalChange }) {
             <option value="500p">$500+</option>
           </select>
           <label className="filter-check"><input type="checkbox" checked={filterRecent} onChange={e => setFilterRecent(e.target.checked)} /> RECENT</label>
-          <label className="filter-check"><input type="checkbox" checked={filterMissing} onChange={e => setFilterMissing(e.target.checked)} /> NO IMAGE</label>
         </div>
 
         {!loading && items.length === 0 && <p className="empty">No items yet. Add your first piece.</p>}
