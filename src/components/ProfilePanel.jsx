@@ -83,7 +83,8 @@ export default function ProfilePanel({ open, user, onClose, onSignOut, avatarUrl
       const converted = await maybeConvertHeic(raw);
       const resized   = await resizeImage(converted);
       const path = `${user.id}/avatar.jpg`;
-      const { error } = await sb.storage.from('images').upload(path, resized, { contentType: 'image/jpeg', upsert: true });
+      await sb.storage.from('images').remove([path]);
+      const { error } = await sb.storage.from('images').upload(path, resized, { contentType: 'image/jpeg' });
       if (error) { console.error('Avatar upload error:', error); setSaveError(`Upload failed: ${error.message}`); return; }
       const url = `${STORAGE}/images/${path}?t=${Date.now()}`;
       await sb.auth.updateUser({ data: { profile: { ...profile, avatarUrl: url } } });
