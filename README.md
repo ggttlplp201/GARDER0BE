@@ -118,4 +118,4 @@ GitHub Actions runs on every push to `main`:
 
 ## License
 
-© Leon Meng. All rights reserved.
+MIT © Leon Meng
