@@ -132,8 +132,8 @@ export default function App() {
     <>
       {page === 'inventory' && <Inventory user={user} onSignOut={signOut} onTotalChange={setTotal} />}
       {page === 'explore'   && <ExplorePage user={user} externalProfile={friendsProfile} onExternalProfileClear={() => setFriendsProfile(null)} />}
-      {page === 'friends'   && <FriendsPage user={user} onViewProfile={handleViewFriendProfile} />}
-      <BottomNav page={page} onNavigate={p => { setPage(p); if (p === 'friends') { setToasts([]); setRequestCount(0); } }} total={total} showTotal={page === 'inventory' && total > 0} requestCount={requestCount} />
+      {page === 'friends'   && <FriendsPage user={user} onViewProfile={handleViewFriendProfile} onRequestsViewed={() => setRequestCount(0)} />}
+      <BottomNav page={page} onNavigate={p => { setPage(p); if (p === 'friends') setToasts([]); }} total={total} showTotal={page === 'inventory' && total > 0} requestCount={requestCount} />
       <LikeToast toasts={toasts} onDismiss={dismissToast} />
     </>
   );

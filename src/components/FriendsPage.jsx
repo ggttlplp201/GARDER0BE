@@ -10,7 +10,7 @@ function Avatar({ url, size = 44 }) {
   );
 }
 
-export default function FriendsPage({ user, onViewProfile }) {
+export default function FriendsPage({ user, onViewProfile, onRequestsViewed }) {
   const [tab, setTab]           = useState('friends');
   const [friends, setFriends]   = useState([]);
   const [incoming, setIncoming] = useState([]);
@@ -86,7 +86,7 @@ export default function FriendsPage({ user, onViewProfile }) {
         <button className={`friends-tab${tab === 'friends' ? ' active' : ''}`} onClick={() => setTab('friends')}>
           FRIENDS {friends.length > 0 && <span className="friends-count">{friends.length}</span>}
         </button>
-        <button className={`friends-tab${tab === 'requests' ? ' active' : ''}`} onClick={() => setTab('requests')}>
+        <button className={`friends-tab${tab === 'requests' ? ' active' : ''}`} onClick={() => { setTab('requests'); onRequestsViewed?.(); }}>
           REQUESTS {pendingCount > 0 && <span className="friends-badge">{pendingCount}</span>}
         </button>
         <button className={`friends-tab${tab === 'likes' ? ' active' : ''}`} onClick={() => setTab('likes')}>
