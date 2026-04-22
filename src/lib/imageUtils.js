@@ -1,4 +1,4 @@
-import { API_URL, REMOVE_BG_API_KEY, STORAGE } from './constants';
+import { API_URL, STORAGE } from './constants';
 import { sb } from './supabase';
 
 export function parseImageUrls(raw) {
@@ -20,32 +20,15 @@ export async function maybeConvertHeic(file) {
   }
 }
 
-export async function removeBg(file, rawName) {
+export async function removeBg(file) {
   try {
-    const fd = new FormData();
-    fd.append('file', file, rawName);
-    if (API_URL) {
-      const res = await fetch(`${API_URL}/remove-bg`, { method: 'POST', body: fd });
-      if (res.ok) return await res.blob();
-      console.warn('remove-bg backend error:', res.status, await res.text());
-    } else if (REMOVE_BG_API_KEY) {
-      const bgFd = new FormData();
-      bgFd.append('image_file', file, rawName);
-      bgFd.append('size', 'auto');
-      const res = await fetch('https://api.remove.bg/v1.0/removebg', {
-        method: 'POST',
-        headers: { 'X-Api-Key': REMOVE_BG_API_KEY },
-        body: bgFd,
-      });
-      if (res.ok) return await res.blob();
-      console.warn('remove.bg error:', res.status, await res.text());
-    } else {
-      console.warn('remove.bg: no API key configured');
-    }
+    const { removeBackground } = await import('@imgly/background-removal');
+    const blob = await removeBackground(file);
+    return blob;
   } catch (e) {
-    console.warn('remove.bg exception:', e.message);
+    console.warn('removeBg failed:', e.message);
+    return file;
   }
-  return file;
 }
 
 export async function autoTagWithClaude(blob) {
