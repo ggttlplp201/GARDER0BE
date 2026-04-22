@@ -9,7 +9,7 @@ export function useItems(user) {
   const fetchItems = useCallback(async () => {
     if (!user) return;
     setLoading(true);
-    const { data, error } = await sb.from('items').select('*').order('created_at', { ascending: true });
+    const { data, error } = await sb.from('items').select('*').eq('user_id', user.id).order('created_at', { ascending: true });
     setLoading(false);
     if (error) { console.error(error); return; }
     setItems(data);
