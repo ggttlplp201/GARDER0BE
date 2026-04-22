@@ -1,4 +1,4 @@
-import { API_URL, SUPABASE_ANON_KEY, CLAUDE_TAG_URL, STORAGE } from './constants';
+import { API_URL, STORAGE } from './constants';
 import { sb } from './supabase';
 
 export function parseImageUrls(raw) {
@@ -48,21 +48,14 @@ export async function autoTagWithClaude(blob) {
     return await resp.json();
   }
 
-  // Supabase edge function fallback
-  const resp = await fetch(CLAUDE_TAG_URL, {
-    method: 'POST',
-    headers: {
-      'apikey': SUPABASE_ANON_KEY,
-      'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-      'content-type': 'application/json',
-    },
-    body: JSON.stringify({ base64, mediaType }),
+  // Use Supabase JS client to avoid CORS issues
+  const { data, error } = await sb.functions.invoke('claude-tag', {
+    body: { base64, mediaType },
   });
-  if (!resp.ok) throw new Error(await resp.text());
-  const data = await resp.json();
-  const raw = data.content?.[0]?.text?.trim() || '';
+  if (error) throw new Error(error.message);
+  const raw = data?.content?.[0]?.text?.trim() || '';
   const match = raw.match(/\{[\s\S]*\}/);
-  if (!match) throw new Error('no JSON');
+  if (!match) throw new Error('no JSON in response');
   return JSON.parse(match[0]);
 }
 
