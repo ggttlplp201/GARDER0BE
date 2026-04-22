@@ -4,7 +4,7 @@ import AuthScreen from './components/AuthScreen';
 import Inventory from './components/Inventory';
 import ExplorePage from './components/ExplorePage';
 import FriendsPage from './components/FriendsPage';
-import { enableGyro } from './lib/gyro';
+import { requestGyroPermission } from './lib/gyro';
 import { sb } from './lib/supabase';
 import './App.css';
 
@@ -78,12 +78,8 @@ export default function App() {
 
   useEffect(() => {
     if (!window.DeviceOrientationEvent) return;
-    async function tryEnable() {
-      const status = await enableGyro();
-      if (status !== 'denied') document.removeEventListener('pointerdown', tryEnable);
-    }
-    document.addEventListener('pointerdown', tryEnable);
-    return () => document.removeEventListener('pointerdown', tryEnable);
+    document.addEventListener('pointerdown', requestGyroPermission);
+    return () => document.removeEventListener('pointerdown', requestGyroPermission);
   }, []);
 
   useEffect(() => {
