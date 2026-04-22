@@ -114,7 +114,7 @@ export default function ExplorePage() {
           </div>
           <input
             className="search-input"
-            style={{ marginBottom: 20 }}
+            style={{ marginBottom: 20, width: '100%', boxSizing: 'border-box' }}
             placeholder="SEARCH NAME, LOCATION"
             value={search}
             onChange={e => setSearch(e.target.value)}
