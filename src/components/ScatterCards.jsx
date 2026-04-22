@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { buildScatterFrame, SC_PERIM_LEN } from '../lib/ascii';
-import { gyroState, gyroCallbacks, isGyroActive } from '../lib/gyro';
+import { gyroState, gyroCallbacks, isGyroActive, enableGyro } from '../lib/gyro';
 
 const SCATTER_LAYOUT = [
   { x:  3, y:  5, rot: -14 },
@@ -13,6 +13,7 @@ const SCATTER_LAYOUT = [
 function applyTilt(card) {
   const shine = card.querySelector('.card-shine');
 
+  card.addEventListener('pointerdown', () => enableGyro());
   card.addEventListener('mousemove', e => {
     if (isGyroActive()) return;
     const rect = card.getBoundingClientRect();

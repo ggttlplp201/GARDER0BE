@@ -8,7 +8,7 @@ export default function ItemCard({ item, onRemove, onEdit, onClick }) {
   const confirmTimer    = useRef(null);
   const gyroCallbackRef = useRef(null);
   const reducedMotion   = useRef(typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
-  const isTouch         = useRef(typeof window !== 'undefined' && 'ontouchstart' in window);
+  const hasGyro         = useRef(typeof window !== 'undefined' && !!window.DeviceOrientationEvent);
   const [imgIdx, setImgIdx]         = useState(0);
   const [confirming, setConfirming] = useState(false);
   const imgUrls  = parseImageUrls(item.image_url);
@@ -18,7 +18,7 @@ export default function ItemCard({ item, onRemove, onEdit, onClick }) {
     : '';
 
   useEffect(() => {
-    if (!isTouch.current || reducedMotion.current) return;
+    if (!hasGyro.current || reducedMotion.current) return;
     const card  = cardRef.current;
     const shine = shineRef.current;
     gyroCallbackRef.current = () => {

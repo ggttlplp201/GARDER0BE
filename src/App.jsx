@@ -77,9 +77,13 @@ export default function App() {
   const [toasts, setToasts]             = useState([]);
 
   useEffect(() => {
-    if (!('ontouchstart' in window)) return;
-    document.addEventListener('touchstart', enableGyro, { once: true, passive: true });
-    return () => document.removeEventListener('touchstart', enableGyro);
+    if (!window.DeviceOrientationEvent) return;
+    async function tryEnable() {
+      const status = await enableGyro();
+      if (status !== 'denied') document.removeEventListener('pointerdown', tryEnable);
+    }
+    document.addEventListener('pointerdown', tryEnable);
+    return () => document.removeEventListener('pointerdown', tryEnable);
   }, []);
 
   useEffect(() => {
