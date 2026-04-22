@@ -43,10 +43,19 @@ export default function EditItemModal({ item, onClose, onSave }) {
     setEditImgs(prev => [...prev, ...newImgs]);
   }
 
-  function addUrlImg() {
+  async function addUrlImg() {
     const url = fields.urlInput.trim(); if (!url) return;
-    setEditImgs(prev => [...prev, { src: url, blob: null, storedUrl: null }]);
     set('urlInput', '');
+    try {
+      const resp = await fetch(url);
+      const rawBlob = await resp.blob();
+      const blob = await removeBg(new File([rawBlob], 'image.jpg', { type: rawBlob.type }));
+      const src = URL.createObjectURL(blob);
+      blobUrlsRef.current.push(src);
+      setEditImgs(prev => [...prev, { src, blob, storedUrl: null }]);
+    } catch {
+      setEditImgs(prev => [...prev, { src: url, blob: null, storedUrl: null }]);
+    }
   }
 
   function removeImg(idx) { setEditImgs(prev => prev.filter((_, i) => i !== idx)); }

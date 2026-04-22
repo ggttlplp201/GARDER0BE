@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import ImageUploadZone from './ImageUploadZone';
 import BrandInput from './BrandInput';
 import { ITEM_TYPES } from '../lib/constants';
+import { removeBg } from '../lib/imageUtils';
 
 const DEFAULT_FIELDS = { name: '', color: '', brand: '', type: 'Shirt', size: '', price: '', urlInput: '', status: 'owned', condition: '' };
 
@@ -32,10 +33,19 @@ export default function AddItemModal({ open, onClose, onAdd }) {
     onClose();
   }
 
-  function addUrlImg() {
+  async function addUrlImg() {
     const url = fields.urlInput.trim(); if (!url) return;
-    setPending(p => [...p, { src: url, blob: null, url }]);
     set('urlInput', '');
+    try {
+      const resp = await fetch(url);
+      const rawBlob = await resp.blob();
+      const blob = await removeBg(new File([rawBlob], 'image.jpg', { type: rawBlob.type }));
+      const src = URL.createObjectURL(blob);
+      setPending(p => [...p, { src, blob, url: null }]);
+    } catch {
+      // fallback: use URL as-is if fetch/removeBg fails
+      setPending(p => [...p, { src: url, blob: null, url }]);
+    }
   }
 
   const modalRef = useRef(null);

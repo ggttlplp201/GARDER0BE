@@ -115,7 +115,7 @@ export default function ExplorePage() {
           <input
             className="search-input"
             style={{ marginBottom: 20 }}
-            placeholder="SEARCH NAME, LOCATION..."
+            placeholder="SEARCH NAME, LOCATION"
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
