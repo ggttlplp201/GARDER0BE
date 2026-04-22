@@ -176,13 +176,7 @@ export default function Inventory({ user, onSignOut }) {
         {!loading && items.length === 0 && <p className="empty">No items yet. Add your first piece.</p>}
         {!loading && items.length > 0 && filtered.length === 0 && <p className="empty">No items match the current filters.</p>}
 
-        {loading && (
-          <div className="cards-grid" style={{ marginTop: 8 }}>
-            {[...Array(6)].map((_, i) => <div key={i} className="skeleton-card" />)}
-          </div>
-        )}
-
-        <div id="catalog">
+<div id="catalog">
           {groups.map(group => {
             const groupItems = sorted.filter(i => groupKey(i, sortBy) === group);
             return (
