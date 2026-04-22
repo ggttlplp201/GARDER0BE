@@ -1,4 +1,4 @@
-import { useRef, useCallback, useEffect } from 'react';
+import { useRef, useState, useCallback, useEffect } from 'react';
 import { maybeConvertHeic, removeBg } from '../lib/imageUtils';
 
 export default function ImageUploadZone({ pending, onChange, fields, onTagApply, isFirstUpload }) {
