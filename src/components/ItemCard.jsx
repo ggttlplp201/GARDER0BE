@@ -1,10 +1,11 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { parseImageUrls } from '../lib/imageUtils';
 
 export default function ItemCard({ item, onRemove, onEdit, onClick }) {
   const cardRef      = useRef(null);
   const shineRef     = useRef(null);
   const confirmTimer = useRef(null);
+  const reducedMotion = useRef(typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   const [imgIdx, setImgIdx]         = useState(0);
   const [confirming, setConfirming] = useState(false);
   const imgUrls   = parseImageUrls(item.image_url);
@@ -14,6 +15,7 @@ export default function ItemCard({ item, onRemove, onEdit, onClick }) {
     : '';
 
   function handleMouseMove(e) {
+    if (reducedMotion.current) return;
     const card = cardRef.current; if (!card) return;
     const r = card.getBoundingClientRect();
     const x = (e.clientX - r.left) / r.width  - 0.5;
@@ -79,11 +81,13 @@ export default function ItemCard({ item, onRemove, onEdit, onClick }) {
         <div ref={shineRef} className="card-shine" />
       </div>
       <div className="card-info">
+        {item.status === 'wishlist' && <span className="card-status-badge">WISHLIST</span>}
         <div className="card-name">{item.name || 'Untitled'}</div>
         <div className="card-brand">Brand: {item.brand || '—'}</div>
-        <div className="card-type">Type: {item.type}</div>
+        <div className="card-type">Type: {item.type}{item.condition ? ` · ${item.condition}` : ''}</div>
         {item.size  && <div className="card-type">Size: {item.size}</div>}
         {item.price > 0 && <div className="card-price">${parseFloat(item.price).toLocaleString()}</div>}
+        {item.tags && <div className="card-tags">{item.tags}</div>}
         <button className="edit-btn" onClick={e => { e.stopPropagation(); onEdit(item.id); }}>EDIT</button>
       </div>
     </div>

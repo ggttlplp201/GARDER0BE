@@ -4,10 +4,13 @@ import { parseImageUrls, uploadImageBlob, deleteStorageUrl } from '../lib/imageU
 
 export function useItems(user) {
   const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   const fetchItems = useCallback(async () => {
     if (!user) return;
+    setLoading(true);
     const { data, error } = await sb.from('items').select('*').order('created_at', { ascending: true });
+    setLoading(false);
     if (error) { console.error(error); return; }
     setItems(data);
     // Cache preview URLs for scatter cards
@@ -35,6 +38,13 @@ export function useItems(user) {
       name: fullName, brand: fields.brand, type: fields.type,
       size: fields.size, price: parseFloat(fields.price) || 0,
       image_url, user_id: user.id,
+      status: fields.status || 'owned',
+      condition: fields.condition || null,
+      purchase_date: fields.purchase_date || null,
+      retail_price: parseFloat(fields.retail_price) || null,
+      notes: fields.notes || null,
+      resale_estimate: parseFloat(fields.resale_estimate) || null,
+      tags: fields.tags || null,
     });
     if (error) throw new Error(error.message);
     await fetchItems();
@@ -65,6 +75,13 @@ export function useItems(user) {
     const { error } = await sb.from('items').update({
       name: fullName, brand: fields.brand, type: fields.type,
       size: fields.size, price: parseFloat(fields.price) || 0, image_url,
+      status: fields.status || 'owned',
+      condition: fields.condition || null,
+      purchase_date: fields.purchase_date || null,
+      retail_price: parseFloat(fields.retail_price) || null,
+      notes: fields.notes || null,
+      resale_estimate: parseFloat(fields.resale_estimate) || null,
+      tags: fields.tags || null,
     }).eq('id', id);
     if (error) throw new Error(error.message);
     await fetchItems();
@@ -78,5 +95,5 @@ export function useItems(user) {
     await fetchItems();
   }
 
-  return { items, fetchItems, addItem, editItem, removeItem };
+  return { items, loading, fetchItems, addItem, editItem, removeItem };
 }

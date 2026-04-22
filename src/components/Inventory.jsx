@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import ItemCard from './ItemCard';
 import MusicPlayer from './MusicPlayer';
 import ProfilePanel from './ProfilePanel';
@@ -6,6 +6,7 @@ import Lightbox from './Lightbox';
 import AddItemModal from './AddItemModal';
 import EditItemModal from './EditItemModal';
 import { useItems } from '../hooks/useItems';
+import { ITEM_TYPES } from '../lib/constants';
 import { usePlayer } from '../hooks/usePlayer';
 
 const SORT_OPTIONS = [
@@ -33,10 +34,16 @@ function groupKey(item, sortBy) {
 }
 
 export default function Inventory({ user, onSignOut }) {
-  const { items, fetchItems, addItem, editItem, removeItem } = useItems(user);
+  const { items, loading, fetchItems, addItem, editItem, removeItem } = useItems(user);
   const player = usePlayer();
 
   const [sortBy, setSortBy]           = useState('brand');
+  const [search, setSearch]           = useState('');
+  const [filterType, setFilterType]   = useState('');
+  const [filterStatus, setFilterStatus] = useState('');
+  const [filterMissing, setFilterMissing] = useState(false);
+  const [filterRecent, setFilterRecent]   = useState(false);
+  const [filterPrice, setFilterPrice] = useState('');
   const [profileOpen, setProfileOpen] = useState(false);
   const [avatarUrl, setAvatarUrl]     = useState('');
   const [lbItem, setLbItem]           = useState(null);
@@ -55,8 +62,34 @@ export default function Inventory({ user, onSignOut }) {
     } catch {}
   }, [user?.id]);
 
+  // Filter
+  const filtered = items.filter(item => {
+    if (search) {
+      const q = search.toLowerCase();
+      if (!item.name?.toLowerCase().includes(q) && !item.brand?.toLowerCase().includes(q) && !item.tags?.toLowerCase().includes(q)) return false;
+    }
+    if (filterType && item.type !== filterType) return false;
+    if (filterStatus && (item.status || 'owned') !== filterStatus) return false;
+    if (filterMissing && item.image_url) return false;
+    if (filterRecent && Date.now() - new Date(item.created_at).getTime() > 30 * 24 * 60 * 60 * 1000) return false;
+    if (filterPrice === 'u100' && (parseFloat(item.price) || 0) >= 100) return false;
+    if (filterPrice === '100-500' && ((parseFloat(item.price) || 0) < 100 || (parseFloat(item.price) || 0) > 500)) return false;
+    if (filterPrice === '500p' && (parseFloat(item.price) || 0) < 500) return false;
+    return true;
+  });
+
+  function exportCSV() {
+    const cols = ['name','brand','type','size','price','status','condition','purchase_date','retail_price','resale_estimate','tags','notes','created_at'];
+    const rows = [cols, ...items.map(item => cols.map(c => `"${String(item[c] ?? '').replace(/"/g, '""')}"`))]
+      .map(r => r.join(','));
+    const url = URL.createObjectURL(new Blob([rows.join('\n')], { type: 'text/csv' }));
+    const a = document.createElement('a');
+    a.href = url; a.download = `garderobe-${new Date().toISOString().slice(0,10)}.csv`;
+    a.click(); URL.revokeObjectURL(url);
+  }
+
   // Sort & group
-  const sorted = [...items].sort((a, b) => {
+  const sorted = [...filtered].sort((a, b) => {
     if (sortBy === 'date')  return new Date(b.created_at) - new Date(a.created_at);
     if (sortBy === 'price') return (parseFloat(b.price) || 0) - (parseFloat(a.price) || 0);
     if (sortBy === 'type')  return (a.type || '').localeCompare(b.type || '');
@@ -65,7 +98,7 @@ export default function Inventory({ user, onSignOut }) {
 
   const rawGroups = [...new Set(sorted.map(i => groupKey(i, sortBy)))];
   const groups    = sortBy === 'price' ? PRICE_ORDER.filter(g => rawGroups.includes(g)) : rawGroups;
-  const total     = items.reduce((s, i) => s + (parseFloat(i.price) || 0), 0);
+  const total     = items.filter(i => (i.status || 'owned') === 'owned').reduce((s, i) => s + (parseFloat(i.price) || 0), 0);
 
   async function handleAdd(fields, pending) {
     await addItem(fields, pending);
@@ -114,9 +147,38 @@ export default function Inventory({ user, onSignOut }) {
               {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
           </div>
+          {items.length > 0 && <button className="export-btn" onClick={exportCSV}>EXPORT CSV</button>}
         </div>
 
-        {items.length === 0 && <p className="empty">No items yet. Add your first piece.</p>}
+        <div className="filter-row">
+          <input className="search-input" placeholder="SEARCH NAME, BRAND, TAGS..." value={search} onChange={e => setSearch(e.target.value)} />
+          <select className="filter-select" value={filterType} onChange={e => setFilterType(e.target.value)}>
+            <option value="">ALL TYPES</option>
+            {ITEM_TYPES.map(t => <option key={t}>{t}</option>)}
+          </select>
+          <select className="filter-select" value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
+            <option value="">OWNED + WISHLIST</option>
+            <option value="owned">OWNED</option>
+            <option value="wishlist">WISHLIST</option>
+          </select>
+          <select className="filter-select" value={filterPrice} onChange={e => setFilterPrice(e.target.value)}>
+            <option value="">ANY PRICE</option>
+            <option value="u100">Under $100</option>
+            <option value="100-500">$100–$500</option>
+            <option value="500p">$500+</option>
+          </select>
+          <label className="filter-check"><input type="checkbox" checked={filterRecent} onChange={e => setFilterRecent(e.target.checked)} /> RECENT</label>
+          <label className="filter-check"><input type="checkbox" checked={filterMissing} onChange={e => setFilterMissing(e.target.checked)} /> NO IMAGE</label>
+        </div>
+
+        {!loading && items.length === 0 && <p className="empty">No items yet. Add your first piece.</p>}
+        {!loading && items.length > 0 && filtered.length === 0 && <p className="empty">No items match the current filters.</p>}
+
+        {loading && (
+          <div className="cards-grid" style={{ marginTop: 8 }}>
+            {[...Array(6)].map((_, i) => <div key={i} className="skeleton-card" />)}
+          </div>
+        )}
 
         <div id="catalog">
           {groups.map(group => {

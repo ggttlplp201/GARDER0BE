@@ -6,7 +6,11 @@ import './App.css';
 export default function App() {
   const { user, authMode, setAuthMode, signIn, signUp, signOut } = useAuth();
 
-  if (user === undefined) return null; // loading
+  if (user === undefined) return (
+    <div className="app-loading">
+      <span className="app-loading-text">GARDEROBE</span>
+    </div>
+  );
 
   if (!user) {
     return (
