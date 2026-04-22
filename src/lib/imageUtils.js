@@ -48,11 +48,14 @@ export async function autoTagWithClaude(blob) {
   });
   const mediaType = blob.type === 'image/png' ? 'image/png' : 'image/jpeg';
 
-  // Use Supabase JS client to avoid CORS issues
-  const { data, error } = await sb.functions.invoke('claude-tag', {
-    body: { base64, mediaType },
+  // Netlify serverless function — same domain, no CORS issues
+  const resp = await fetch('/.netlify/functions/claude-tag', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ base64, mediaType }),
   });
-  if (error) throw new Error(error.message);
+  if (!resp.ok) throw new Error(await resp.text());
+  const data = await resp.json();
   const raw = data?.content?.[0]?.text?.trim() || '';
   const match = raw.match(/\{[\s\S]*\}/);
   if (!match) throw new Error('no JSON in response');
