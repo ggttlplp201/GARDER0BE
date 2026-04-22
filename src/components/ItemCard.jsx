@@ -1,32 +1,86 @@
 import { useRef, useState, useEffect } from 'react';
 import { parseImageUrls } from '../lib/imageUtils';
 
+// Module-level gyro — one listener shared across all cards
+let gyroX = 0, gyroY = 0;
+const gyroCallbacks = new Set();
+let gyroActive = false;
+let gyroRequested = false;
+
+function startGyro() {
+  if (gyroActive) return;
+  gyroActive = true;
+  window.addEventListener('deviceorientation', e => {
+    gyroX = (e.gamma || 0) / 30;
+    gyroY = ((e.beta  || 0) - 70) / 40;
+    gyroCallbacks.forEach(fn => fn());
+  }, { passive: true });
+}
+
+async function enableGyro() {
+  if (gyroRequested) return;
+  gyroRequested = true;
+  if (typeof DeviceOrientationEvent?.requestPermission === 'function') {
+    try {
+      const res = await DeviceOrientationEvent.requestPermission();
+      if (res === 'granted') startGyro();
+      else gyroRequested = false;
+    } catch { gyroRequested = false; }
+  } else if ('DeviceOrientationEvent' in window) {
+    startGyro();
+  }
+}
+
 export default function ItemCard({ item, onRemove, onEdit, onClick }) {
-  const cardRef      = useRef(null);
-  const shineRef     = useRef(null);
-  const confirmTimer = useRef(null);
-  const reducedMotion = useRef(typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  const cardRef        = useRef(null);
+  const shineRef       = useRef(null);
+  const confirmTimer   = useRef(null);
+  const gyroCallbackRef = useRef(null);
+  const reducedMotion  = useRef(typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  const isTouch        = useRef(typeof window !== 'undefined' && 'ontouchstart' in window);
   const [imgIdx, setImgIdx]         = useState(0);
   const [confirming, setConfirming] = useState(false);
-  const imgUrls   = parseImageUrls(item.image_url);
-  const multiImg  = imgUrls.length > 1;
-  const dateStr   = item.created_at
+  const imgUrls  = parseImageUrls(item.image_url);
+  const multiImg = imgUrls.length > 1;
+  const dateStr  = item.created_at
     ? new Date(item.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
     : '';
 
+  // Register gyro callback on touch devices
+  useEffect(() => {
+    if (!isTouch.current || reducedMotion.current) return;
+    gyroCallbackRef.current = () => {
+      const card = cardRef.current; if (!card) return;
+      const x = Math.max(-1, Math.min(1, gyroX));
+      const y = Math.max(-1, Math.min(1, gyroY));
+      card.style.transform = `perspective(600px) rotateY(${x * 14}deg) rotateX(${-y * 14}deg) scale(1.02)`;
+      if (shineRef.current) {
+        shineRef.current.style.opacity = '0.6';
+        shineRef.current.style.background = `linear-gradient(${115 + x * 30}deg, transparent 30%, rgba(255,255,255,${0.15 + Math.abs(x) * 0.15}) 50%, transparent 70%)`;
+      }
+    };
+    gyroCallbacks.add(gyroCallbackRef.current);
+    return () => {
+      if (gyroCallbackRef.current) gyroCallbacks.delete(gyroCallbackRef.current);
+      if (cardRef.current) cardRef.current.style.transform = '';
+      if (shineRef.current) shineRef.current.style.opacity = '0';
+    };
+  }, []);
+
   function handleMouseMove(e) {
-    if (reducedMotion.current) return;
+    if (reducedMotion.current || gyroActive) return;
     const card = cardRef.current; if (!card) return;
     const r = card.getBoundingClientRect();
     const x = (e.clientX - r.left) / r.width  - 0.5;
     const y = (e.clientY - r.top)  / r.height - 0.5;
-    card.style.transform = `perspective(500px) rotateY(${x*16}deg) rotateX(${-y*16}deg) scale(1.04) translateZ(10px)`;
+    card.style.transform = `perspective(500px) rotateY(${x * 16}deg) rotateX(${-y * 16}deg) scale(1.04) translateZ(10px)`;
     if (shineRef.current) {
       shineRef.current.style.opacity = '1';
-      shineRef.current.style.background = `linear-gradient(${115+x*30}deg, transparent 30%, rgba(255,255,255,${0.3+Math.abs(x)*0.3}) 50%, transparent 70%)`;
+      shineRef.current.style.background = `linear-gradient(${115 + x * 30}deg, transparent 30%, rgba(255,255,255,${0.3 + Math.abs(x) * 0.3}) 50%, transparent 70%)`;
     }
   }
   function handleMouseLeave() {
+    if (gyroActive) return;
     if (cardRef.current) cardRef.current.style.transform = '';
     if (shineRef.current) shineRef.current.style.opacity = '0';
   }
@@ -52,6 +106,7 @@ export default function ItemCard({ item, onRemove, onEdit, onClick }) {
       onKeyDown={e => e.key === 'Enter' && handleCardClick(e)}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
+      onTouchStart={() => enableGyro()}
     >
       <button
         className={`card-remove-x${confirming ? ' confirming' : ''}`}
@@ -83,11 +138,10 @@ export default function ItemCard({ item, onRemove, onEdit, onClick }) {
       <div className="card-info">
         {item.status === 'wishlist' && <span className="card-status-badge">WISHLIST</span>}
         <div className="card-name">{item.name || 'Untitled'}</div>
-        <div className="card-brand">Brand: {item.brand || '—'}</div>
-        <div className="card-type">Type: {item.type}{item.condition ? ` · ${item.condition}` : ''}</div>
-        {item.size  && <div className="card-type">Size: {item.size}</div>}
+        <div className="card-brand">{item.brand || '—'}</div>
+        <div className="card-type">{item.type}{item.condition ? ` · ${item.condition}` : ''}</div>
+        {item.size  && <div className="card-type">{item.size}</div>}
         {item.price > 0 && <div className="card-price">${parseFloat(item.price).toLocaleString()}</div>}
-        {item.tags && <div className="card-tags">{item.tags}</div>}
         <button className="edit-btn" onClick={e => { e.stopPropagation(); onEdit(item.id); }}>EDIT</button>
       </div>
     </div>

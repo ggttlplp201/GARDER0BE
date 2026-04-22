@@ -41,10 +41,6 @@ export function useItems(user) {
       status: fields.status || 'owned',
       condition: fields.condition || null,
       purchase_date: fields.purchase_date || null,
-      retail_price: parseFloat(fields.retail_price) || null,
-      notes: fields.notes || null,
-      resale_estimate: parseFloat(fields.resale_estimate) || null,
-      tags: fields.tags || null,
     });
     if (error) throw new Error(error.message);
     await fetchItems();
@@ -78,10 +74,6 @@ export function useItems(user) {
       status: fields.status || 'owned',
       condition: fields.condition || null,
       purchase_date: fields.purchase_date || null,
-      retail_price: parseFloat(fields.retail_price) || null,
-      notes: fields.notes || null,
-      resale_estimate: parseFloat(fields.resale_estimate) || null,
-      tags: fields.tags || null,
     }).eq('id', id);
     if (error) throw new Error(error.message);
     await fetchItems();

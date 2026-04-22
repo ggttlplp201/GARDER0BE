@@ -66,7 +66,7 @@ export default function Inventory({ user, onSignOut }) {
   const filtered = items.filter(item => {
     if (search) {
       const q = search.toLowerCase();
-      if (!item.name?.toLowerCase().includes(q) && !item.brand?.toLowerCase().includes(q) && !item.tags?.toLowerCase().includes(q)) return false;
+      if (!item.name?.toLowerCase().includes(q) && !item.brand?.toLowerCase().includes(q)) return false;
     }
     if (filterType && item.type !== filterType) return false;
     if (filterStatus && (item.status || 'owned') !== filterStatus) return false;
@@ -79,7 +79,7 @@ export default function Inventory({ user, onSignOut }) {
   });
 
   function exportCSV() {
-    const cols = ['name','brand','type','size','price','status','condition','purchase_date','retail_price','resale_estimate','tags','notes','created_at'];
+    const cols = ['name','brand','type','size','price','status','condition','purchase_date','created_at'];
     const rows = [cols, ...items.map(item => cols.map(c => `"${String(item[c] ?? '').replace(/"/g, '""')}"`))]
       .map(r => r.join(','));
     const url = URL.createObjectURL(new Blob([rows.join('\n')], { type: 'text/csv' }));
@@ -151,7 +151,7 @@ export default function Inventory({ user, onSignOut }) {
         </div>
 
         <div className="filter-row">
-          <input className="search-input" placeholder="SEARCH NAME, BRAND, TAGS..." value={search} onChange={e => setSearch(e.target.value)} />
+          <input className="search-input" placeholder="SEARCH NAME, BRAND..." value={search} onChange={e => setSearch(e.target.value)} />
           <select className="filter-select" value={filterType} onChange={e => setFilterType(e.target.value)}>
             <option value="">ALL TYPES</option>
             {ITEM_TYPES.map(t => <option key={t}>{t}</option>)}

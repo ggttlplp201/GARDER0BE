@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import ImageUploadZone from './ImageUploadZone';
 import { ITEM_TYPES } from '../lib/constants';
 
-const DEFAULT_FIELDS = { name: '', color: '', brand: '', type: 'Shirt', size: '', price: '', urlInput: '', status: 'owned', condition: '', purchase_date: '', retail_price: '', notes: '', resale_estimate: '', tags: '' };
+const DEFAULT_FIELDS = { name: '', color: '', brand: '', type: 'Shirt', size: '', price: '', urlInput: '', status: 'owned', condition: '', purchase_date: '' };
 
 export default function AddItemModal({ open, onClose, onAdd }) {
   const [fields, setFields]   = useState(DEFAULT_FIELDS);
@@ -97,23 +97,6 @@ export default function AddItemModal({ open, onClose, onAdd }) {
           <label>Purchase Date</label>
           <input type="date" value={fields.purchase_date} onChange={e => set('purchase_date', e.target.value)} />
         </div>
-        <div className="field">
-          <label>Retail Price ($)</label>
-          <input type="number" min="0" value={fields.retail_price} onChange={e => set('retail_price', e.target.value)} placeholder="Original retail" />
-        </div>
-        <div className="field">
-          <label>Resale Estimate ($)</label>
-          <input type="number" min="0" value={fields.resale_estimate} onChange={e => set('resale_estimate', e.target.value)} placeholder="Current market value" />
-        </div>
-        <div className="field">
-          <label>Tags</label>
-          <input value={fields.tags} onChange={e => set('tags', e.target.value)} placeholder="e.g. streetwear, archive, grail" />
-        </div>
-        <div className="field">
-          <label>Notes</label>
-          <textarea rows="2" style={{ width: '100%', padding: '7px 10px', border: '1.5px solid black', fontFamily: 'Arial, sans-serif', fontSize: 13, resize: 'none' }} value={fields.notes} onChange={e => set('notes', e.target.value)} placeholder="Provenance, condition notes, etc." />
-        </div>
-
         <ImageUploadZone
           pending={pending}
           onChange={setPending}

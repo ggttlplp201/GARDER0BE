@@ -3,7 +3,7 @@ import { parseImageUrls, maybeConvertHeic, removeBg } from '../lib/imageUtils';
 import { ITEM_TYPES } from '../lib/constants';
 
 export default function EditItemModal({ item, onClose, onSave }) {
-  const [fields, setFields] = useState({ name: '', color: '', brand: '', type: 'Shirt', size: '', price: '', urlInput: '', status: 'owned', condition: '', purchase_date: '', retail_price: '', notes: '', resale_estimate: '', tags: '' });
+  const [fields, setFields] = useState({ name: '', color: '', brand: '', type: 'Shirt', size: '', price: '', urlInput: '', status: 'owned', condition: '', purchase_date: '' });
   const [editImgs, setEditImgs] = useState([]);
   const [saving, setSaving] = useState(false);
   const [error, setError]   = useState('');
@@ -23,10 +23,6 @@ export default function EditItemModal({ item, onClose, onSave }) {
       status:          item.status          || 'owned',
       condition:       item.condition       || '',
       purchase_date:   item.purchase_date   || '',
-      retail_price:    item.retail_price    || '',
-      notes:           item.notes           || '',
-      resale_estimate: item.resale_estimate || '',
-      tags:            item.tags            || '',
     });
     setEditImgs(parseImageUrls(item.image_url).map(url => ({ src: url, blob: null, storedUrl: url })));
   }, [item]);
@@ -129,22 +125,6 @@ export default function EditItemModal({ item, onClose, onSave }) {
         <div className="field">
           <label>Purchase Date</label>
           <input type="date" value={fields.purchase_date} onChange={e => set('purchase_date', e.target.value)} />
-        </div>
-        <div className="field">
-          <label>Retail Price ($)</label>
-          <input type="number" min="0" value={fields.retail_price} onChange={e => set('retail_price', e.target.value)} placeholder="Original retail" />
-        </div>
-        <div className="field">
-          <label>Resale Estimate ($)</label>
-          <input type="number" min="0" value={fields.resale_estimate} onChange={e => set('resale_estimate', e.target.value)} placeholder="Current market value" />
-        </div>
-        <div className="field">
-          <label>Tags</label>
-          <input value={fields.tags} onChange={e => set('tags', e.target.value)} placeholder="e.g. streetwear, archive, grail" />
-        </div>
-        <div className="field">
-          <label>Notes</label>
-          <textarea rows="2" style={{ width: '100%', padding: '7px 10px', border: '1.5px solid black', fontFamily: 'Arial, sans-serif', fontSize: 13, resize: 'none' }} value={fields.notes} onChange={e => set('notes', e.target.value)} placeholder="Provenance, condition notes, etc." />
         </div>
         <div className="field">
           <label>Photos</label>
