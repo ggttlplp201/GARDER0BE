@@ -13,7 +13,7 @@ const SCATTER_LAYOUT = [
 function applyTilt(card) {
   const shine = card.querySelector('.card-shine');
 
-  card.addEventListener('pointerdown', requestGyroPermission);
+  card.addEventListener('click', requestGyroPermission);
   card.addEventListener('mousemove', e => {
     if (isGyroActive()) return;
     const rect = card.getBoundingClientRect();

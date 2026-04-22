@@ -78,8 +78,8 @@ export default function App() {
 
   useEffect(() => {
     if (!window.DeviceOrientationEvent) return;
-    document.addEventListener('pointerdown', requestGyroPermission);
-    return () => document.removeEventListener('pointerdown', requestGyroPermission);
+    document.addEventListener('click', requestGyroPermission);
+    return () => document.removeEventListener('click', requestGyroPermission);
   }, []);
 
   useEffect(() => {
