@@ -87,7 +87,7 @@ h1 { font-size: 2rem; font-weight: bold; margin-bottom: 2px; }
 .edit-btn:hover { background: black; color: white; }
 
 .scatter-card { width: 140px; background: white; position: relative; overflow: visible; transform-style: preserve-3d; will-change: transform; box-shadow: 0 8px 32px rgba(0,0,0,0.7); cursor: default; }
-.scatter-card .card-image-area { width: 100%; aspect-ratio: 3/4; background: #1a1a1a; overflow: hidden; display: flex; align-items: center; justify-content: center; position: relative; border: none; border-bottom: none; }
+.scatter-card .card-image-area { width: 100%; aspect-ratio: 3/4; background: #0a0a0a; overflow: hidden; display: flex; align-items: center; justify-content: center; position: relative; border: none; border-bottom: none; }
 .scatter-card .card-image-area img { width: 100% !important; height: 100% !important; object-fit: cover !important; display: block; }
 .scatter-card .card-shine { position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity 0.15s; }
 .scatter-ascii-frame { position: absolute; top: -10px; left: -8px; font-family: 'Courier New', monospace; font-size: 10px; line-height: 10px; color: rgba(255,255,255,0.4); pointer-events: none; white-space: pre; z-index: 2; margin: 0; }
