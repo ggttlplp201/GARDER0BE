@@ -1,20 +1,20 @@
 import { useEffect, useRef } from 'react';
 import { buildScatterFrame, SC_PERIM_LEN } from '../lib/ascii';
+import { gyroState, gyroCallbacks, isGyroActive } from '../lib/gyro';
 
-// Positions converted from original (cards were mounted on 50%-wide door elements)
-// door=left: viewport_x = door_x / 2
-// door=right: viewport_x = 50 + door_x / 2
 const SCATTER_LAYOUT = [
-  { x:  3, y:  5, rot: -14 },  // door=left,  x=6
-  { x: 75, y:  4, rot:  12 },  // door=right, x=50
-  { x:  2, y: 58, rot:  18 },  // door=left,  x=4
-  { x: 79, y: 55, rot: -16 },  // door=right, x=58
-  { x: 36, y: 76, rot:  -8 },  // door=left,  x=72
+  { x:  3, y:  5, rot: -14 },
+  { x: 75, y:  4, rot:  12 },
+  { x:  2, y: 58, rot:  18 },
+  { x: 79, y: 55, rot: -16 },
+  { x: 36, y: 76, rot:  -8 },
 ];
 
 function applyTilt(card) {
   const shine = card.querySelector('.card-shine');
+
   card.addEventListener('mousemove', e => {
+    if (isGyroActive()) return;
     const rect = card.getBoundingClientRect();
     const x = (e.clientX - rect.left) / rect.width - 0.5;
     const y = (e.clientY - rect.top)  / rect.height - 0.5;
@@ -25,9 +25,22 @@ function applyTilt(card) {
     }
   });
   card.addEventListener('mouseleave', () => {
+    if (isGyroActive()) return;
     card.style.transform = '';
     if (shine) shine.style.opacity = '0';
   });
+
+  const cb = () => {
+    const x = Math.max(-1, Math.min(1, gyroState.x));
+    const y = Math.max(-1, Math.min(1, gyroState.y));
+    card.style.transform = `perspective(600px) rotateY(${x*14}deg) rotateX(${-y*14}deg) scale(1.02)`;
+    if (shine) {
+      shine.style.opacity = '0.5';
+      shine.style.background = `linear-gradient(${115+x*30}deg,transparent 30%,rgba(255,255,255,${0.12+Math.abs(x)*0.12}) 50%,transparent 70%)`;
+    }
+  };
+  gyroCallbacks.add(cb);
+  return cb;
 }
 
 export default function ScatterCards() {
@@ -46,6 +59,7 @@ export default function ScatterCards() {
     const container = containerRef.current;
     if (!container) return;
     itemsRef.current = [];
+    const gyroCbs = [];
 
     SCATTER_LAYOUT.forEach((pos, i) => {
       const imgUrl = imgUrls.length ? imgUrls[i % imgUrls.length] : '';
@@ -62,9 +76,7 @@ export default function ScatterCards() {
       frame.textContent = buildScatterFrame((i * 13) % SC_PERIM_LEN);
       card.appendChild(frame);
 
-      const imgHtml = imgUrl
-        ? `<img src="${imgUrl}" loading="lazy" />`
-        : '';
+      const imgHtml = imgUrl ? `<img src="${imgUrl}" loading="lazy" />` : '';
       card.insertAdjacentHTML('beforeend', `
         <div class="card-image-area">
           ${imgHtml}
@@ -74,7 +86,7 @@ export default function ScatterCards() {
 
       wrap.appendChild(card);
       container.appendChild(wrap);
-      applyTilt(card);
+      gyroCbs.push(applyTilt(card));
       itemsRef.current.push({ preEl: frame, offset: (i * 13) % SC_PERIM_LEN });
     });
 
@@ -87,6 +99,7 @@ export default function ScatterCards() {
 
     return () => {
       clearInterval(animRef.current);
+      gyroCbs.forEach(cb => gyroCallbacks.delete(cb));
       if (container) container.innerHTML = '';
     };
   }, []);

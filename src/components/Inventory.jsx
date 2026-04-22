@@ -1,4 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
+
+const RECENT_CUTOFF = Date.now() - 30 * 24 * 60 * 60 * 1000;
 import ItemCard from './ItemCard';
 import MusicPlayer from './MusicPlayer';
 import ProfilePanel from './ProfilePanel';
@@ -71,7 +73,7 @@ export default function Inventory({ user, onSignOut }) {
     if (filterType && item.type !== filterType) return false;
     if (filterStatus && (item.status || 'owned') !== filterStatus) return false;
     if (filterMissing && item.image_url) return false;
-    if (filterRecent && Date.now() - new Date(item.created_at).getTime() > 30 * 24 * 60 * 60 * 1000) return false;
+    if (filterRecent && new Date(item.created_at).getTime() < RECENT_CUTOFF) return false;
     if (filterPrice === 'u100' && (parseFloat(item.price) || 0) >= 100) return false;
     if (filterPrice === '100-500' && ((parseFloat(item.price) || 0) < 100 || (parseFloat(item.price) || 0) > 500)) return false;
     if (filterPrice === '500p' && (parseFloat(item.price) || 0) < 500) return false;

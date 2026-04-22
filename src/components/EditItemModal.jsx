@@ -67,7 +67,8 @@ export default function EditItemModal({ item, onClose, onSave }) {
   }
 
   useEffect(() => {
-    return () => { blobUrlsRef.current.forEach(url => URL.revokeObjectURL(url)); };
+    const urls = blobUrlsRef.current;
+    return () => { urls.forEach(url => URL.revokeObjectURL(url)); };
   }, []);
 
   useEffect(() => {
