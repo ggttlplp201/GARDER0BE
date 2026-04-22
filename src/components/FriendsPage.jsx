@@ -21,29 +21,34 @@ export default function FriendsPage({ user, onViewProfile }) {
   const load = useCallback(async () => {
     if (!user) return;
     setLoading(true);
+
     const [{ data: inc }, { data: out }, { data: acc }, { data: lks }] = await Promise.all([
-      sb.from('friend_requests')
-        .select('id, from_user_id, profiles!friend_requests_from_user_id_fkey(id, username, avatar_url, location)')
-        .eq('to_user_id', user.id).eq('status', 'pending'),
-      sb.from('friend_requests')
-        .select('id, to_user_id, profiles!friend_requests_to_user_id_fkey(id, username, avatar_url, location)')
-        .eq('from_user_id', user.id).eq('status', 'pending'),
-      sb.from('friend_requests')
-        .select('id, from_user_id, to_user_id, profiles!friend_requests_from_user_id_fkey(id,username,avatar_url,location), to_profiles:profiles!friend_requests_to_user_id_fkey(id,username,avatar_url,location)')
-        .or(`from_user_id.eq.${user.id},to_user_id.eq.${user.id}`)
-        .eq('status', 'accepted'),
-      sb.from('profile_likes')
-        .select('id, user_id, created_at, profiles!profile_likes_user_id_fkey(id, username, avatar_url)')
-        .eq('liked_user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(20),
+      sb.from('friend_requests').select('id, from_user_id').eq('to_user_id', user.id).eq('status', 'pending'),
+      sb.from('friend_requests').select('id, to_user_id').eq('from_user_id', user.id).eq('status', 'pending'),
+      sb.from('friend_requests').select('id, from_user_id, to_user_id').or(`from_user_id.eq.${user.id},to_user_id.eq.${user.id}`).eq('status', 'accepted'),
+      sb.from('profile_likes').select('id, user_id, created_at').eq('liked_user_id', user.id).order('created_at', { ascending: false }).limit(20),
     ]);
-    setIncoming(inc || []);
-    setOutgoing(out || []);
-    setLikes(lks || []);
+
+    // Collect all user IDs we need profiles for
+    const ids = new Set([
+      ...(inc || []).map(r => r.from_user_id),
+      ...(out || []).map(r => r.to_user_id),
+      ...(acc || []).flatMap(r => [r.from_user_id, r.to_user_id]),
+      ...(lks || []).map(r => r.user_id),
+    ].filter(Boolean));
+
+    let profileMap = {};
+    if (ids.size > 0) {
+      const { data: profiles } = await sb.from('profiles').select('id, username, avatar_url, location').in('id', [...ids]);
+      (profiles || []).forEach(p => { profileMap[p.id] = p; });
+    }
+
+    setIncoming((inc || []).map(r => ({ ...r, profile: profileMap[r.from_user_id] || null })));
+    setOutgoing((out || []).map(r => ({ ...r, profile: profileMap[r.to_user_id] || null })));
+    setLikes((lks || []).map(r => ({ ...r, profile: profileMap[r.user_id] || null })));
     setFriends((acc || []).map(r => {
-      const isFrom = r.from_user_id === user.id;
-      return isFrom ? r.to_profiles : r.profiles;
+      const otherId = r.from_user_id === user.id ? r.to_user_id : r.from_user_id;
+      return profileMap[otherId] || null;
     }).filter(Boolean));
     setLoading(false);
   }, [user]);
@@ -111,10 +116,10 @@ export default function FriendsPage({ user, onViewProfile }) {
               <div className="friends-section-label">INCOMING</div>
               {incoming.map(r => (
                 <div key={r.id} className="friends-row">
-                  <Avatar url={r.profiles?.avatar_url} />
+                  <Avatar url={r.profile?.avatar_url} />
                   <div className="friends-row-info">
-                    <div className="friends-row-name">{r.profiles?.username || 'Anonymous'}</div>
-                    {r.profiles?.location && <div className="friends-row-meta">{r.profiles.location}</div>}
+                    <div className="friends-row-name">{r.profile?.username || 'Anonymous'}</div>
+                    {r.profile?.location && <div className="friends-row-meta">{r.profiles.location}</div>}
                   </div>
                   <div className="friends-row-actions">
                     <button className="friend-btn accept" onClick={() => accept(r.id)}>✓</button>
@@ -129,10 +134,10 @@ export default function FriendsPage({ user, onViewProfile }) {
               <div className="friends-section-label">SENT</div>
               {outgoing.map(r => (
                 <div key={r.id} className="friends-row">
-                  <Avatar url={r.profiles?.avatar_url} />
+                  <Avatar url={r.profile?.avatar_url} />
                   <div className="friends-row-info">
-                    <div className="friends-row-name">{r.profiles?.username || 'Anonymous'}</div>
-                    {r.profiles?.location && <div className="friends-row-meta">{r.profiles.location}</div>}
+                    <div className="friends-row-name">{r.profile?.username || 'Anonymous'}</div>
+                    {r.profile?.location && <div className="friends-row-meta">{r.profiles.location}</div>}
                   </div>
                   <button className="friend-btn cancel" onClick={() => cancel(r.id)}>CANCEL</button>
                 </div>
@@ -150,10 +155,10 @@ export default function FriendsPage({ user, onViewProfile }) {
           {likes.length === 0
             ? <p className="empty">Nobody has liked your profile yet.</p>
             : likes.map(l => (
-              <div key={l.id} className="friends-row" onClick={() => l.profiles && onViewProfile(l.profiles)} style={{ cursor: l.profiles ? 'pointer' : 'default' }}>
-                <Avatar url={l.profiles?.avatar_url} />
+              <div key={l.id} className="friends-row" onClick={() => l.profile && onViewProfile(l.profile)} style={{ cursor: l.profile ? 'pointer' : 'default' }}>
+                <Avatar url={l.profile?.avatar_url} />
                 <div className="friends-row-info">
-                  <div className="friends-row-name">{l.profiles?.username || 'Anonymous'}</div>
+                  <div className="friends-row-name">{l.profile?.username || 'Anonymous'}</div>
                   <div className="friends-row-meta">{new Date(l.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
                 </div>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" style={{ color: '#e05', flexShrink: 0 }}>
