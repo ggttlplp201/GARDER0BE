@@ -17,7 +17,7 @@ export default function AddItemModal({ open, onClose, onAdd }) {
   }
 
   async function handleAdd() {
-    if (!fields.name.trim()) return;
+    if (!fields.name.trim()) { setError('Please enter an item name.'); return; }
     setSaving(true); setError('');
     try { await onAdd(fields, pending); handleClose(); }
     catch (err) { setError(err.message || 'Failed to save item.'); }
