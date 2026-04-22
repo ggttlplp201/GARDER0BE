@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTheme } from '../hooks/useTheme';
+import { sb } from '../lib/supabase';
 import ItemCard from './ItemCard';
 import MusicPlayer from './MusicPlayer';
 import ProfilePanel from './ProfilePanel';
@@ -58,8 +59,14 @@ export default function Inventory({ user, onSignOut, onTotalChange }) {
     const key = `garderobe-profile-${user?.id || 'guest'}`;
     try {
       const p = JSON.parse(localStorage.getItem(key) || '{}');
-      if (p.avatarUrl) setAvatarUrl(p.avatarUrl);
+      if (p.avatarUrl) { setAvatarUrl(p.avatarUrl); return; }
     } catch {}
+    if (user) {
+      sb.auth.getUser().then(({ data: { user: u } }) => {
+        const url = u?.user_metadata?.profile?.avatarUrl;
+        if (url) setAvatarUrl(url);
+      });
+    }
   }, [user?.id]);
 
   // Filter
