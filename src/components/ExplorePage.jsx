@@ -2,6 +2,133 @@ import { useState, useEffect, useCallback } from 'react';
 import { sb } from '../lib/supabase';
 import { parseImageUrls } from '../lib/imageUtils';
 
+// ── RSS feeds ─────────────────────────────────────────────────────────────────
+const FEEDS = [
+  { name: 'HYPEBEAST',     url: 'https://hypebeast.com/feed' },
+  { name: 'HIGHSNOBIETY',  url: 'https://www.highsnobiety.com/feed/' },
+  { name: 'HYPEBAE',       url: 'https://hypebae.com/feed' },
+  { name: 'DAZED',         url: 'https://www.dazeddigital.com/rss' },
+];
+const RSS2JSON = 'https://api.rss2json.com/v1/api.json?count=8&rss_url=';
+const CACHE_KEY = 'garderobe-feed-cache';
+const CACHE_TTL = 30 * 60 * 1000; // 30 min
+
+function stripHtml(html) {
+  return html ? html.replace(/<[^>]*>/g, '').replace(/&[a-z]+;/gi, ' ').trim() : '';
+}
+
+function timeAgo(dateStr) {
+  const diff = Date.now() - new Date(dateStr);
+  const h = Math.floor(diff / 3600000);
+  if (h < 1)  return 'just now';
+  if (h < 24) return `${h}h ago`;
+  return `${Math.floor(h / 24)}d ago`;
+}
+
+function scoreArticle(article, brands) {
+  if (!brands.length) return 0;
+  const text = (article.title + ' ' + article.desc).toLowerCase();
+  return brands.reduce((score, brand) => score + (text.includes(brand.toLowerCase()) ? 1 : 0), 0);
+}
+
+function NewsFeed({ user }) {
+  const [articles, setArticles] = useState([]);
+  const [brands, setBrands]     = useState([]);
+  const [loading, setLoading]   = useState(true);
+  const [error, setError]       = useState(false);
+  const [sort, setSort]         = useState('recent');
+
+  // Fetch user's inventory brands for relevance scoring
+  useEffect(() => {
+    if (!user) return;
+    sb.from('items').select('brand').eq('user_id', user.id).then(({ data }) => {
+      const unique = [...new Set((data || []).map(i => i.brand).filter(Boolean))];
+      setBrands(unique);
+    });
+  }, [user]);
+
+  useEffect(() => {
+    try {
+      const cached = JSON.parse(sessionStorage.getItem(CACHE_KEY) || 'null');
+      if (cached && Date.now() - cached.ts < CACHE_TTL) {
+        setArticles(cached.articles);
+        setLoading(false);
+        return;
+      }
+    } catch {}
+
+    async function fetchFeeds() {
+      try {
+        const results = await Promise.allSettled(
+          FEEDS.map(f =>
+            fetch(RSS2JSON + encodeURIComponent(f.url))
+              .then(r => r.json())
+              .then(data => (data.items || []).map(item => ({
+                id:     item.guid || item.link,
+                source: f.name,
+                title:  item.title || '',
+                desc:   stripHtml(item.description || item.content || '').slice(0, 180),
+                image:  item.thumbnail || item.enclosure?.link || null,
+                link:   item.link,
+                date:   item.pubDate,
+              })))
+          )
+        );
+        const all = results
+          .filter(r => r.status === 'fulfilled')
+          .flatMap(r => r.value)
+          .sort((a, b) => new Date(b.date) - new Date(a.date))
+          .slice(0, 40);
+        sessionStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), articles: all }));
+        setArticles(all);
+      } catch {
+        setError(true);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchFeeds();
+  }, []);
+
+  const sorted = sort === 'recent'
+    ? [...articles].sort((a, b) => new Date(b.date) - new Date(a.date))
+    : [...articles].sort((a, b) => {
+        const diff = scoreArticle(b, brands) - scoreArticle(a, brands);
+        return diff !== 0 ? diff : new Date(b.date) - new Date(a.date);
+      });
+
+  if (loading) return <p className="empty">Loading feed...</p>;
+  if (error)   return <p className="empty">Couldn't load feed. Try again later.</p>;
+  if (!sorted.length) return <p className="empty">No articles found.</p>;
+
+  return (
+    <div className="news-feed">
+      <div className="news-sort-row">
+        <button className={`news-sort-btn${sort === 'recent' ? ' active' : ''}`} onClick={() => setSort('recent')}>RECENT</button>
+        <button className={`news-sort-btn${sort === 'relevance' ? ' active' : ''}`} onClick={() => setSort('relevance')} title="Sorted by brands in your wardrobe">FOR YOU</button>
+      </div>
+      {sorted.map(a => {
+        const score = scoreArticle(a, brands);
+        return (
+          <a key={a.id} className="news-card" href={a.link} target="_blank" rel="noopener noreferrer">
+            {a.image && <div className="news-card-img"><img src={a.image} alt="" loading="lazy" /></div>}
+            <div className="news-card-body">
+              <div className="news-card-source">
+                {a.source} · {timeAgo(a.date)}
+                {sort === 'relevance' && score > 0 && <span className="news-relevance-dot" title={`${score} brand match${score > 1 ? 'es' : ''}`}> ●</span>}
+              </div>
+              <div className="news-card-title">{a.title}</div>
+              {a.desc && <div className="news-card-desc">{a.desc}</div>}
+            </div>
+          </a>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── Shared sub-components ─────────────────────────────────────────────────────
+
 function Avatar({ url, size = 52 }) {
   if (url) return <img src={url} alt="" style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', border: '2px solid black', flexShrink: 0 }} />;
   return (
@@ -49,7 +176,7 @@ function PublicItemCard({ item }) {
 
 function SocialButtons({ user, profileId, onRequestSent }) {
   const [liked, setLiked]         = useState(false);
-  const [reqStatus, setReqStatus] = useState(null); // null | 'pending' | 'accepted'
+  const [reqStatus, setReqStatus] = useState(null);
 
   useEffect(() => {
     if (!user || user.id === profileId) return;
@@ -143,14 +270,17 @@ function ProfileView({ profile, user, onBack }) {
   );
 }
 
+// ── Main page ─────────────────────────────────────────────────────────────────
+
 export default function ExplorePage({ user, externalProfile, onExternalProfileClear }) {
-  const [profiles, setProfiles]               = useState([]);
-  const [loading, setLoading]                 = useState(true);
-  const [search, setSearch]                   = useState('');
-  const [selectedProfile, setSelectedProfile] = useState(null);
+  const [tab, setTab]                             = useState('people');
+  const [profiles, setProfiles]                   = useState([]);
+  const [loading, setLoading]                     = useState(true);
+  const [search, setSearch]                       = useState('');
+  const [selectedProfile, setSelectedProfile]     = useState(null);
 
   useEffect(() => {
-    if (externalProfile) setSelectedProfile(externalProfile);
+    if (externalProfile) { setSelectedProfile(externalProfile); setTab('people'); }
   }, [externalProfile]);
 
   const load = useCallback(() => {
@@ -175,38 +305,50 @@ export default function ExplorePage({ user, externalProfile, onExternalProfileCl
 
   return (
     <div className="explore-page">
-      {!selectedProfile ? (
+      {selectedProfile ? (
+        <ProfileView profile={selectedProfile} user={user} onBack={handleBack} />
+      ) : (
         <>
           <div className="explore-page-header">
             <div className="explore-title">EXPLORE</div>
-            <div className="explore-subtitle">public collections</div>
+            <div className="explore-subtitle">{tab === 'people' ? 'public collections' : 'fashion & culture'}</div>
           </div>
-          <input
-            className="search-input"
-            style={{ marginBottom: 20, width: '100%', boxSizing: 'border-box' }}
-            placeholder="SEARCH NAME, LOCATION"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-          />
-          {loading && <p className="empty">Loading...</p>}
-          {!loading && filtered.length === 0 && (
-            <p className="empty">{search ? 'No profiles match.' : 'No public profiles yet.'}</p>
-          )}
-          <div className="explore-grid">
-            {filtered.map(p => (
-              <div key={p.id} className="explore-card" onClick={() => setSelectedProfile(p)}>
-                <Avatar url={p.avatar_url} size={48} />
-                <div className="explore-card-info">
-                  <div className="explore-card-name">{p.username || 'Anonymous'}</div>
-                  {p.location && <div className="explore-card-meta">{p.location}</div>}
-                </div>
-                <SocialButtons user={user} profileId={p.id} />
+
+          <div className="friends-tabs" style={{ marginBottom: 16 }}>
+            <button className={`friends-tab${tab === 'people' ? ' active' : ''}`} onClick={() => setTab('people')}>PEOPLE</button>
+            <button className={`friends-tab${tab === 'feed'   ? ' active' : ''}`} onClick={() => setTab('feed')}>FEED</button>
+          </div>
+
+          {tab === 'people' && (
+            <>
+              <input
+                className="search-input"
+                style={{ marginBottom: 20, width: '100%', boxSizing: 'border-box' }}
+                placeholder="SEARCH NAME, LOCATION"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+              />
+              {loading && <p className="empty">Loading...</p>}
+              {!loading && filtered.length === 0 && (
+                <p className="empty">{search ? 'No profiles match.' : 'No public profiles yet.'}</p>
+              )}
+              <div className="explore-grid">
+                {filtered.map(p => (
+                  <div key={p.id} className="explore-card" onClick={() => setSelectedProfile(p)}>
+                    <Avatar url={p.avatar_url} size={48} />
+                    <div className="explore-card-info">
+                      <div className="explore-card-name">{p.username || 'Anonymous'}</div>
+                      {p.location && <div className="explore-card-meta">{p.location}</div>}
+                    </div>
+                    <SocialButtons user={user} profileId={p.id} />
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            </>
+          )}
+
+          {tab === 'feed' && <NewsFeed user={user} />}
         </>
-      ) : (
-        <ProfileView profile={selectedProfile} user={user} onBack={handleBack} />
       )}
     </div>
   );
