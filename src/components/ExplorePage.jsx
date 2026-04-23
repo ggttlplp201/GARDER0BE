@@ -10,7 +10,10 @@ const FEEDS = [
   { name: 'DAZED',        url: 'https://www.dazeddigital.com/rss' },
   { name: 'COMPLEX',      url: 'https://www.complex.com/style/rss' },
 ];
-const PROXY   = 'https://api.allorigins.win/raw?url=';
+const PROXIES = [
+  'https://corsproxy.io/?',
+  'https://api.allorigins.win/raw?url=',
+];
 const CACHE_KEY = 'garderobe-feed-cache-v2';
 const CACHE_TTL = 30 * 60 * 1000;
 
@@ -31,9 +34,28 @@ function firstImg(html) {
   return m ? m[1] : null;
 }
 
+async function fetchWithTimeout(url, ms = 7000) {
+  const ctrl = new AbortController();
+  const id   = setTimeout(() => ctrl.abort(), ms);
+  try {
+    const res = await fetch(url, { signal: ctrl.signal });
+    return res;
+  } finally {
+    clearTimeout(id);
+  }
+}
+
 async function fetchFeed(feed) {
-  const res  = await fetch(PROXY + encodeURIComponent(feed.url));
-  const text = await res.text();
+  let text = null;
+  for (const proxy of PROXIES) {
+    try {
+      const res = await fetchWithTimeout(proxy + encodeURIComponent(feed.url));
+      if (res.ok) { text = await res.text(); break; }
+    } catch (e) {
+      console.warn('[feed] proxy failed:', proxy, e.message);
+    }
+  }
+  if (!text) throw new Error('all proxies failed for ' + feed.name);
   const doc  = new DOMParser().parseFromString(text, 'text/xml');
   return [...doc.querySelectorAll('item')].slice(0, 8).map(item => {
     const desc    = item.querySelector('description')?.textContent || '';
