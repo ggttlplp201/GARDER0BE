@@ -1,18 +1,23 @@
 export const gyroState = { x: 0, y: 0 };
 export const gyroCallbacks = new Set();
-let gyroActive = false;
+let gyroActive    = false;
+let gyroListening = false;
 let permissionPending = false;
 let baseline = null;
 
 export function isGyroActive() { return gyroActive; }
 
 function startGyro() {
-  if (gyroActive) return;
-  gyroActive = true;
-  console.log('[gyro] started, callbacks registered:', gyroCallbacks.size);
+  if (gyroListening) return;
+  gyroListening = true;
+  console.log('[gyro] listener registered');
   window.addEventListener('deviceorientation', e => {
     console.log('[gyro] event', e.beta, e.gamma, 'callbacks:', gyroCallbacks.size);
     if (e.beta === null && e.gamma === null) return;
+    if (!gyroActive) {
+      gyroActive = true;
+      console.log('[gyro] activated on first real event');
+    }
     if (!baseline) {
       baseline = { beta: e.beta || 0, gamma: e.gamma || 0 };
       console.log('[gyro] baseline set', baseline);
