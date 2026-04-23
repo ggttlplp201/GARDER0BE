@@ -4,17 +4,18 @@ import { parseImageUrls } from '../lib/imageUtils';
 
 // ── RSS feeds ─────────────────────────────────────────────────────────────────
 const FEEDS = [
-  { name: 'HYPEBEAST',     url: 'https://hypebeast.com/feed' },
-  { name: 'HIGHSNOBIETY',  url: 'https://www.highsnobiety.com/feed/' },
-  { name: 'HYPEBAE',       url: 'https://hypebae.com/feed' },
-  { name: 'DAZED',         url: 'https://www.dazeddigital.com/rss' },
+  { name: 'HYPEBEAST',    url: 'https://hypebeast.com/feed' },
+  { name: 'HIGHSNOBIETY', url: 'https://www.highsnobiety.com/feed/' },
+  { name: 'HYPEBAE',      url: 'https://hypebae.com/feed' },
+  { name: 'DAZED',        url: 'https://www.dazeddigital.com/rss' },
+  { name: 'COMPLEX',      url: 'https://www.complex.com/style/rss' },
 ];
-const RSS2JSON = 'https://api.rss2json.com/v1/api.json?count=8&rss_url=';
+const PROXY   = 'https://api.allorigins.win/raw?url=';
 const CACHE_KEY = 'garderobe-feed-cache';
-const CACHE_TTL = 30 * 60 * 1000; // 30 min
+const CACHE_TTL = 30 * 60 * 1000;
 
 function stripHtml(html) {
-  return html ? html.replace(/<[^>]*>/g, '').replace(/&[a-z]+;/gi, ' ').trim() : '';
+  return html ? html.replace(/<[^>]*>/g, '').replace(/&[a-z#0-9]+;/gi, ' ').replace(/\s+/g, ' ').trim() : '';
 }
 
 function timeAgo(dateStr) {
@@ -23,6 +24,35 @@ function timeAgo(dateStr) {
   if (h < 1)  return 'just now';
   if (h < 24) return `${h}h ago`;
   return `${Math.floor(h / 24)}d ago`;
+}
+
+function firstImg(html) {
+  const m = html && html.match(/<img[^>]+src=["']([^"']+)["']/i);
+  return m ? m[1] : null;
+}
+
+async function fetchFeed(feed) {
+  const res  = await fetch(PROXY + encodeURIComponent(feed.url));
+  const text = await res.text();
+  const doc  = new DOMParser().parseFromString(text, 'text/xml');
+  return [...doc.querySelectorAll('item')].slice(0, 8).map(item => {
+    const desc    = item.querySelector('description')?.textContent || '';
+    const content = item.querySelector('content\\:encoded, encoded')?.textContent || '';
+    const encUrl  = item.querySelector('enclosure')?.getAttribute('url');
+    const mediaUrl = item.querySelector('media\\:content')?.getAttribute('url') ||
+                     item.querySelector('media\\:thumbnail')?.getAttribute('url');
+    const image   = encUrl || mediaUrl || firstImg(content) || firstImg(desc) || null;
+    const rawDesc = stripHtml(content || desc);
+    return {
+      id:     item.querySelector('guid')?.textContent || item.querySelector('link')?.textContent || '',
+      source: feed.name,
+      title:  item.querySelector('title')?.textContent?.trim() || '',
+      desc:   rawDesc.slice(0, 200),
+      image,
+      link:   item.querySelector('link')?.textContent?.trim() || '',
+      date:   item.querySelector('pubDate')?.textContent || '',
+    };
+  });
 }
 
 function scoreArticle(article, brands) {
@@ -59,21 +89,7 @@ function NewsFeed({ user }) {
 
     async function fetchFeeds() {
       try {
-        const results = await Promise.allSettled(
-          FEEDS.map(f =>
-            fetch(RSS2JSON + encodeURIComponent(f.url))
-              .then(r => r.json())
-              .then(data => (data.items || []).map(item => ({
-                id:     item.guid || item.link,
-                source: f.name,
-                title:  item.title || '',
-                desc:   stripHtml(item.description || item.content || '').slice(0, 180),
-                image:  item.thumbnail || item.enclosure?.link || null,
-                link:   item.link,
-                date:   item.pubDate,
-              })))
-          )
-        );
+        const results = await Promise.allSettled(FEEDS.map(fetchFeed));
         const all = results
           .filter(r => r.status === 'fulfilled')
           .flatMap(r => r.value)
