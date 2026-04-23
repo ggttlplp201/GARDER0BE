@@ -9,14 +9,30 @@ export default function ItemCard({ item, onRemove, onEdit, onClick }) {
   const gyroCallbackRef = useRef(null);
   const reducedMotion   = useRef(typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   const hasGyro         = useRef(typeof window !== 'undefined' && !!window.DeviceOrientationEvent);
+
+  const stripRef     = useRef(null);
+  const imgIdxRef    = useRef(0);
+  const isDragRef    = useRef(false);
+  const dragStartRef = useRef(0);
+  const didSwipeRef  = useRef(false);
+
   const [imgIdx, setImgIdx]         = useState(0);
   const [confirming, setConfirming] = useState(false);
-  const swipeRef = useRef({ startX: null, moved: false });
+
   const imgUrls  = parseImageUrls(item.image_url);
   const multiImg = imgUrls.length > 1;
   const dateStr  = item.created_at
     ? new Date(item.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
     : '';
+
+  // Sync strip position when imgIdx changes (arrow buttons, etc.)
+  useEffect(() => {
+    imgIdxRef.current = imgIdx;
+    if (stripRef.current && !isDragRef.current) {
+      stripRef.current.style.transition = 'transform 0.22s ease';
+      stripRef.current.style.transform  = `translateX(${-imgIdx * 100}%)`;
+    }
+  }, [imgIdx]);
 
   useEffect(() => {
     if (!hasGyro.current || reducedMotion.current) return;
@@ -59,7 +75,7 @@ export default function ItemCard({ item, onRemove, onEdit, onClick }) {
   }
 
   function handleCardClick(e) {
-    if (swipeRef.current.moved) { swipeRef.current.moved = false; return; }
+    if (didSwipeRef.current) { didSwipeRef.current = false; return; }
     if (e.target.closest('.card-remove-x') || e.target.closest('.edit-btn') || e.target.closest('.card-img-arrow')) return;
     onClick(item.id);
   }
@@ -71,17 +87,37 @@ export default function ItemCard({ item, onRemove, onEdit, onClick }) {
 
   function onImgPointerDown(e) {
     if (e.button !== undefined && e.button !== 0) return;
-    swipeRef.current = { startX: e.clientX, moved: false };
+    e.currentTarget.setPointerCapture(e.pointerId);
+    isDragRef.current    = true;
+    dragStartRef.current = e.clientX;
+    didSwipeRef.current  = false;
+    if (stripRef.current) stripRef.current.style.transition = 'none';
   }
+
+  function onImgPointerMove(e) {
+    if (!isDragRef.current || !stripRef.current) return;
+    const dx = e.clientX - dragStartRef.current;
+    stripRef.current.style.transform = `translateX(calc(${-imgIdxRef.current * 100}% + ${dx}px))`;
+  }
+
   function onImgPointerUp(e) {
-    const { startX } = swipeRef.current;
-    if (startX === null || !multiImg) return;
-    const dx = e.clientX - startX;
-    swipeRef.current.startX = null;
-    if (Math.abs(dx) > 30) {
-      swipeRef.current.moved = true;
-      setImgIdx(i => (i + (dx < 0 ? 1 : -1) + imgUrls.length) % imgUrls.length);
+    if (!isDragRef.current) return;
+    isDragRef.current = false;
+    const dx            = e.clientX - dragStartRef.current;
+    const containerW    = e.currentTarget.offsetWidth || 200;
+    const len           = imgUrls.length;
+    let newIdx          = imgIdxRef.current;
+
+    if (Math.abs(dx) > containerW * 0.25) {
+      newIdx = (imgIdxRef.current + (dx < 0 ? 1 : -1) + len) % len;
+      didSwipeRef.current = true;
     }
+
+    if (stripRef.current) {
+      stripRef.current.style.transition = 'transform 0.22s ease';
+      stripRef.current.style.transform  = `translateX(${-newIdx * 100}%)`;
+    }
+    setImgIdx(newIdx);
   }
 
   return (
@@ -110,25 +146,28 @@ export default function ItemCard({ item, onRemove, onEdit, onClick }) {
           }
         }}
       >{confirming ? '?' : '×'}</button>
+
       <div
         className="card-image-area"
         onPointerDown={multiImg ? onImgPointerDown : undefined}
+        onPointerMove={multiImg ? onImgPointerMove : undefined}
         onPointerUp={multiImg ? onImgPointerUp : undefined}
+        onPointerCancel={multiImg ? onImgPointerUp : undefined}
         style={multiImg ? { touchAction: 'pan-y' } : undefined}
       >
-        {imgUrls.length === 0
-          ? <span style={{ fontSize: 13, color: '#aaa' }}>No image</span>
-          : imgUrls.map((url, i) => (
-            <img
-              key={url + i}
-              src={url}
-              alt={item.name}
-              draggable="false"
-              className={multiImg ? 'card-img-layer' : undefined}
-              style={multiImg ? { opacity: i === imgIdx ? 1 : 0 } : undefined}
-            />
-          ))
-        }
+        {multiImg ? (
+          <div ref={stripRef} className="card-img-strip">
+            {imgUrls.map((url, i) => (
+              <div key={url + i} className="card-img-slot">
+                <img src={url} alt={item.name} draggable="false" />
+              </div>
+            ))}
+          </div>
+        ) : imgUrls.length ? (
+          <img src={imgUrls[0]} alt={item.name} />
+        ) : (
+          <span style={{ fontSize: 13, color: '#aaa' }}>No image</span>
+        )}
         {multiImg && <>
           <button className="card-img-arrow card-img-prev" aria-label="Previous image" onClick={e => nav(-1, e)}>‹</button>
           <button className="card-img-arrow card-img-next" aria-label="Next image" onClick={e => nav(1, e)}>›</button>
@@ -137,6 +176,7 @@ export default function ItemCard({ item, onRemove, onEdit, onClick }) {
         {dateStr && <div className="card-date">{dateStr}</div>}
         <div ref={shineRef} className="card-shine" />
       </div>
+
       <div className="card-info">
         {item.status === 'wishlist' && <span className="card-status-badge">WISHLIST</span>}
         <div className="card-name">{item.name || 'Untitled'}</div>
