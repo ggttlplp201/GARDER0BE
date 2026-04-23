@@ -87,6 +87,7 @@ export default function ItemCard({ item, onRemove, onEdit, onClick }) {
 
   function onImgPointerDown(e) {
     if (e.button !== undefined && e.button !== 0) return;
+    if (e.target.closest('.card-img-arrow')) return;
     e.currentTarget.setPointerCapture(e.pointerId);
     isDragRef.current    = true;
     dragStartRef.current = e.clientX;

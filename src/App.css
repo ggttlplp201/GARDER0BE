@@ -241,6 +241,9 @@ input[type=range].vol-slider::-webkit-slider-thumb { -webkit-appearance: none; a
 .lightbox-close:hover { opacity: 0.5; }
 .lb-img-area { flex: 0 0 56%; aspect-ratio: 1/1; background: var(--bg3); border-right: 1.5px solid var(--border); display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
 .lb-img-area img { max-width: 88%; max-height: 88%; object-fit: contain; display: block; }
+.lb-img-strip { position: absolute; inset: 0; display: flex; will-change: transform; }
+.lb-img-slot { flex-shrink: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none; }
+.lb-img-slot img { max-width: 88%; max-height: 88%; object-fit: contain; display: block; -webkit-user-drag: none; user-select: none; }
 .lb-shine { position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity 0.15s; z-index: 4; }
 .lb-no-img { font-size: 13px; color: var(--text3); }
 .lb-arrow { position: absolute; top: 50%; transform: translateY(-50%); width: 36px; height: 36px; background: var(--bg); border: 1.5px solid var(--border); color: var(--text); cursor: pointer; font-size: 20px; font-weight: bold; display: flex; align-items: center; justify-content: center; z-index: 1; line-height: 1; }
