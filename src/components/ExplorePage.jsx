@@ -11,7 +11,7 @@ const FEEDS = [
   { name: 'COMPLEX',      url: 'https://www.complex.com/style/rss' },
 ];
 const PROXY   = 'https://api.allorigins.win/raw?url=';
-const CACHE_KEY = 'garderobe-feed-cache';
+const CACHE_KEY = 'garderobe-feed-cache-v2';
 const CACHE_TTL = 30 * 60 * 1000;
 
 function stripHtml(html) {
@@ -90,14 +90,20 @@ function NewsFeed({ user }) {
     async function fetchFeeds() {
       try {
         const results = await Promise.allSettled(FEEDS.map(fetchFeed));
+        results.forEach((r, i) => {
+          if (r.status === 'rejected') console.warn('[feed] failed:', FEEDS[i].name, r.reason);
+          else console.log('[feed] ok:', FEEDS[i].name, r.value.length, 'items');
+        });
         const all = results
           .filter(r => r.status === 'fulfilled')
           .flatMap(r => r.value)
           .sort((a, b) => new Date(b.date) - new Date(a.date))
           .slice(0, 40);
+        console.log('[feed] total articles:', all.length);
         sessionStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), articles: all }));
         setArticles(all);
-      } catch {
+      } catch (e) {
+        console.error('[feed] fatal:', e);
         setError(true);
       } finally {
         setLoading(false);
