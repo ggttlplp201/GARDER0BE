@@ -11,6 +11,7 @@ export default function ItemCard({ item, onRemove, onEdit, onClick }) {
   const hasGyro         = useRef(typeof window !== 'undefined' && !!window.DeviceOrientationEvent);
   const [imgIdx, setImgIdx]         = useState(0);
   const [confirming, setConfirming] = useState(false);
+  const swipeRef = useRef({ startX: null, moved: false });
   const imgUrls  = parseImageUrls(item.image_url);
   const multiImg = imgUrls.length > 1;
   const dateStr  = item.created_at
@@ -58,6 +59,7 @@ export default function ItemCard({ item, onRemove, onEdit, onClick }) {
   }
 
   function handleCardClick(e) {
+    if (swipeRef.current.moved) { swipeRef.current.moved = false; return; }
     if (e.target.closest('.card-remove-x') || e.target.closest('.edit-btn') || e.target.closest('.card-img-arrow')) return;
     onClick(item.id);
   }
@@ -65,6 +67,21 @@ export default function ItemCard({ item, onRemove, onEdit, onClick }) {
   function nav(dir, e) {
     e.stopPropagation();
     setImgIdx(i => (i + dir + imgUrls.length) % imgUrls.length);
+  }
+
+  function onImgPointerDown(e) {
+    if (e.button !== undefined && e.button !== 0) return;
+    swipeRef.current = { startX: e.clientX, moved: false };
+  }
+  function onImgPointerUp(e) {
+    const { startX } = swipeRef.current;
+    if (startX === null || !multiImg) return;
+    const dx = e.clientX - startX;
+    swipeRef.current.startX = null;
+    if (Math.abs(dx) > 30) {
+      swipeRef.current.moved = true;
+      setImgIdx(i => (i + (dx < 0 ? 1 : -1) + imgUrls.length) % imgUrls.length);
+    }
   }
 
   return (
@@ -93,10 +110,24 @@ export default function ItemCard({ item, onRemove, onEdit, onClick }) {
           }
         }}
       >{confirming ? '?' : '×'}</button>
-      <div className="card-image-area">
-        {imgUrls.length
-          ? <img src={imgUrls[imgIdx]} alt={item.name} />
-          : <span style={{ fontSize: 13, color: '#aaa' }}>No image</span>
+      <div
+        className="card-image-area"
+        onPointerDown={multiImg ? onImgPointerDown : undefined}
+        onPointerUp={multiImg ? onImgPointerUp : undefined}
+        style={multiImg ? { touchAction: 'pan-y' } : undefined}
+      >
+        {imgUrls.length === 0
+          ? <span style={{ fontSize: 13, color: '#aaa' }}>No image</span>
+          : imgUrls.map((url, i) => (
+            <img
+              key={url + i}
+              src={url}
+              alt={item.name}
+              draggable="false"
+              className={multiImg ? 'card-img-layer' : undefined}
+              style={multiImg ? { opacity: i === imgIdx ? 1 : 0 } : undefined}
+            />
+          ))
         }
         {multiImg && <>
           <button className="card-img-arrow card-img-prev" aria-label="Previous image" onClick={e => nav(-1, e)}>‹</button>
