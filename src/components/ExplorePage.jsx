@@ -1,145 +1,219 @@
 import { useState, useEffect, useCallback } from 'react';
 import { sb } from '../lib/supabase';
 import { parseImageUrls } from '../lib/imageUtils';
+import { API_URL } from '../lib/constants';
 
-// ── RSS feeds ─────────────────────────────────────────────────────────────────
-const FEEDS = [
-  { name: 'HYPEBEAST',    url: 'https://hypebeast.com/feed' },
-  { name: 'HIGHSNOBIETY', url: 'https://www.highsnobiety.com/feed/' },
-  { name: 'HYPEBAE',      url: 'https://hypebae.com/feed' },
-  { name: 'DAZED',        url: 'https://www.dazeddigital.com/rss' },
-  { name: 'COMPLEX',      url: 'https://www.complex.com/style/rss' },
-];
-const PROXIES = [
-  'https://corsproxy.io/?',
-  'https://api.allorigins.win/raw?url=',
-];
-const CACHE_KEY = 'garderobe-feed-cache-v2';
-const CACHE_TTL = 30 * 60 * 1000;
+// ── Feed cache ────────────────────────────────────────────────────────────────
+const FEED_CACHE_KEY = 'garderobe-feed-v1';
+const FEED_CACHE_TTL = 30 * 60 * 1000;
 
-function stripHtml(html) {
-  return html ? html.replace(/<[^>]*>/g, '').replace(/&[a-z#0-9]+;/gi, ' ').replace(/\s+/g, ' ').trim() : '';
-}
-
+// ── Time display ──────────────────────────────────────────────────────────────
 function timeAgo(dateStr) {
-  const diff = Date.now() - new Date(dateStr);
+  if (!dateStr) return 'recent';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return 'recent';
+  const diff = Date.now() - d.getTime();
+  if (diff < 0) return 'recent';
   const h = Math.floor(diff / 3600000);
   if (h < 1)  return 'just now';
   if (h < 24) return `${h}h ago`;
   return `${Math.floor(h / 24)}d ago`;
 }
 
-function firstImg(html) {
-  const m = html && html.match(/<img[^>]+src=["']([^"']+)["']/i);
-  return m ? m[1] : null;
-}
+// ── Brand matching ────────────────────────────────────────────────────────────
+// Brands that are too short or generic for simple substring matching
+const AMBIGUOUS_BRANDS = new Set(['ami', 'lv', 'fog', 'play', 'cdg', 'ald', 'y-3', 'mm6', 'huf', 'arc']);
 
-async function fetchWithTimeout(url, ms = 7000) {
-  const ctrl = new AbortController();
-  const id   = setTimeout(() => ctrl.abort(), ms);
-  try {
-    const res = await fetch(url, { signal: ctrl.signal });
-    return res;
-  } finally {
-    clearTimeout(id);
+function brandMatches(text, brand) {
+  const b = brand.toLowerCase();
+  const escaped = b.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  if (b.length <= 3 || AMBIGUOUS_BRANDS.has(b)) {
+    // Require no alphanumeric character on either side
+    return new RegExp(`(?<![a-zA-Z0-9])${escaped}(?![a-zA-Z0-9])`, 'i').test(text);
   }
+  if (b.includes(' ')) {
+    return text.includes(b); // multi-word brands are specific enough
+  }
+  return new RegExp(`\\b${escaped}\\b`, 'i').test(text);
 }
 
-async function fetchFeed(feed) {
-  let text = null;
-  for (const proxy of PROXIES) {
-    try {
-      const res = await fetchWithTimeout(proxy + encodeURIComponent(feed.url));
-      if (res.ok) { text = await res.text(); break; }
-    } catch (e) {
-      console.warn('[feed] proxy failed:', proxy, e.message);
+// ── Wardrobe profiling ────────────────────────────────────────────────────────
+const STREETWEAR_BRANDS = new Set([
+  'supreme', 'palace', 'stussy', 'bape', 'a bathing ape', 'kith', 'off-white', 'off white',
+  'fear of god', 'essentials', 'fog', 'carhartt', 'dickies', 'vans', 'nike', 'adidas',
+  'new balance', 'jordan', 'air jordan', 'converse', 'champion', 'huf', 'thrasher',
+  'anti social social club', 'assc', 'noah', 'aime leon dore', 'ald', 'rhude', 'vlone',
+  'gallery dept', 'cactus plant flea market', 'cpfm', 'golf wang', 'pleasures',
+  'corteiz', 'trapstar', 'sp5der', 'hellstar', 'eric emanuel', 'ksubi', 'represent',
+  'human made', 'undercover', 'neighborhood', 'wtaps', 'visvim', 'stone island',
+  'patagonia', 'the north face', 'columbia', 'puma', 'reebok', 'asics', 'salomon',
+]);
+
+const LUXURY_BRANDS = new Set([
+  'louis vuitton', 'lv', 'gucci', 'prada', 'chanel', 'hermes', 'hermès', 'dior',
+  'saint laurent', 'ysl', 'balenciaga', 'givenchy', 'bottega veneta', 'fendi',
+  'versace', 'valentino', 'burberry', 'alexander mcqueen', 'mcqueen',
+  'rick owens', 'maison margiela', 'margiela', 'mm6', 'acne studios', 'vetements',
+  'loewe', 'celine', 'jil sander', 'issey miyake', 'yohji yamamoto', 'y-3',
+  'comme des garcons', 'cdg', 'play', 'moncler', 'canada goose', 'loro piana',
+  'brunello cucinelli', 'tom ford', 'ralph lauren', 'polo ralph lauren',
+  'ami', 'jacquemus', 'casablanca', 'wales bonner', 'craig green', 'marni',
+  'diesel', 'dsquared2', 'moschino', 'dolce gabbana', 'dolce & gabbana',
+]);
+
+const STREETWEAR_KEYWORDS = [
+  'streetwear', 'sneaker', 'drop', 'collab', 'hype', 'grail', 'resell',
+  'colorway', 'restock', 'limited edition', 'hypebeast', 'cop', 'release date',
+];
+const LUXURY_KEYWORDS = [
+  'luxury', 'runway', 'couture', 'fashion week', 'editorial', 'atelier',
+  'collection', 'lookbook', 'ss25', 'fw25', 'ss24', 'fw24', 'resort', 'menswear',
+];
+
+function getWardrobeProfile(ownedBrands) {
+  let streetwear = 0, luxury = 0;
+  for (const brand of ownedBrands) {
+    const b = brand.toLowerCase();
+    if (STREETWEAR_BRANDS.has(b)) streetwear++;
+    if (LUXURY_BRANDS.has(b)) luxury++;
+  }
+  const total = streetwear + luxury;
+  // Need ≥3 categorized brands and ≥40% dominance to assign a lean
+  const confidence = total >= 3 ? Math.abs(streetwear - luxury) / total : 0;
+  const lean = confidence >= 0.4 ? (streetwear >= luxury ? 'streetwear' : 'luxury') : 'neutral';
+  return { streetwear, luxury, lean, confidence };
+}
+
+// brandFreq: { brandName: count } for owned items
+// wishlistBrands: [brandName] for wishlist items
+function scoreArticle(article, brandFreq, wishlistBrands, profile) {
+  const hasData = Object.keys(brandFreq).length > 0 || wishlistBrands.length > 0;
+  if (!hasData) return 0;
+  const text = (article.title + ' ' + article.desc).toLowerCase();
+  let score = 0;
+
+  // Owned brand matches — weighted by how many items of that brand
+  for (const [brand, count] of Object.entries(brandFreq)) {
+    if (brandMatches(text, brand)) score += 2 + Math.min(count - 1, 3);
+  }
+
+  // Wishlist brand matches
+  for (const brand of wishlistBrands) {
+    if (brandMatches(text, brand)) score += 2;
+  }
+
+  // Category keyword boost — only when wardrobe has a clear lean
+  if (profile?.lean && profile.lean !== 'neutral') {
+    const keywords = profile.lean === 'streetwear' ? STREETWEAR_KEYWORDS : LUXURY_KEYWORDS;
+    score += keywords.filter(k => text.includes(k)).length * 0.5;
+  }
+
+  // Recency bonus
+  if (article.date) {
+    const age = Date.now() - new Date(article.date).getTime();
+    if (!isNaN(age) && age >= 0) {
+      if (age < 86_400_000)  score += 1;    // <24h
+      else if (age < 604_800_000) score += 0.5; // <7d
     }
   }
-  if (!text) throw new Error('all proxies failed for ' + feed.name);
-  const doc  = new DOMParser().parseFromString(text, 'text/xml');
-  return [...doc.querySelectorAll('item')].slice(0, 8).map(item => {
-    const desc    = item.querySelector('description')?.textContent || '';
-    const content = item.querySelector('content\\:encoded, encoded')?.textContent || '';
-    const encUrl  = item.querySelector('enclosure')?.getAttribute('url');
-    const mediaUrl = item.querySelector('media\\:content')?.getAttribute('url') ||
-                     item.querySelector('media\\:thumbnail')?.getAttribute('url');
-    const image   = encUrl || mediaUrl || firstImg(content) || firstImg(desc) || null;
-    const rawDesc = stripHtml(content || desc);
-    return {
-      id:     item.querySelector('guid')?.textContent || item.querySelector('link')?.textContent || '',
-      source: feed.name,
-      title:  item.querySelector('title')?.textContent?.trim() || '',
-      desc:   rawDesc.slice(0, 200),
-      image,
-      link:   item.querySelector('link')?.textContent?.trim() || '',
-      date:   item.querySelector('pubDate')?.textContent || '',
-    };
-  });
+
+  return score;
 }
 
-function scoreArticle(article, brands) {
-  if (!brands.length) return 0;
-  const text = (article.title + ' ' + article.desc).toLowerCase();
-  return brands.reduce((score, brand) => score + (text.includes(brand.toLowerCase()) ? 1 : 0), 0);
+// Ensure top N articles aren't dominated by one source
+function diversify(articles, maxPerSource = 2, topN = 8) {
+  const top = [], rest = [], counts = {};
+  for (const a of articles) {
+    const c = counts[a.source] || 0;
+    if (top.length < topN && c < maxPerSource) { top.push(a); counts[a.source] = c + 1; }
+    else rest.push(a);
+  }
+  return [...top, ...rest];
+}
+
+function interleave(groups) {
+  const result = [];
+  const maxLen = Math.max(0, ...groups.map(g => g.length));
+  for (let i = 0; i < maxLen; i++) {
+    for (const group of groups) {
+      if (i < group.length) result.push(group[i]);
+    }
+  }
+  return result;
 }
 
 function NewsFeed({ user }) {
-  const [articles, setArticles] = useState([]);
-  const [brands, setBrands]     = useState([]);
-  const [loading, setLoading]   = useState(true);
-  const [error, setError]       = useState(false);
-  const [sort, setSort]         = useState('recent');
+  const [articles, setArticles]         = useState([]);
+  const [brandFreq, setBrandFreq]       = useState({});
+  const [wishlistBrands, setWishlist]   = useState([]);
+  const [profile, setProfile]           = useState(null);
+  const [loading, setLoading]           = useState(true);
+  const [error, setError]               = useState(false);
+  const [sort, setSort]                 = useState('recent');
 
-  // Fetch user's inventory brands for relevance scoring
+  // Fetch wardrobe brands with frequency + wishlist separation
   useEffect(() => {
     if (!user) return;
-    sb.from('items').select('brand').eq('user_id', user.id).then(({ data }) => {
-      const unique = [...new Set((data || []).map(i => i.brand).filter(Boolean))];
-      setBrands(unique);
+    sb.from('items').select('brand, status').eq('user_id', user.id).then(({ data }) => {
+      const freq = {}, wishlist = new Set();
+      for (const item of (data || [])) {
+        if (!item.brand) continue;
+        const b = item.brand.toLowerCase();
+        if (item.status === 'wishlist') wishlist.add(b);
+        else freq[b] = (freq[b] || 0) + 1;
+      }
+      setBrandFreq(freq);
+      setWishlist([...wishlist]);
+      setProfile(getWardrobeProfile(Object.keys(freq)));
     });
-  }, [user]);
+  }, [user?.id]);
 
+  // Fetch articles from backend (with sessionStorage cache)
   useEffect(() => {
     try {
-      const cached = JSON.parse(sessionStorage.getItem(CACHE_KEY) || 'null');
-      if (cached && Date.now() - cached.ts < CACHE_TTL) {
+      const cached = JSON.parse(sessionStorage.getItem(FEED_CACHE_KEY) || 'null');
+      if (cached && Date.now() - cached.ts < FEED_CACHE_TTL) {
         setArticles(cached.articles);
         setLoading(false);
         return;
       }
     } catch {}
 
-    async function fetchFeeds() {
+    async function load() {
       try {
-        const results = await Promise.allSettled(FEEDS.map(fetchFeed));
-        results.forEach((r, i) => {
-          if (r.status === 'rejected') console.warn('[feed] failed:', FEEDS[i].name, r.reason);
-          else console.log('[feed] ok:', FEEDS[i].name, r.value.length, 'items');
-        });
-        const all = results
-          .filter(r => r.status === 'fulfilled')
-          .flatMap(r => r.value)
-          .sort((a, b) => new Date(b.date) - new Date(a.date))
-          .slice(0, 40);
-        console.log('[feed] total articles:', all.length);
-        sessionStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), articles: all }));
-        setArticles(all);
+        const res = await fetch(`${API_URL}/feed/articles`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const { articles: raw } = await res.json();
+        sessionStorage.setItem(FEED_CACHE_KEY, JSON.stringify({ ts: Date.now(), articles: raw }));
+        setArticles(raw);
       } catch (e) {
-        console.error('[feed] fatal:', e);
+        console.error('[feed] failed:', e);
         setError(true);
       } finally {
         setLoading(false);
       }
     }
-    fetchFeeds();
+    load();
   }, []);
 
-  const sorted = sort === 'recent'
-    ? [...articles].sort((a, b) => new Date(b.date) - new Date(a.date))
-    : [...articles].sort((a, b) => {
-        const diff = scoreArticle(b, brands) - scoreArticle(a, brands);
-        return diff !== 0 ? diff : new Date(b.date) - new Date(a.date);
-      });
+  const sorted = (() => {
+    if (!articles.length) return [];
+    if (sort === 'recent') {
+      // Group by source, interleave round-robin for variety
+      const groups = {};
+      for (const a of articles) (groups[a.source] = groups[a.source] || []).push(a);
+      return interleave(
+        Object.values(groups).map(g => g.sort((a, b) => new Date(b.date) - new Date(a.date)))
+      ).slice(0, 40);
+    }
+    // FOR YOU: score → sort → diversity pass
+    const scored = [...articles].sort((a, b) => {
+      const diff = scoreArticle(b, brandFreq, wishlistBrands, profile)
+                 - scoreArticle(a, brandFreq, wishlistBrands, profile);
+      return diff !== 0 ? diff : new Date(b.date) - new Date(a.date);
+    });
+    return diversify(scored).slice(0, 40);
+  })();
 
   if (loading) return <p className="empty">Loading feed...</p>;
   if (error)   return <p className="empty">Couldn't load feed. Try again later.</p>;
@@ -148,14 +222,18 @@ function NewsFeed({ user }) {
   return (
     <div className="news-feed">
       <div className="news-sort-row">
-        <button className={`news-sort-btn${sort === 'recent' ? ' active' : ''}`} onClick={() => setSort('recent')}>RECENT</button>
+        <button className={`news-sort-btn${sort === 'recent'    ? ' active' : ''}`} onClick={() => setSort('recent')}>RECENT</button>
         <button className={`news-sort-btn${sort === 'relevance' ? ' active' : ''}`} onClick={() => setSort('relevance')} title="Sorted by brands in your wardrobe">FOR YOU</button>
       </div>
       {sorted.map(a => {
-        const score = scoreArticle(a, brands);
+        const score = scoreArticle(a, brandFreq, wishlistBrands, profile);
         return (
           <a key={a.id} className="news-card" href={a.link} target="_blank" rel="noopener noreferrer">
-            {a.image && <div className="news-card-img"><img src={a.image} alt="" loading="lazy" /></div>}
+            {a.image && (
+              <div className="news-card-img">
+                <img src={a.image} alt="" loading="lazy" onError={e => { e.currentTarget.parentElement.style.display = 'none'; }} />
+              </div>
+            )}
             <div className="news-card-body">
               <div className="news-card-source">
                 {a.source} · {timeAgo(a.date)}
