@@ -469,13 +469,23 @@ export default function DesignHouseGlobe({ mini = false }) {
     if (!canvas || !container) return;
     const dpr = window.devicePixelRatio || 1;
 
+    if (mini) {
+      // In mini mode the frame loop owns canvas/container sizing during animation.
+      // Just set the initial size here — no ResizeObserver (it would clear the canvas
+      // every frame by resetting canvas.width between draw() calls).
+      const s = MINI_SIZE;
+      canvas.width = s * dpr; canvas.height = s * dpr;
+      canvas.style.width = `${s}px`; canvas.style.height = `${s}px`;
+      container.style.width = `${s}px`; container.style.height = `${s}px`;
+      return;
+    }
+
     function setSize(s) {
       canvas.width  = s * dpr; canvas.height = s * dpr;
       canvas.style.width = `${s}px`; canvas.style.height = `${s}px`;
       setContainerW(s);
     }
 
-    // Observe the container (works for both full mode and mini collapsed)
     function resize() {
       const s = Math.min(container.clientWidth, container.clientHeight);
       if (s > 0) setSize(s);
@@ -483,7 +493,7 @@ export default function DesignHouseGlobe({ mini = false }) {
     const ro = new ResizeObserver(resize);
     ro.observe(container); resize();
     return () => ro.disconnect();
-  }, [mini, isZoomed]);
+  }, [mini]);
 
   const hitCluster = useCallback((mx, my) => {
     const cls = clustersRef.current;
@@ -646,8 +656,6 @@ export default function DesignHouseGlobe({ mini = false }) {
             position: 'absolute',
             top: 0,
             right: 0,
-            width:  isZoomed ? ZOOM_SIZE : MINI_SIZE,
-            height: isZoomed ? ZOOM_SIZE : MINI_SIZE,
             zIndex: isZoomed ? 200 : 1,
           }}
         >
