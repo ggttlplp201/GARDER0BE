@@ -5,7 +5,7 @@ import worldData from 'world-atlas/countries-110m.json';
 
 const INIT_ROTY  = -0.18;
 const INIT_ROTX  =  0.50;
-const IDLE_SPEED =  0.0016;
+const IDLE_SPEED =  0.004;
 const FRICTION   =  0.88;
 const ROTX_MIN   = -1.3;
 const ROTX_MAX   =  1.3;
@@ -150,6 +150,10 @@ export default function DesignHouseGlobe({ mini = false }) {
   const hovIdxRef    = useRef(null);
   const miniRef      = useRef(mini);
 
+  const lastDrawRef = useRef(0);
+  const sizeRef     = useRef(MINI_SIZE);
+  const nowRef      = useRef(new Date());
+
   const [hovered, setHovered]    = useState(null);
   const [tooltipPos, setTooltip] = useState({ x: 0, y: 0 });
   const [containerW, setContainerW] = useState(mini ? MINI_SIZE : 400);
@@ -159,7 +163,7 @@ export default function DesignHouseGlobe({ mini = false }) {
 
   // Tick local time every minute
   useEffect(() => {
-    const t = setInterval(() => setNow(new Date()), 60000);
+    const t = setInterval(() => { const d = new Date(); nowRef.current = d; setNow(d); }, 60000);
     return () => clearInterval(t);
   }, []);
 
@@ -218,11 +222,10 @@ export default function DesignHouseGlobe({ mini = false }) {
     ctx.strokeStyle = isDark ? 'rgba(232,232,232,0.35)' : 'rgba(0,0,0,0.25)';
     ctx.lineWidth = 0.8; ctx.stroke();
 
-    // City lights in dark mode — glowing dots at design house locations on night side
+    // City lights in dark mode — glowing dots at all visible design house locations
     if (isDark) {
       for (let i = 0; i < HOUSES.length; i++) {
         const h = HOUSES[i];
-        if (!isNightSide(h.lat, h.lng, sunLng, sunLat)) continue;
         const pos = proj([h.lng, h.lat]);
         if (!pos) continue;
         const [lx, ly] = pos;
@@ -303,40 +306,156 @@ export default function DesignHouseGlobe({ mini = false }) {
         }
       }
     }
+    // Auto-labels when zoomed — with iterative overlap separation
+    if (isZoomedRef.current) {
+      const nowT = nowRef.current;
+      const stemLen = 32;
+      const padX = 5, padY = 4, lineH = 11;
+      const boxGap = 4;
+
+      // First pass: compute all label geometries
+      const labs = [];
+      for (let ci = 0; ci < clusters.length; ci++) {
+        const cl = clusters[ci];
+        const { sx, sy, indices, isStack, count } = cl;
+        const dx = sx - cx, dy = sy - cy;
+        const dist = Math.hypot(dx, dy) || 1;
+        const ux = dist < 10 ? 0 : dx / dist;
+        const uy = dist < 10 ? -1 : dy / dist;
+        const toRight = ux >= 0;
+
+        const h0 = HOUSES[indices[0]];
+        const textLines = [];
+        if (isStack && count > 1) {
+          textLines.push({ text: h0.city, bold: true, sz: 8 });
+          for (const idx of indices) textLines.push({ text: HOUSES[idx].name, bold: false, sz: 7.5 });
+          textLines.push({ text: localTime(h0.tz, nowT), bold: false, sz: 7, dim: true });
+        } else {
+          textLines.push({ text: h0.name, bold: true, sz: 8 });
+          textLines.push({ text: `${h0.city} · ${localTime(h0.tz, nowT)}`, bold: false, sz: 7, dim: true });
+        }
+
+        let maxW = 0;
+        for (const l of textLines) {
+          ctx.font = `${l.bold ? 'bold ' : ''}${l.sz}px Arial`;
+          maxW = Math.max(maxW, ctx.measureText(l.text).width);
+        }
+        const bw = maxW + padX * 2;
+        const bh = textLines.length * lineH + padY * 2;
+        const stemX = sx + ux * stemLen;
+        const stemY = sy + uy * stemLen;
+        const bx = toRight ? stemX + 4 : stemX - bw - 4;
+        const by = stemY - bh / 2;
+
+        labs.push({ sx, sy, ux, uy, toRight, stemX, stemY, bx, bw, bh, by, textLines });
+      }
+
+      // Iterative vertical separation
+      for (let iter = 0; iter < 20; iter++) {
+        let moved = false;
+        for (let a = 0; a < labs.length; a++) {
+          for (let b = a + 1; b < labs.length; b++) {
+            const la = labs[a], lb = labs[b];
+            if (la.bx + la.bw < lb.bx - boxGap || lb.bx + lb.bw < la.bx - boxGap) continue;
+            const overlap = (la.by + la.bh + boxGap) - lb.by;
+            if (overlap <= 0) continue;
+            const half = overlap / 2;
+            labs[a].by -= half;
+            labs[b].by += half;
+            moved = true;
+          }
+        }
+        if (!moved) break;
+      }
+
+      // Draw all labels with final positions
+      for (const lab of labs) {
+        const { sx, sy, ux, uy, toRight, stemX, stemY, bx, bw, bh, by, textLines } = lab;
+        const pr = pR;
+        const boxMidY = by + bh / 2;
+
+        // L-shaped line: dot edge → stem → box edge
+        ctx.beginPath();
+        ctx.moveTo(sx + ux * (pr + 2), sy + uy * (pr + 2));
+        ctx.lineTo(stemX, stemY);
+        if (Math.abs(stemY - boxMidY) > 2) ctx.lineTo(stemX, boxMidY);
+        ctx.lineTo(toRight ? bx : bx + bw, boxMidY);
+        ctx.strokeStyle = isDark ? 'rgba(220,220,220,0.5)' : 'rgba(0,0,0,0.35)';
+        ctx.lineWidth = 0.7; ctx.stroke();
+
+        // Box
+        ctx.fillStyle = isDark ? 'rgba(13,13,13,0.88)' : 'rgba(255,255,255,0.9)';
+        ctx.strokeStyle = isDark ? 'rgba(200,200,200,0.2)' : 'rgba(0,0,0,0.12)';
+        ctx.lineWidth = 0.8;
+        ctx.fillRect(bx, by, bw, bh);
+        ctx.strokeRect(bx, by, bw, bh);
+
+        // Text
+        ctx.textBaseline = 'top'; ctx.textAlign = 'left';
+        textLines.forEach((l, i) => {
+          ctx.font = `${l.bold ? 'bold ' : ''}${l.sz}px Arial`;
+          ctx.fillStyle = l.dim ? (isDark ? '#888' : '#aaa') : fg;
+          ctx.fillText(l.text, bx + padX, by + padY + i * lineH);
+        });
+      }
+    }
+
     ctx.restore();
   }, []);
 
-  // Animation loop
+  // Animation loop — full 60fps during interaction, ~20fps when idle
   useEffect(() => {
-    function frame() {
-      if (flyRef.current && !dragRef.current) {
-        const f  = flyRef.current;
-        const eY = f.tRotY - rotYRef.current;
-        const eX = f.tRotX - rotXRef.current;
-        const eC = f.tClip - clipRef.current;
-        rotYRef.current += eY * 0.05;
-        rotXRef.current += eX * 0.05;
-        clipRef.current += eC * 0.05;
-        if (Math.abs(eY) < 0.002 && Math.abs(eX) < 0.002 && Math.abs(eC) < 0.1) {
-          rotYRef.current = f.tRotY;
-          rotXRef.current = f.tRotX;
-          clipRef.current = f.tClip;
-          flyRef.current  = null;
+    function frame(ts) {
+      const isActive = dragRef.current || flyRef.current || hovIdxRef.current !== null;
+      const interval = isActive ? 16 : 50;
+
+      if (ts - lastDrawRef.current >= interval) {
+        if (flyRef.current && !dragRef.current) {
+          const f   = flyRef.current;
+          const eY  = f.tRotY - rotYRef.current;
+          const eX  = f.tRotX - rotXRef.current;
+          const eC  = f.tClip - clipRef.current;
+          const eSz = (f.tSize ?? sizeRef.current) - sizeRef.current;
+          rotYRef.current += eY  * 0.05;
+          rotXRef.current += eX  * 0.05;
+          clipRef.current += eC  * 0.05;
+          sizeRef.current += eSz * 0.05;
+
+          // Apply canvas/container size directly (keeps it in sync with clip angle)
+          if (miniRef.current && f.tSize !== undefined) {
+            const s   = Math.round(sizeRef.current);
+            const dpr = window.devicePixelRatio || 1;
+            const cv  = canvasRef.current;
+            const ct  = containerRef.current;
+            if (cv) { cv.width = s * dpr; cv.height = s * dpr; cv.style.width = `${s}px`; cv.style.height = `${s}px`; }
+            if (ct) { ct.style.width = `${s}px`; ct.style.height = `${s}px`; }
+          }
+
+          if (Math.abs(eY) < 0.002 && Math.abs(eX) < 0.002 && Math.abs(eC) < 0.1 && Math.abs(eSz) < 1) {
+            rotYRef.current = f.tRotY;
+            rotXRef.current = f.tRotX;
+            clipRef.current = f.tClip;
+            sizeRef.current = f.tSize ?? sizeRef.current;
+            flyRef.current  = null;
+            if (f.tSize === ZOOM_SIZE) setIsZoomed(true);
+            if (f.tSize === MINI_SIZE) setIsZoomed(false);
+          }
+          velYRef.current = 0; velXRef.current = 0;
+        } else if (!dragRef.current && !isZoomedRef.current) {
+          velYRef.current = velYRef.current * FRICTION + IDLE_SPEED * (1 - FRICTION);
+          rotYRef.current += velYRef.current;
+          if (Math.abs(velXRef.current) > 0.00005) {
+            velXRef.current *= FRICTION;
+            rotXRef.current  = Math.max(ROTX_MIN, Math.min(ROTX_MAX, rotXRef.current + velXRef.current));
+          }
+        } else if (!dragRef.current && isZoomedRef.current) {
+          velYRef.current = velYRef.current * FRICTION + IDLE_SPEED * 0.25 * (1 - FRICTION);
+          rotYRef.current += velYRef.current;
+          velXRef.current = 0;
         }
-        velYRef.current = 0; velXRef.current = 0;
-      } else if (!dragRef.current && !isZoomedRef.current) {
-        velYRef.current = velYRef.current * FRICTION + IDLE_SPEED * (1 - FRICTION);
-        rotYRef.current += velYRef.current;
-        if (Math.abs(velXRef.current) > 0.00005) {
-          velXRef.current *= FRICTION;
-          rotXRef.current  = Math.max(ROTX_MIN, Math.min(ROTX_MAX, rotXRef.current + velXRef.current));
-        }
-      } else if (!dragRef.current && isZoomedRef.current) {
-        velYRef.current = velYRef.current * FRICTION + IDLE_SPEED * 0.08 * (1 - FRICTION);
-        rotYRef.current += velYRef.current;
-        velXRef.current = 0;
+        draw();
+        lastDrawRef.current = ts;
       }
-      draw();
       animRef.current = requestAnimationFrame(frame);
     }
     animRef.current = requestAnimationFrame(frame);
@@ -354,11 +473,6 @@ export default function DesignHouseGlobe({ mini = false }) {
       canvas.width  = s * dpr; canvas.height = s * dpr;
       canvas.style.width = `${s}px`; canvas.style.height = `${s}px`;
       setContainerW(s);
-    }
-
-    if (mini && isZoomed) {
-      setSize(ZOOM_SIZE);
-      return;
     }
 
     // Observe the container (works for both full mode and mini collapsed)
@@ -430,14 +544,13 @@ export default function DesignHouseGlobe({ mini = false }) {
         const ci = hitCluster(mx, my);
         if (ci !== null && clustersRef.current[ci]?.count > 1 && !isZoomedRef.current) {
           const cl = clustersRef.current[ci];
-          const tClip = ZOOM_CLIP;
           flyRef.current = {
             tRotY: -cl.lng * Math.PI / 180,
             tRotX:  cl.lat * Math.PI / 180,
-            tClip,
+            tClip: ZOOM_CLIP,
+            tSize: ZOOM_SIZE,
           };
           isZoomedRef.current = true;
-          setIsZoomed(true);
           hovIdxRef.current = null;
           setHovered(null);
         }
@@ -452,7 +565,7 @@ export default function DesignHouseGlobe({ mini = false }) {
   }, []);
 
   const handleBack = useCallback(() => {
-    flyRef.current = { tRotY: rotYRef.current, tRotX: rotXRef.current, tClip: 90 };
+    flyRef.current = { tRotY: rotYRef.current, tRotX: rotXRef.current, tClip: 90, tSize: MINI_SIZE };
     isZoomedRef.current = false;
     setIsZoomed(false);
   }, []);
@@ -539,7 +652,7 @@ export default function DesignHouseGlobe({ mini = false }) {
           }}
         >
           {globeCanvas}
-          {isZoomed && tooltip}
+          {!isZoomed && tooltip}
           {isZoomed && (
             <button className="globe-back-btn" onClick={handleBack}>←</button>
           )}
