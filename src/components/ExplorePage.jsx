@@ -399,7 +399,7 @@ function ProfileView({ profile, user, onBack }) {
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 
-export default function ExplorePage({ user, externalProfile, onExternalProfileClear }) {
+export default function ExplorePage({ user, externalProfile, onExternalProfileClear, likeCount, onLikesViewed }) {
   const [tab, setTab]                             = useState('feed');
   const [profiles, setProfiles]                   = useState([]);
   const [loading, setLoading]                     = useState(true);
@@ -449,14 +449,14 @@ export default function ExplorePage({ user, externalProfile, onExternalProfileCl
           {/* Tabs */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', margin: '0 36px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
             {[['feed', 'FEED'], ['people', 'PEOPLE']].map(([k, label]) => (
-              <button key={k} onClick={() => setTab(k)} style={{
+              <button key={k} onClick={() => { setTab(k); if (k === 'people') onLikesViewed?.(); }} style={{ position: 'relative',
                 background: 'none', border: 'none', padding: '14px 0',
                 fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '0.18em',
                 cursor: 'pointer', fontWeight: tab === k ? 700 : 400,
                 color: tab === k ? 'var(--text)' : 'var(--text2)',
                 borderBottom: tab === k ? '2px solid var(--text)' : '2px solid transparent',
                 marginBottom: -1,
-              }}>{label}</button>
+              }}>{label}{k === 'people' && likeCount > 0 && <span className="nav-badge">{likeCount}</span>}</button>
             ))}
           </div>
 

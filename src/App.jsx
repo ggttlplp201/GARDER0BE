@@ -223,6 +223,8 @@ export default function App() {
             user={user}
             externalProfile={friendsProfile}
             onExternalProfileClear={() => setFriendsProfile(null)}
+            likeCount={likeCount}
+            onLikesViewed={() => setLikeCount(0)}
           />
         )}
         {page === 'friends' && (
