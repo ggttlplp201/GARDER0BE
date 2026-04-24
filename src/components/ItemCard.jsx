@@ -44,8 +44,9 @@ export default function ItemCard({ item, onRemove, onEdit, onClick }) {
       const y = Math.max(-1, Math.min(1, gyroState.y));
       card.style.transform = `perspective(600px) rotateY(${x * 14}deg) rotateX(${-y * 14}deg) scale(1.02)`;
       if (shine) {
-        shine.style.opacity = '0.6';
-        shine.style.background = `linear-gradient(${115 + x * 30}deg, transparent 30%, rgba(255,255,255,${0.15 + Math.abs(x) * 0.15}) 50%, transparent 70%)`;
+        const dk = document.documentElement.classList.contains('dark');
+        shine.style.opacity = dk ? '0.3' : '0.6';
+        shine.style.background = `linear-gradient(${115 + x * 30}deg, transparent 30%, rgba(255,255,255,${(0.15 + Math.abs(x) * 0.15) * (dk ? 0.4 : 1)}) 50%, transparent 70%)`;
       }
     };
     gyroCallbacks.add(gyroCallbackRef.current);
@@ -64,8 +65,9 @@ export default function ItemCard({ item, onRemove, onEdit, onClick }) {
     const y = (e.clientY - r.top)  / r.height - 0.5;
     card.style.transform = `perspective(500px) rotateY(${x * 16}deg) rotateX(${-y * 16}deg) scale(1.04) translateZ(10px)`;
     if (shineRef.current) {
-      shineRef.current.style.opacity = '1';
-      shineRef.current.style.background = `linear-gradient(${115 + x * 30}deg, transparent 30%, rgba(255,255,255,${0.3 + Math.abs(x) * 0.3}) 50%, transparent 70%)`;
+      const dk = document.documentElement.classList.contains('dark');
+      shineRef.current.style.opacity = dk ? '0.4' : '1';
+      shineRef.current.style.background = `linear-gradient(${115 + x * 30}deg, transparent 30%, rgba(255,255,255,${(0.3 + Math.abs(x) * 0.3) * (dk ? 0.4 : 1)}) 50%, transparent 70%)`;
     }
   }
   function handleMouseLeave() {
