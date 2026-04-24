@@ -59,6 +59,7 @@ export default function App() {
   const [editItemId, setEditItemId]   = useState(null);
   const [lbItem, setLbItem]           = useState(null);
   const [requestCount, setRequestCount] = useState(0);
+  const [likeCount, setLikeCount]     = useState(0);
   const [friendsProfile, setFriendsProfile] = useState(null);
   const [toasts, setToasts]           = useState([]);
 
@@ -109,6 +110,7 @@ export default function App() {
         const { data: profile } = await sb.from('profiles').select('username, avatar_url').eq('id', payload.new.user_id).maybeSingle();
         const toast = { id: Date.now(), name: profile?.username || 'Someone', avatarUrl: profile?.avatar_url || null };
         setToasts(t => [...t, toast]);
+        setLikeCount(c => c + 1);
         setTimeout(() => setToasts(t => t.filter(x => x.id !== toast.id)), 5000);
       })
       .subscribe();
@@ -207,9 +209,14 @@ export default function App() {
 
       <AppNav
         page={page}
-        setPage={p => { navigate(p); if (p === 'friends') setToasts([]); }}
+        setPage={p => {
+          navigate(p);
+          if (p === 'friends') { setToasts([]); setRequestCount(0); }
+          if (p === 'explore') setLikeCount(0);
+        }}
         total={total}
         requestCount={requestCount}
+        likeCount={likeCount}
       />
 
       {/* Overlays */}

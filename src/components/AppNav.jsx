@@ -7,23 +7,23 @@ const NAV_ITEMS = [
   { k: 'friends',   label: 'FRIENDS' },
 ];
 
-export default function AppNav({ page, setPage, total, requestCount }) {
+export default function AppNav({ page, setPage, total, requestCount, likeCount }) {
   const activePage = page === 'detail' ? 'wardrobe' : page;
   return (
     <div className="app-nav">
       <div className="app-nav-tabs">
-        {NAV_ITEMS.map(it => (
+        {NAV_ITEMS.map(it => {
+          const badge = it.k === 'friends' ? requestCount : it.k === 'explore' ? likeCount : 0;
+          return (
           <button
             key={it.k}
             onClick={() => setPage(it.k)}
             className={`app-nav-tab${activePage === it.k ? ' active' : ''}`}
           >
             {activePage === it.k ? '■' : '□'} {it.label}
-            {it.k === 'friends' && requestCount > 0 && (
-              <span className="nav-badge">{requestCount}</span>
-            )}
+            {badge > 0 && <span className="nav-badge">{badge}</span>}
           </button>
-        ))}
+        );})}
       </div>
       <div className="app-nav-value">
         COLLECTION VALUE — <strong>${total.toLocaleString()}.00</strong>
