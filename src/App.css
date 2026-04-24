@@ -550,7 +550,7 @@ input[type=range].vol-slider::-webkit-slider-thumb { -webkit-appearance: none; a
 
 /* ── Header ── */
 .app-header {
-  padding: 12px 36px 0;
+  padding: 18px 36px 0;
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
