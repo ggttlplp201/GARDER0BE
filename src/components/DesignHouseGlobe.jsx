@@ -158,6 +158,7 @@ export default function DesignHouseGlobe({ mini = false }) {
   const [tooltipPos, setTooltip] = useState({ x: 0, y: 0 });
   const [containerW, setContainerW] = useState(mini ? MINI_SIZE : 400);
   const [isZoomed, setIsZoomed]  = useState(false);
+  const [showBack, setShowBack]  = useState(false);
   const isZoomedRef              = useRef(false);
   const [now, setNow]            = useState(() => new Date());
 
@@ -563,6 +564,7 @@ export default function DesignHouseGlobe({ mini = false }) {
           isZoomedRef.current = true;
           hovIdxRef.current = null;
           setHovered(null);
+          setShowBack(true);
         }
       }
     }
@@ -578,6 +580,7 @@ export default function DesignHouseGlobe({ mini = false }) {
     flyRef.current = { tRotY: rotYRef.current, tRotX: rotXRef.current, tClip: 90, tSize: MINI_SIZE };
     isZoomedRef.current = false;
     setIsZoomed(false);
+    setShowBack(false);
   }, []);
 
   const hovCluster  = hovered !== null ? clustersRef.current[hovered] ?? null : null;
@@ -661,8 +664,8 @@ export default function DesignHouseGlobe({ mini = false }) {
         >
           {globeCanvas}
           {!isZoomed && tooltip}
-          {isZoomed && (
-            <button className="globe-back-btn" onClick={handleBack}>←</button>
+          {showBack && (
+            <button className="globe-back-btn" onClick={handleBack}>← BACK</button>
           )}
         </div>
       </div>

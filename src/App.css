@@ -470,22 +470,24 @@ input[type=range].vol-slider::-webkit-slider-thumb { -webkit-appearance: none; a
 .globe-mode-btn.active { border-color: var(--border); color: var(--text); background: var(--bg3); }
 .globe-back-btn {
   position: absolute;
-  top: 10px;
-  left: 10px;
-  width: 28px; height: 28px;
-  display: flex; align-items: center; justify-content: center;
-  border: 1.5px solid var(--border-light);
-  background: var(--bg2);
-  color: var(--text2);
+  top: 8px;
+  left: 8px;
+  padding: 4px 9px;
+  border: 1.5px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
   cursor: pointer;
-  font-size: 16px;
-  border-radius: 50%;
-  line-height: 1;
-  padding: 0;
+  font-size: 9px;
+  font-weight: bold;
+  letter-spacing: 0.08em;
+  font-family: Arial, sans-serif;
   z-index: 10;
-  transition: border-color 0.12s, color 0.12s, background 0.12s;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: background 0.12s, color 0.12s;
 }
-.globe-back-btn:hover { border-color: var(--border); color: var(--text); background: var(--bg3); }
+.globe-back-btn:hover { background: var(--text); color: var(--bg); }
 
 /* ── Mobile ─────────────────────────────────────── */
 @media (max-width: 640px) {
