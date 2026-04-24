@@ -232,7 +232,7 @@ export default function DesignHouseGlobe({ mini = false }) {
       const [_lng, _lat] = solarPosition();
       solarCacheRef.current = { lng: _lng, lat: _lat, night: nightCircle(_lng, _lat), ts: _sNow };
     }
-    const { lng: sunLng, lat: sunLat, night } = solarCacheRef.current;
+    const { night } = solarCacheRef.current;
     ctx.beginPath(); path(night);
     ctx.fillStyle = isDark ? 'rgba(0,0,0,0.45)' : 'rgba(0,0,0,0.13)';
     ctx.fill();

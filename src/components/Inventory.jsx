@@ -10,7 +10,7 @@ import AddItemModal from './AddItemModal';
 import EditItemModal from './EditItemModal';
 import { useItems } from '../hooks/useItems';
 import { ITEM_TYPES } from '../lib/constants';
-import { usePlayer } from '../hooks/usePlayer';
+// import { usePlayer } from '../hooks/usePlayer'; // saved — uncomment to restore music player
 
 const SORT_OPTIONS = [
   { value: 'brand', label: 'Brand' },
