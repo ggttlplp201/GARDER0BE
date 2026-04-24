@@ -355,9 +355,8 @@ export default function DesignHouseGlobe({ mini = false }) {
           const h0 = HOUSES[indices[0]];
           const textLines = [];
           if (isStack && count > 1) {
-            textLines.push({ text: h0.city, bold: true, sz: 8 });
+            textLines.push({ text: `${h0.city} · ${localTime(h0.tz, nowT)}`, bold: true, sz: 8 });
             for (const idx of indices) textLines.push({ text: HOUSES[idx].name, bold: false, sz: 7.5 });
-            textLines.push({ text: localTime(h0.tz, nowT), bold: false, sz: 7, dim: true });
           } else {
             textLines.push({ text: h0.name, bold: true, sz: 8 });
             textLines.push({ text: `${h0.city} · ${localTime(h0.tz, nowT)}`, bold: false, sz: 7, dim: true });
