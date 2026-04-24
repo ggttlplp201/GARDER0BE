@@ -128,13 +128,6 @@ function buildClusters(visible) {
   return out;
 }
 
-function isNightSide(lat, lng, sunLng, sunLat) {
-  const toR = Math.PI / 180;
-  const dot = Math.sin(sunLat * toR) * Math.sin(lat * toR)
-            + Math.cos(sunLat * toR) * Math.cos(lat * toR) * Math.cos((lng - sunLng) * toR);
-  return dot < 0;
-}
-
 export default function DesignHouseGlobe({ mini = false }) {
   const canvasRef    = useRef(null);
   const containerRef = useRef(null);
@@ -150,22 +143,47 @@ export default function DesignHouseGlobe({ mini = false }) {
   const hovIdxRef    = useRef(null);
   const miniRef      = useRef(mini);
 
-  const lastDrawRef = useRef(0);
-  const sizeRef     = useRef(MINI_SIZE);
-  const nowRef      = useRef(new Date());
+  const lastDrawRef   = useRef(0);
+  const sizeRef       = useRef(MINI_SIZE);
+  const nowRef        = useRef(new Date());
+  // Performance caches — values that are expensive to recompute every frame
+  const solarCacheRef = useRef({ lng: 0, lat: 0, night: null, ts: 0 });
+  const gradCacheRef  = useRef({ W: 0, H: 0, r: 0, isDark: null, atmos: null, hl: null, dark: null });
+  const labelCacheRef = useRef({ key: '', measured: [] });
+  const pausedRef     = useRef(false);
 
-  const [hovered, setHovered]    = useState(null);
-  const [tooltipPos, setTooltip] = useState({ x: 0, y: 0 });
+  const [hovCluster, setHovCluster] = useState(null);
+  const [dragging, setDragging]     = useState(false);
+  const [tooltipPos, setTooltip]    = useState({ x: 0, y: 0 });
   const [containerW, setContainerW] = useState(mini ? MINI_SIZE : 400);
-  const [isZoomed, setIsZoomed]  = useState(false);
-  const [showBack, setShowBack]  = useState(false);
-  const isZoomedRef              = useRef(false);
-  const [now, setNow]            = useState(() => new Date());
+  const [isZoomed, setIsZoomed]     = useState(false);
+  const [showBack, setShowBack]     = useState(false);
+  const isZoomedRef                 = useRef(false);
+  const [now, setNow]               = useState(() => new Date());
 
   // Tick local time every minute
   useEffect(() => {
     const t = setInterval(() => { const d = new Date(); nowRef.current = d; setNow(d); }, 60000);
     return () => clearInterval(t);
+  }, []);
+
+  // Pause RAF when tab is hidden
+  useEffect(() => {
+    const onVis = () => { pausedRef.current = document.hidden; };
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
+  }, []);
+
+  // Pause RAF when globe is scrolled off-screen
+  useEffect(() => {
+    const ct = containerRef.current;
+    if (!ct) return;
+    const io = new IntersectionObserver(
+      ([entry]) => { pausedRef.current = !entry.isIntersecting || document.hidden; },
+      { threshold: 0 }
+    );
+    io.observe(ct);
+    return () => io.disconnect();
   }, []);
 
   const draw = useCallback(() => {
@@ -207,8 +225,14 @@ export default function DesignHouseGlobe({ mini = false }) {
 
     if (LAND) { ctx.beginPath(); path(LAND); ctx.fillStyle = land; ctx.fill(); }
 
-    const [sunLng, sunLat] = solarPosition();
-    const night = nightCircle(sunLng, sunLat);
+    // Solar position + night overlay — recompute at most every 30 s
+    const _sNow = Date.now();
+    const _sc   = solarCacheRef.current;
+    if (_sNow - _sc.ts > 30000 || !_sc.night) {
+      const [_lng, _lat] = solarPosition();
+      solarCacheRef.current = { lng: _lng, lat: _lat, night: nightCircle(_lng, _lat), ts: _sNow };
+    }
+    const { lng: sunLng, lat: sunLat, night } = solarCacheRef.current;
     ctx.beginPath(); path(night);
     ctx.fillStyle = isDark ? 'rgba(0,0,0,0.45)' : 'rgba(0,0,0,0.13)';
     ctx.fill();
@@ -242,25 +266,32 @@ export default function DesignHouseGlobe({ mini = false }) {
       }
     }
 
+    // 3D atmosphere + lighting gradients — cached; only rebuilt when size or theme changes
+    const _gc = gradCacheRef.current;
+    if (_gc.W !== W || _gc.H !== H || _gc.r !== r || _gc.isDark !== isDark) {
+      const _atmos = ctx.createRadialGradient(cx, cy, r * 0.72, cx, cy, r * 1.0);
+      _atmos.addColorStop(0, 'transparent');
+      _atmos.addColorStop(1, isDark ? 'rgba(120,160,255,0.22)' : 'rgba(100,140,255,0.14)');
+      const _hlx = cx - r * 0.28, _hly = cy - r * 0.30;
+      const _hl = ctx.createRadialGradient(_hlx, _hly, 0, _hlx, _hly, r * 0.52);
+      _hl.addColorStop(0, isDark ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.30)');
+      _hl.addColorStop(1, 'transparent');
+      const _dark = ctx.createRadialGradient(cx + r * 0.20, cy + r * 0.20, r * 0.45, cx, cy, r);
+      _dark.addColorStop(0, 'transparent');
+      _dark.addColorStop(1, isDark ? 'rgba(0,0,0,0.32)' : 'rgba(0,0,0,0.18)');
+      gradCacheRef.current = { W, H, r, isDark, atmos: _atmos, hl: _hl, dark: _dark };
+    }
+    const { atmos: atmosGrad, hl: hlGrad, dark: darkGrad } = gradCacheRef.current;
+
     // 3D atmospheric rim — blue-white halo at the sphere edge
-    const atmosGrad = ctx.createRadialGradient(cx, cy, r * 0.72, cx, cy, r * 1.0);
-    atmosGrad.addColorStop(0, 'transparent');
-    atmosGrad.addColorStop(1, isDark ? 'rgba(120,160,255,0.22)' : 'rgba(100,140,255,0.14)');
     ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
     ctx.fillStyle = atmosGrad; ctx.fill();
 
     // 3D specular highlight — top-left light source
-    const hlx = cx - r * 0.28, hly = cy - r * 0.30;
-    const hlGrad = ctx.createRadialGradient(hlx, hly, 0, hlx, hly, r * 0.52);
-    hlGrad.addColorStop(0, isDark ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.30)');
-    hlGrad.addColorStop(1, 'transparent');
     ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
     ctx.fillStyle = hlGrad; ctx.fill();
 
     // Limb darkening — subtle shadow toward the bottom-right edge
-    const darkGrad = ctx.createRadialGradient(cx + r * 0.20, cy + r * 0.20, r * 0.45, cx, cy, r);
-    darkGrad.addColorStop(0, 'transparent');
-    darkGrad.addColorStop(1, isDark ? 'rgba(0,0,0,0.32)' : 'rgba(0,0,0,0.18)');
     ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
     ctx.fillStyle = darkGrad; ctx.fill();
 
@@ -314,42 +345,49 @@ export default function DesignHouseGlobe({ mini = false }) {
       const padX = 5, padY = 4, lineH = 11;
       const boxGap = 4;
 
-      // First pass: compute all label geometries
-      const labs = [];
-      for (let ci = 0; ci < clusters.length; ci++) {
-        const cl = clusters[ci];
-        const { sx, sy, indices, isStack, count } = cl;
+      // Cache text measurement (ctx.measureText + textLines) by minute + visible cluster set.
+      // Positions (sx,sy) are re-derived each frame from current cluster data; only the
+      // expensive text layout work is cached.
+      const _labKey = nowT.getMinutes() + '|' + clusters.map(c => c.indices.join(',')).join('|');
+      if (_labKey !== labelCacheRef.current.key) {
+        const _measured = clusters.map(cl => {
+          const { indices, isStack, count } = cl;
+          const h0 = HOUSES[indices[0]];
+          const textLines = [];
+          if (isStack && count > 1) {
+            textLines.push({ text: h0.city, bold: true, sz: 8 });
+            for (const idx of indices) textLines.push({ text: HOUSES[idx].name, bold: false, sz: 7.5 });
+            textLines.push({ text: localTime(h0.tz, nowT), bold: false, sz: 7, dim: true });
+          } else {
+            textLines.push({ text: h0.name, bold: true, sz: 8 });
+            textLines.push({ text: `${h0.city} · ${localTime(h0.tz, nowT)}`, bold: false, sz: 7, dim: true });
+          }
+          let maxW = 0;
+          for (const l of textLines) {
+            ctx.font = `${l.bold ? 'bold ' : ''}${l.sz}px Arial`;
+            maxW = Math.max(maxW, ctx.measureText(l.text).width);
+          }
+          return { textLines, bw: maxW + padX * 2, bh: textLines.length * lineH + padY * 2 };
+        });
+        labelCacheRef.current = { key: _labKey, measured: _measured };
+      }
+      const { measured } = labelCacheRef.current;
+
+      // Build per-frame lab positions from current cluster screen coordinates + cached measurements
+      const labs = clusters.map((cl, ci) => {
+        const { sx, sy } = cl;
+        const { bw, bh, textLines } = measured[ci];
         const dx = sx - cx, dy = sy - cy;
         const dist = Math.hypot(dx, dy) || 1;
         const ux = dist < 10 ? 0 : dx / dist;
         const uy = dist < 10 ? -1 : dy / dist;
         const toRight = ux >= 0;
-
-        const h0 = HOUSES[indices[0]];
-        const textLines = [];
-        if (isStack && count > 1) {
-          textLines.push({ text: h0.city, bold: true, sz: 8 });
-          for (const idx of indices) textLines.push({ text: HOUSES[idx].name, bold: false, sz: 7.5 });
-          textLines.push({ text: localTime(h0.tz, nowT), bold: false, sz: 7, dim: true });
-        } else {
-          textLines.push({ text: h0.name, bold: true, sz: 8 });
-          textLines.push({ text: `${h0.city} · ${localTime(h0.tz, nowT)}`, bold: false, sz: 7, dim: true });
-        }
-
-        let maxW = 0;
-        for (const l of textLines) {
-          ctx.font = `${l.bold ? 'bold ' : ''}${l.sz}px Arial`;
-          maxW = Math.max(maxW, ctx.measureText(l.text).width);
-        }
-        const bw = maxW + padX * 2;
-        const bh = textLines.length * lineH + padY * 2;
         const stemX = sx + ux * stemLen;
         const stemY = sy + uy * stemLen;
-        const bx = toRight ? stemX + 4 : stemX - bw - 4;
-        const by = stemY - bh / 2;
-
-        labs.push({ sx, sy, ux, uy, toRight, stemX, stemY, bx, bw, bh, by, textLines });
-      }
+        return { sx, sy, ux, uy, toRight, stemX, stemY,
+                 bx: toRight ? stemX + 4 : stemX - bw - 4,
+                 by: stemY - bh / 2, bw, bh, textLines };
+      });
 
       // Iterative vertical separation
       for (let iter = 0; iter < 20; iter++) {
@@ -407,6 +445,7 @@ export default function DesignHouseGlobe({ mini = false }) {
   // Animation loop — full 60fps during interaction, ~20fps when idle
   useEffect(() => {
     function frame(ts) {
+      if (pausedRef.current) { animRef.current = requestAnimationFrame(frame); return; }
       const isActive = dragRef.current || flyRef.current || hovIdxRef.current !== null;
       const interval = isActive ? 16 : 50;
 
@@ -428,7 +467,12 @@ export default function DesignHouseGlobe({ mini = false }) {
             const dpr = window.devicePixelRatio || 1;
             const cv  = canvasRef.current;
             const ct  = containerRef.current;
-            if (cv) { cv.width = s * dpr; cv.height = s * dpr; cv.style.width = `${s}px`; cv.style.height = `${s}px`; }
+            if (cv) {
+              const tw = s * dpr;
+              // Only reset backing store when size actually changes (setting canvas.width clears it)
+              if (cv.width !== tw) { cv.width = tw; cv.height = tw; }
+              cv.style.width = `${s}px`; cv.style.height = `${s}px`;
+            }
             if (ct) { ct.style.width = `${s}px`; ct.style.height = `${s}px`; }
           }
 
@@ -515,6 +559,7 @@ export default function DesignHouseGlobe({ mini = false }) {
       startRotY: rotYRef.current, startRotX: rotXRef.current,
       moved: false,
     };
+    setDragging(true);
     e.currentTarget.setPointerCapture(e.pointerId);
   }, []);
 
@@ -541,7 +586,7 @@ export default function DesignHouseGlobe({ mini = false }) {
     const ci   = hitCluster(mx, my);
     if (ci !== hovIdxRef.current) {
       hovIdxRef.current = ci;
-      setHovered(ci);
+      setHovCluster(ci !== null ? (clustersRef.current[ci] ?? null) : null);
       if (ci !== null) setTooltip({ x: mx, y: my });
     }
   }, [hitCluster]);
@@ -563,17 +608,19 @@ export default function DesignHouseGlobe({ mini = false }) {
           };
           isZoomedRef.current = true;
           hovIdxRef.current = null;
-          setHovered(null);
+          setHovCluster(null);
           setShowBack(true);
         }
       }
     }
     dragRef.current = null;
+    setDragging(false);
   }, [hitCluster]);
 
   const onMouseLeave = useCallback(() => {
     hovIdxRef.current = null;
-    setHovered(null);
+    setHovCluster(null);
+    setDragging(false);
   }, []);
 
   const handleBack = useCallback(() => {
@@ -583,10 +630,9 @@ export default function DesignHouseGlobe({ mini = false }) {
     setShowBack(false);
   }, []);
 
-  const hovCluster  = hovered !== null ? clustersRef.current[hovered] ?? null : null;
   const hovHouse    = hovCluster?.count === 1 ? HOUSES[hovCluster.indices[0]] : null;
   const isHovStack  = hovCluster?.isStack && hovCluster.count > 1;
-  const cursorStyle = (hovCluster?.count > 1 && !isHovStack) ? 'pointer' : (dragRef.current ? 'grabbing' : 'grab');
+  const cursorStyle = (hovCluster?.count > 1 && !isHovStack) ? 'pointer' : (dragging ? 'grabbing' : 'grab');
 
   // Tooltip positioning — flip to left if near right edge
   const tooltipStyle = {
