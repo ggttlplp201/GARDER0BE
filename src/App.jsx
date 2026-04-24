@@ -73,7 +73,7 @@ export default function App() {
   }, [user, fetchItems]);
 
   useEffect(() => {
-    const t = items.reduce((s, i) => s + (parseFloat(i.price) || 0), 0);
+    const t = items.filter(i => i.status !== 'wishlist').reduce((s, i) => s + (parseFloat(i.price) || 0), 0);
     setTotal(Math.round(t));
   }, [items]);
 
