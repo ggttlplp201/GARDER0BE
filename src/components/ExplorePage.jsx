@@ -231,7 +231,7 @@ function NewsFeed({ user }) {
           <a key={a.id} className="news-card" href={a.link} target="_blank" rel="noopener noreferrer">
             <div className="news-card-img">
               {a.image
-                ? <img src={a.image} alt="" loading="lazy" onError={e => { e.currentTarget.style.display = 'none'; }} />
+                ? <img src={a.image} alt="" loading="lazy" onError={e => { e.currentTarget.replaceWith(Object.assign(document.createElement('div'), { className: 'news-card-img-placeholder', textContent: (a.source || '').toUpperCase() })); }} />
                 : <div className="news-card-img-placeholder">{(a.source || '').toUpperCase()}</div>
               }
             </div>
