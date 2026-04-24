@@ -7,8 +7,8 @@ export default function WishlistView({ items, onItemClick, onAdd }) {
     <div className="v-screen">
       <div className="v-screen-header">
         <div>
-          <div className="v-screen-title">WISHLIST · TRACKED PRICES</div>
-          <div className="v-screen-sub">{String(wishlist.length).padStart(2, '0')} ITEMS · WATCHING DAILY</div>
+          <div className="v-screen-title">WISHLIST</div>
+          <div className="v-screen-sub">{String(wishlist.length).padStart(2, '0')} ITEMS · TRACKING PRICE</div>
         </div>
         <button className="toolbar-add" style={{ alignSelf: 'flex-end' }} onClick={onAdd}>+ TRACK NEW</button>
       </div>

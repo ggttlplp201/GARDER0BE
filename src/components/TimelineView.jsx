@@ -20,7 +20,7 @@ export default function TimelineView({ items, onItemClick }) {
     <div className="v-screen">
       <div className="v-screen-header">
         <div>
-          <div className="v-screen-title">ACQUISITIONS · TIMELINE</div>
+          <div className="v-screen-title">ACQUISITIONS</div>
           <div className="v-screen-sub">{items.length} ENTRIES · EARLIEST {earliest} · LATEST {latest}</div>
         </div>
         <div className="v-header-action" style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.12em', alignSelf: 'flex-end' }}>SORT / DESC ↓</div>

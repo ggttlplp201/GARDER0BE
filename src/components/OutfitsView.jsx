@@ -159,7 +159,7 @@ export default function OutfitsView({ items }) {
     <div className="v-screen">
       <div className="v-screen-header" style={{ borderBottom: 'none' }}>
         <div>
-          <div className="v-screen-title">OUTFIT · TODAY</div>
+          <div className="v-screen-title">OOTD</div>
           <div className="v-screen-sub">BUILD A FIT · TAP ITEMS TO ADD · TAP SLOT TO REMOVE</div>
         </div>
         <button
