@@ -550,21 +550,21 @@ input[type=range].vol-slider::-webkit-slider-thumb { -webkit-appearance: none; a
 
 /* ── Header ── */
 .app-header {
-  padding: 18px 36px 0;
+  padding: 12px 36px 0;
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   flex-shrink: 0;
   background: var(--bg);
 }
-.app-header-left { display: flex; flex-direction: column; padding-bottom: 8px; }
+.app-header-left { display: flex; flex-direction: column; padding-bottom: 2px; }
 .app-wordmark {
   font-size: 40px; font-weight: 500; letter-spacing: -0.01em;
   line-height: 0.9; font-family: var(--font-display);
 }
 .app-phonetic { font-family: var(--font-mono); font-size: 10px; opacity: 0.55; margin-top: 6px; letter-spacing: 0.02em; }
 .app-subtitle { font-family: var(--font-mono); font-size: 10px; opacity: 0.55; letter-spacing: 0.02em; margin-top: 2px; }
-.app-header-right { display: flex; gap: 28px; align-items: flex-start; padding-bottom: 8px; }
+.app-header-right { display: flex; gap: 28px; align-items: flex-start; padding-bottom: 2px; }
 .app-header-meta {
   text-align: right; font-family: var(--font-mono); font-size: 10px;
   line-height: 1.75; padding-top: 4px; min-width: 140px; opacity: 0.55; letter-spacing: 0.02em;
@@ -615,7 +615,7 @@ input[type=range].vol-slider::-webkit-slider-thumb { -webkit-appearance: none; a
 
 /* View header bar */
 .v-screen-header {
-  padding: 6px 36px 12px;
+  padding: 2px 36px 12px;
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
