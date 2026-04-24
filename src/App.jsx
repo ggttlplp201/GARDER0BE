@@ -87,12 +87,10 @@ export default function App() {
     } catch {}
     if (user) {
       sb.auth.getUser().then(({ data: { user: u } }) => {
-        const url = u?.user_metadata?.profile?.avatarUrl;
-        if (url) setAvatarUrl(url);
-        const loc = u?.user_metadata?.profile?.location;
-        if (loc) setUserLocation(loc);
-        const name = u?.user_metadata?.profile?.name;
-        if (name) setUserName(name);
+        const meta = u?.user_metadata?.profile || {};
+        if (meta.avatarUrl) setAvatarUrl(meta.avatarUrl);
+        if (meta['p-location']) setUserLocation(meta['p-location']);
+        if (meta['p-name']) setUserName(meta['p-name']);
       });
     }
   }, [user?.id]);
@@ -222,12 +220,12 @@ export default function App() {
         avatarUrl={avatarUrl}
         onAvatarChange={url => setAvatarUrl(url)}
         onProfileSave={() => {
-          try {
-            const key = `garderobe-profile-${user?.id || 'guest'}`;
-            const p = JSON.parse(localStorage.getItem(key) || '{}');
-            if (p['p-location']) setUserLocation(p['p-location']);
-            if (p['p-name']) setUserName(p['p-name']);
-          } catch {}
+          sb.auth.getUser().then(({ data: { user: u } }) => {
+            const meta = u?.user_metadata?.profile || {};
+            if (meta['p-location']) setUserLocation(meta['p-location']);
+            if (meta['p-name']) setUserName(meta['p-name']);
+            if (meta.avatarUrl) setAvatarUrl(meta.avatarUrl);
+          });
         }}
       />
 
