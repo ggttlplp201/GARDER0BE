@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { parseImageUrls } from '../lib/imageUtils';
-import { gyroState, gyroCallbacks, isGyroActive } from '../lib/gyro';
+import { isGyroActive } from '../lib/gyro';
 import ItemCard from './ItemCard';
 
 function Hanger({ size = 34 }) {
@@ -47,17 +47,6 @@ function RackCard({ item, globalIdx, onClick }) {
     if (isGyroActive()) return;
     if (cardRef.current) cardRef.current.style.transform = '';
     if (shineRef.current) shineRef.current.style.opacity = '0';
-  }
-
-  function nav(dir, e) {
-    e.stopPropagation();
-    const next = (imgIdx + dir + imgs.length) % imgs.length;
-    setImgIdx(next);
-    imgIdxRef.current = next;
-    if (stripRef.current) {
-      stripRef.current.style.transition = 'transform 0.22s ease';
-      stripRef.current.style.transform = `translateX(${-next * 100}%)`;
-    }
   }
 
   function onImgPointerDown(e) {

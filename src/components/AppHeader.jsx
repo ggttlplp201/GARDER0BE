@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import DesignHouseGlobe from './DesignHouseGlobe';
 
-export default function AppHeader({ user, dark, onDark, avatarUrl, location, userName, onProfileOpen }) {
+export default function AppHeader({ onDark, avatarUrl, location, userName, onProfileOpen }) {
   const [now, setNow] = useState(new Date());
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 30000);
