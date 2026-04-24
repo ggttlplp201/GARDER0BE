@@ -469,7 +469,7 @@ export default function ExplorePage({ user, externalProfile, onExternalProfileCl
             </>
           )}
 
-          {tab === 'feed' && <NewsFeed user={user} />}
+          {tab === 'feed'  && <NewsFeed user={user} />}
         </>
       )}
     </div>

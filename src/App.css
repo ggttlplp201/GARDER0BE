@@ -28,9 +28,11 @@ html.dark {
 }
 
 body { font-family: Arial, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; transition: background 0.2s, color 0.2s; }
-.root { padding: 28px 36px 100px; width: 100%; position: relative; background: var(--bg); }
+.root { padding: 26px 36px 100px; width: 100%; position: relative; background: var(--bg); }
 
-.header-row { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 20px; gap: 24px; }
+.header-row { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: -19px; gap: 16px; }
+.header-left { display: flex; flex-direction: column; }
+.header-right { display: flex; align-items: flex-start; gap: 12px; flex-shrink: 0; }
 h1 { font-size: 2rem; font-weight: bold; margin-bottom: 2px; }
 .phonetic { font-size: 11px; color: #999; font-style: italic; margin-bottom: 4px; }
 .subtitle { font-size: 14px; color: #555; }
@@ -96,7 +98,8 @@ h1 { font-size: 2rem; font-weight: bold; margin-bottom: 2px; }
 .brand-title { font-size: 1rem; font-weight: bold; margin-bottom: 6px; letter-spacing: 0.02em; }
 .brand-divider { border: none; border-top: 1.5px solid var(--border); margin-bottom: 14px; }
 
-.controls-row { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; flex-wrap: wrap; }
+.globe-center-row { display: flex; justify-content: center; margin: 8px 0 12px; }
+.controls-row { display: flex; align-items: center; gap: 14px; margin-bottom: 12px; flex-wrap: wrap; }
 .sort-wrap { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: bold; }
 .sort-wrap select { border: 1.5px solid var(--border); background: var(--bg); color: var(--text); font-size: 12px; font-family: Arial, sans-serif; padding: 6px 8px; cursor: pointer; outline: none; }
 .sort-wrap select:focus { outline: 2px solid var(--border); }
@@ -124,7 +127,7 @@ h1 { font-size: 2rem; font-weight: bold; margin-bottom: 2px; }
 .card-img-prev { left: 4px; }
 .card-img-next { right: 4px; }
 .card-img-counter { position: absolute; bottom: 6px; right: 7px; font-size: 10px; color: var(--text2); background: rgba(128,128,128,0.15); padding: 2px 5px; pointer-events: none; z-index: 1; }
-.card-remove-x { position: absolute; top: 6px; right: 6px; width: 22px; height: 22px; border: 1.5px solid var(--border); background: var(--bg); color: var(--text); cursor: pointer; font-size: 13px; font-weight: bold; display: flex; align-items: center; justify-content: center; line-height: 1; z-index: 2; transition: background 0.15s; }
+.card-remove-x { position: absolute; top: 6px; right: 6px; width: 22px; height: 22px; border: 1.5px solid var(--border); background: var(--bg); color: var(--text); cursor: pointer; font-size: 13px; font-weight: bold; display: flex; align-items: center; justify-content: center; line-height: 1; z-index: 4; transition: background 0.15s; }
 .card-remove-x:hover { background: var(--text); color: var(--bg); }
 .card-remove-x.confirming { background: var(--text); color: var(--bg); border-color: var(--border); }
 .edit-btn { display: block; width: 100%; padding: 6px 0; border: 1.5px solid var(--border); background: var(--bg); color: var(--text); font-size: 11px; font-weight: bold; letter-spacing: 0.08em; cursor: pointer; text-align: center; }
@@ -409,6 +412,80 @@ input[type=range].vol-slider::-webkit-slider-thumb { -webkit-appearance: none; a
 .profile-avatar-circle { position: relative; }
 .avatar-overlay { position: absolute; inset: 0; border-radius: 50%; background: rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center; font-size: 22px; color: white; font-weight: bold; opacity: 0; transition: opacity 0.15s; }
 .profile-avatar-circle:hover .avatar-overlay { opacity: 1; }
+
+/* ── DesignHouseGlobe ───────────────────────────── */
+.globe-wrap {
+  position: relative;
+  width: 100%;
+  max-width: 520px;
+  margin: 0 auto 24px;
+  user-select: none;
+}
+.globe-canvas {
+  display: block;
+  width: 100%;
+  cursor: grab;
+  touch-action: none;
+}
+.globe-canvas:active { cursor: grabbing; }
+
+.globe-tooltip {
+  position: absolute;
+  pointer-events: none;
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  padding: 7px 10px;
+  min-width: 150px;
+  max-width: 200px;
+  z-index: 10;
+}
+.globe-tt-name   { font-size: 12px; font-weight: bold; letter-spacing: 0.05em; color: var(--text); margin-bottom: 2px; }
+.globe-tt-city   { font-size: 11px; color: var(--text2); margin-bottom: 3px; }
+.globe-tt-coords { font-size: 10px; color: var(--text3); letter-spacing: 0.03em; font-variant-numeric: tabular-nums; }
+.globe-tt-stack-row  { margin-top: 6px; border-top: 1px solid var(--border-light); padding-top: 5px; }
+.globe-tt-stack-name { display: block; font-size: 11px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
+.globe-tt-time { font-size: 11px; color: var(--text2); margin-top: 3px; letter-spacing: 0.04em; }
+.globe-wrap-mini { background: transparent; border: none; }
+
+.globe-modes {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 12px;
+}
+.globe-mode-btn {
+  font-size: 10px;
+  font-weight: bold;
+  letter-spacing: 0.08em;
+  padding: 5px 10px;
+  border: 1.5px solid var(--border-light);
+  background: var(--bg);
+  color: var(--text2);
+  cursor: pointer;
+  font-family: Arial, sans-serif;
+  transition: border-color 0.12s, color 0.12s;
+}
+.globe-mode-btn:hover  { border-color: var(--border); color: var(--text); }
+.globe-mode-btn.active { border-color: var(--border); color: var(--text); background: var(--bg3); }
+.globe-back-btn {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  width: 28px; height: 28px;
+  display: flex; align-items: center; justify-content: center;
+  border: 1.5px solid var(--border-light);
+  background: var(--bg2);
+  color: var(--text2);
+  cursor: pointer;
+  font-size: 16px;
+  border-radius: 50%;
+  line-height: 1;
+  padding: 0;
+  z-index: 10;
+  transition: border-color 0.12s, color 0.12s, background 0.12s;
+}
+.globe-back-btn:hover { border-color: var(--border); color: var(--text); background: var(--bg3); }
 
 /* ── Mobile ─────────────────────────────────────── */
 @media (max-width: 640px) {
