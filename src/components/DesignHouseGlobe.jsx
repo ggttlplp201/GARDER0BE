@@ -12,7 +12,7 @@ const ROTX_MAX   =  1.3;
 const PIN_R      =  4.5;
 const CLUSTER_R  = 11;
 const CLUSTER_D      = PIN_R * 2.6;
-const GEO_STACK_DEG  = 0.15;
+const GEO_STACK_DEG  = 0.015;
 const MINI_SIZE  = 218;  // px — collapsed size in header-right
 const ZOOM_SIZE  = 380;  // px — expanded size when zoomed in mini mode
 const ZOOM_CLIP  = 28;   // fixed clip angle (°) for all zoom-ins
@@ -355,7 +355,7 @@ export default function DesignHouseGlobe({ mini = false }) {
           const h0 = HOUSES[indices[0]];
           const textLines = [];
           if (isStack && count > 1) {
-            for (const idx of indices) textLines.push({ text: HOUSES[idx].name, bold: true, sz: 8 });
+            for (const idx of indices) textLines.push({ text: HOUSES[idx].name + ',', bold: true, sz: 8 });
             textLines.push({ text: `${h0.city} · ${localTime(h0.tz, nowT)}`, bold: false, sz: 7, dim: true });
           } else {
             textLines.push({ text: h0.name, bold: true, sz: 8 });
