@@ -441,7 +441,7 @@ export default function ExplorePage({ user, externalProfile, onExternalProfileCl
           {/* Header */}
           <div style={{ padding: '12px 36px 12px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
             <div className="v-screen-title">EXPLORE</div>
-            <div className="v-screen-sub">FASHION & CULTURE · PUBLIC COLLECTIONS</div>
+            <div className="v-screen-sub">FASHION, CULTURE & PEOPLE</div>
           </div>
 
           {/* Tabs */}
