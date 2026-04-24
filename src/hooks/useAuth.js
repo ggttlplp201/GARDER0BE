@@ -6,7 +6,8 @@ export function useAuth() {
   const [authMode, setAuthMode] = useState('signin');
 
   useEffect(() => {
-    sb.auth.getUser().then(({ data: { user } }) => setUser(user || null));
+    // Use getSession (local cache) first to avoid logout on refresh
+    sb.auth.getSession().then(({ data: { session } }) => setUser(session?.user || null));
     const { data: { subscription } } = sb.auth.onAuthStateChange((_, session) => {
       setUser(session?.user || null);
     });

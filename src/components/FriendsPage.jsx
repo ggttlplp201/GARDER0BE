@@ -81,6 +81,17 @@ export default function FriendsPage({ user, onViewProfile, onRequestsViewed }) {
 
   useEffect(() => { load(); }, [load]);
 
+  // Realtime: reload when friend requests or likes change
+  useEffect(() => {
+    if (!user) return;
+    const ch = sb.channel('friends-page-' + user.id)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'friend_requests', filter: `to_user_id=eq.${user.id}` }, load)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'friend_requests', filter: `from_user_id=eq.${user.id}` }, load)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'profile_likes', filter: `liked_user_id=eq.${user.id}` }, load)
+      .subscribe();
+    return () => sb.removeChannel(ch);
+  }, [user, load]);
+
   async function accept(id) { await sb.from('friend_requests').update({ status: 'accepted' }).eq('id', id); load(); }
   async function decline(id) { await sb.from('friend_requests').delete().eq('id', id); load(); }
   async function unfriend(requestId) { await sb.from('friend_requests').delete().eq('id', requestId); load(); }

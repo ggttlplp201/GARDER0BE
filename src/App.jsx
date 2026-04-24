@@ -20,7 +20,7 @@ import { requestGyroPermission } from './lib/gyro';
 import { sb } from './lib/supabase';
 import './App.css';
 
-function LikeToast({ toasts, onDismiss }) {
+function NotifToast({ toasts, onDismiss }) {
   if (!toasts.length) return null;
   return (
     <div className="toast-stack">
@@ -32,11 +32,12 @@ function LikeToast({ toasts, onDismiss }) {
           }
           <div className="like-toast-text">
             <span className="like-toast-name">{t.name}</span>
-            <span className="like-toast-msg"> liked your profile</span>
+            <span className="like-toast-msg"> {t.msg}</span>
           </div>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style={{ color: '#e05', flexShrink: 0 }}>
-            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-          </svg>
+          {t.type === 'like'
+            ? <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style={{ color: '#e05', flexShrink: 0 }}><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+            : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          }
         </div>
       ))}
     </div>
@@ -105,16 +106,42 @@ export default function App() {
 
   useEffect(() => {
     if (!user) return;
-    const channel = sb.channel('profile-likes-' + user.id)
+
+    function addToast(toast) {
+      setToasts(t => [...t, toast]);
+      setTimeout(() => setToasts(t => t.filter(x => x.id !== toast.id)), 5000);
+    }
+
+    // Realtime: profile likes
+    const likeChannel = sb.channel('profile-likes-' + user.id)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'profile_likes', filter: `liked_user_id=eq.${user.id}` }, async (payload) => {
-        const { data: profile } = await sb.from('profiles').select('username, avatar_url').eq('id', payload.new.user_id).maybeSingle();
-        const toast = { id: Date.now(), name: profile?.username || 'Someone', avatarUrl: profile?.avatar_url || null };
-        setToasts(t => [...t, toast]);
-        setLikeCount(c => c + 1);
-        setTimeout(() => setToasts(t => t.filter(x => x.id !== toast.id)), 5000);
+        const likerId = payload.new.user_id;
+        const [{ data: profile }, { count: friendCount }] = await Promise.all([
+          sb.from('profiles').select('username, avatar_url').eq('id', likerId).maybeSingle(),
+          sb.from('friend_requests')
+            .select('id', { count: 'exact', head: true })
+            .or(`and(from_user_id.eq.${user.id},to_user_id.eq.${likerId}),and(from_user_id.eq.${likerId},to_user_id.eq.${user.id})`)
+            .eq('status', 'accepted'),
+        ]);
+        const isFriend = (friendCount || 0) > 0;
+        const toast = { id: Date.now(), type: 'like', name: profile?.username || 'Someone', avatarUrl: profile?.avatar_url || null, msg: 'liked your profile' };
+        addToast(toast);
+        if (isFriend) setRequestCount(c => c + 1);
+        else setLikeCount(c => c + 1);
       })
       .subscribe();
-    return () => sb.removeChannel(channel);
+
+    // Realtime: incoming friend requests
+    const reqChannel = sb.channel('friend-requests-' + user.id)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'friend_requests', filter: `to_user_id=eq.${user.id}` }, async (payload) => {
+        const { data: profile } = await sb.from('profiles').select('username, avatar_url').eq('id', payload.new.from_user_id).maybeSingle();
+        const toast = { id: Date.now(), type: 'request', name: profile?.username || 'Someone', avatarUrl: profile?.avatar_url || null, msg: 'sent you a friend request' };
+        addToast(toast);
+        setRequestCount(c => c + 1);
+      })
+      .subscribe();
+
+    return () => { sb.removeChannel(likeChannel); sb.removeChannel(reqChannel); };
   }, [user]);
 
   const dismissToast = useCallback(id => setToasts(t => t.filter(x => x.id !== id)), []);
@@ -212,7 +239,7 @@ export default function App() {
         setPage={p => {
           navigate(p);
           if (p === 'friends') { setToasts([]); setRequestCount(0); }
-          if (p === 'explore') setLikeCount(0);
+          if (p === 'explore') { setToasts([]); setLikeCount(0); }
         }}
         total={total}
         requestCount={requestCount}
@@ -260,7 +287,7 @@ export default function App() {
         />
       )}
 
-      <LikeToast toasts={toasts} onDismiss={dismissToast} />
+      <NotifToast toasts={toasts} onDismiss={dismissToast} />
     </div>
   );
 }
