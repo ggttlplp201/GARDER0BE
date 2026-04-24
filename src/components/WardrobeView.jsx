@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { parseImageUrls } from '../lib/imageUtils';
 import { isGyroActive } from '../lib/gyro';
+import { ITEM_TYPES } from '../lib/constants';
 import ItemCard from './ItemCard';
 
 function Hanger({ size = 34 }) {
@@ -118,7 +119,7 @@ function RackCard({ item, globalIdx, onClick }) {
   );
 }
 
-const TYPES = ['ALL', 'TOPS', 'BOTTOMS', 'JEANS', 'PANTS', 'OUTERWEAR', 'SHOES', 'KNITS', 'ACCESSORIES'];
+const TYPES = ['ALL', ...ITEM_TYPES];
 
 export default function WardrobeView({ items, loading, onItemClick, onAdd, onEdit, onRemove }) {
   const [mode, setMode]         = useState('RACK');
@@ -130,16 +131,16 @@ export default function WardrobeView({ items, loading, onItemClick, onAdd, onEdi
       const q = search.toLowerCase();
       if (!it.name?.toLowerCase().includes(q) && !it.brand?.toLowerCase().includes(q)) return false;
     }
-    if (filterType !== 'ALL' && it.type?.toUpperCase() !== filterType) return false;
+    if (filterType !== 'ALL' && it.type !== filterType) return false;
     return true;
   });
 
-  const totalValue = items.reduce((s, i) => s + (parseFloat(i.price) || 0), 0);
+  const totalValue = items.filter(i => i.status !== 'wishlist').reduce((s, i) => s + (parseFloat(i.price) || 0), 0);
   const brands = new Set(items.map(i => i.brand).filter(Boolean));
   const grails = items.filter(i => i.status === 'grail').length;
   const thisYear = new Date().getFullYear();
   const ytd = items
-    .filter(i => i.created_at && new Date(i.created_at).getFullYear() === thisYear)
+    .filter(i => i.status !== 'wishlist' && i.created_at && new Date(i.created_at).getFullYear() === thisYear)
     .reduce((s, i) => s + (parseFloat(i.price) || 0), 0);
 
   const grouped = {};

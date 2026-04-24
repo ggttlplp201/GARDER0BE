@@ -231,6 +231,7 @@ export default function App() {
 
       {addOpen && (
         <AddItemModal
+          open={true}
           onClose={() => setAddOpen(false)}
           onAdd={async (fields, imgs) => { await addItem(fields, imgs); setAddOpen(false); }}
         />
