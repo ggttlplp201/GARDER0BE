@@ -95,9 +95,9 @@ export default function AvatarCropModal({ file, onConfirm, onCancel }) {
           onTouchMove={e => { e.preventDefault(); moveDrag(e.touches[0].clientX, e.touches[0].clientY); }}
           onTouchEnd={endDrag}
         >
-          {srcUrl.current && (
+          {srcUrl && (
             <img
-              src={srcUrl.current}
+              src={srcUrl}
               alt=""
               style={{
                 position: 'absolute',
