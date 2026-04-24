@@ -14,7 +14,7 @@ export default function WishlistView({ items, onItemClick, onAdd }) {
       </div>
 
       <div className="v-body">
-        <div style={{ padding: '0 36px 24px' }}>
+        <div className="mob-pad" style={{ padding: '0 36px 24px' }}>
           {wishlist.length === 0 && (
             <div className="v-empty">
               No wishlist items yet. Add an item and set its status to "wishlist".

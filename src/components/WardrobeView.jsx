@@ -191,7 +191,7 @@ export default function WardrobeView({ items, loading, onItemClick, onAdd, onEdi
         {loading && <div className="v-empty">LOADING…</div>}
 
         {!loading && mode === 'RACK' && (
-          <div style={{ padding: '0 36px 24px' }}>
+          <div className="mob-pad" style={{ padding: '0 36px 24px' }}>
             {brandKeys.length === 0 && <div className="v-empty">No items match your filters.</div>}
             {brandKeys.map((brand, bi) => (
               <div key={brand} style={{ marginTop: bi === 0 ? 0 : 32 }}>
@@ -226,7 +226,7 @@ export default function WardrobeView({ items, loading, onItemClick, onAdd, onEdi
         )}
 
         {!loading && mode === 'LIST' && (
-          <div style={{ padding: '0 36px 24px' }}>
+          <div className="mob-pad" style={{ padding: '0 36px 24px' }}>
             <div className="list-header">
               <div>№</div>
               <div>BRAND · ITEM</div>

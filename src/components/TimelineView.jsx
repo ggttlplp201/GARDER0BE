@@ -27,7 +27,7 @@ export default function TimelineView({ items, onItemClick }) {
       </div>
 
       <div className="v-body">
-        <div style={{ padding: '0 36px 24px' }}>
+        <div className="mob-pad" style={{ padding: '0 36px 24px' }}>
           {months.length === 0 && <div className="v-empty">No items yet.</div>}
           {months.map((m, mi) => {
             const [yr, mo] = m.split('.');

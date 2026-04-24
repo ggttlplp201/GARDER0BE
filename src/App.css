@@ -942,3 +942,85 @@ html.dark .outfit-in-fit-badge { background: rgba(0,0,0,0.7); }
 /* Explore + Friends — fit new shell */
 .explore-page { padding: 20px 36px 24px; max-width: none; margin: 0; }
 
+/* ── Mobile responsive ── */
+@media (max-width: 768px) {
+  /* Header */
+  .app-header { padding: 12px 16px 0; gap: 0; }
+  .app-wordmark { font-size: 26px; }
+  .app-phonetic, .app-subtitle { display: none; }
+  .app-header-left { padding-bottom: 10px; }
+  .app-globe-slot { display: none; }
+  .app-header-meta { min-width: 0; font-size: 9px; line-height: 1.6; }
+  .app-header-right { gap: 12px; padding-bottom: 10px; }
+  .app-avatar-btn { width: 36px; height: 36px; }
+  .app-dark-btn { width: 28px; height: 28px; font-size: 12px; }
+
+  /* Nav */
+  .app-nav { padding: 10px 12px; }
+  .app-nav-tabs { gap: 10px; flex-wrap: nowrap; overflow-x: auto; }
+  .app-nav-tab { font-size: 9px; letter-spacing: 0.08em; white-space: nowrap; }
+  .app-nav-value { display: none; }
+
+  /* View shell */
+  .v-screen-header { padding: 6px 16px 10px; }
+  .v-screen-title { font-size: 28px; }
+
+  /* Stat bar */
+  .stat-bar { margin: 0; overflow-x: auto; grid-template-columns: repeat(5, minmax(80px, 1fr)); }
+  .stat-cell { padding: 8px 10px; }
+  .stat-val { font-size: 18px; }
+
+  /* Toolbar */
+  .toolbar { padding: 8px 16px; gap: 8px; flex-wrap: wrap; }
+  .toolbar-search { min-width: 100px; }
+
+  /* Rack */
+  .rack-cards { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; }
+  .stat-bar { margin-left: 0; margin-right: 0; }
+  .mob-pad { padding-left: 16px !important; padding-right: 16px !important; }
+
+  /* List mode */
+  .list-header { grid-template-columns: 40px 1fr 80px 60px; }
+  .list-row    { grid-template-columns: 40px 1fr 80px 60px; }
+  .list-header > div:nth-child(3),
+  .list-row    > div:nth-child(3),
+  .list-header > div:nth-child(5),
+  .list-row    > div:nth-child(5) { display: none; }
+
+  /* Timeline */
+  .timeline-month-name { font-size: 48px; }
+  .timeline-row { grid-template-columns: 56px 56px 1fr 70px !important; }
+  .timeline-row > div:nth-child(4),
+  .timeline-row > div:nth-child(5) { display: none; }
+
+  /* Wishlist */
+  .wish-row    { grid-template-columns: 36px 52px 1fr 80px !important; }
+  .wish-header { grid-template-columns: 36px 52px 1fr 80px !important; }
+  .wish-row    > div:nth-child(4),
+  .wish-row    > div:nth-child(5),
+  .wish-header > div:nth-child(4),
+  .wish-header > div:nth-child(5) { display: none; }
+
+  /* Detail view */
+  .detail-cols { flex-direction: column !important; }
+  .detail-left, .detail-right { width: 100% !important; }
+  .detail-main-img { height: 60vw !important; }
+  .detail-nav { padding: 8px 16px; font-size: 9px; flex-wrap: wrap; gap: 4px; }
+
+  /* Outfits */
+  .outfits-cols { flex-direction: column !important; }
+  .outfits-left, .outfits-right { width: 100% !important; min-width: 0 !important; }
+  .outfit-rack-grid { grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)) !important; }
+
+  /* Explore tabs */
+  .explore-page { padding: 16px 16px 20px; }
+
+  /* Modals */
+  .modal { margin: 16px; max-height: calc(100dvh - 32px); }
+  .avatar-crop-modal { width: calc(100vw - 32px); }
+
+  /* Friends / people rows */
+  .design-people-row { padding: 12px 16px !important; }
+  .design-people-tabs { margin: 0 16px !important; }
+}
+
