@@ -400,7 +400,7 @@ function ProfileView({ profile, user, onBack }) {
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function ExplorePage({ user, externalProfile, onExternalProfileClear }) {
-  const [tab, setTab]                             = useState('people');
+  const [tab, setTab]                             = useState('feed');
   const [profiles, setProfiles]                   = useState([]);
   const [loading, setLoading]                     = useState(true);
   const [search, setSearch]                       = useState('');
@@ -446,7 +446,7 @@ export default function ExplorePage({ user, externalProfile, onExternalProfileCl
 
           {/* Tabs */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', margin: '0 36px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
-            {[['people', 'PEOPLE'], ['feed', 'FEED']].map(([k, label]) => (
+            {[['feed', 'FEED'], ['people', 'PEOPLE']].map(([k, label]) => (
               <button key={k} onClick={() => setTab(k)} style={{
                 background: 'none', border: 'none', padding: '14px 0',
                 fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '0.18em',
