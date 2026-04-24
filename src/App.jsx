@@ -254,7 +254,7 @@ export default function App() {
         user={user}
         open={profileOpen}
         onClose={() => setProfileOpen(false)}
-        onSignOut={() => { signOut(); setProfileOpen(false); }}
+        onSignOut={() => { sessionStorage.removeItem('garderobe-page'); signOut(); setProfileOpen(false); }}
         avatarUrl={avatarUrl}
         onAvatarChange={url => setAvatarUrl(url)}
         onProfileSave={() => {
