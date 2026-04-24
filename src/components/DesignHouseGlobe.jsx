@@ -372,6 +372,25 @@ export default function DesignHouseGlobe({ mini = false }) {
       }
       const { measured } = labelCacheRef.current;
 
+      // For cities with multiple visible clusters, force vertical direction by longitude:
+      // westernmost cluster → label below dot (uy=+1), easternmost → label above dot (uy=-1).
+      // This keeps paired clusters (e.g. the two Paris groups) visually balanced.
+      const _cityMap = new Map();
+      clusters.forEach((cl, ci) => {
+        const city = HOUSES[cl.indices[0]].city;
+        if (!_cityMap.has(city)) _cityMap.set(city, []);
+        _cityMap.get(city).push(ci);
+      });
+      const _forcedUy = new Array(clusters.length).fill(null);
+      _cityMap.forEach(cis => {
+        if (cis.length < 2) return;
+        const sorted = [...cis].sort((a, b) => {
+          const avgLng = ci => clusters[ci].indices.reduce((s, i) => s + HOUSES[i].lng, 0) / clusters[ci].indices.length;
+          return avgLng(a) - avgLng(b);
+        });
+        sorted.forEach((ci, rank) => { _forcedUy[ci] = rank === 0 ? 1 : -1; });
+      });
+
       // Build per-frame lab positions from current cluster screen coordinates + cached measurements
       const labs = clusters.map((cl, ci) => {
         const { sx, sy } = cl;
@@ -379,7 +398,7 @@ export default function DesignHouseGlobe({ mini = false }) {
         const dx = sx - cx, dy = sy - cy;
         const dist = Math.hypot(dx, dy) || 1;
         const ux = dist < 10 ? 0 : dx / dist;
-        const uy = dist < 10 ? -1 : dy / dist;
+        const uy = _forcedUy[ci] !== null ? _forcedUy[ci] : (dist < 10 ? -1 : dy / dist);
         const toRight = ux >= 0;
         const stemX = sx + ux * stemLen;
         const stemY = sy + uy * stemLen;
