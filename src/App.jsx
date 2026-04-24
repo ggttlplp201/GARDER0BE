@@ -1,9 +1,21 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useAuth } from './hooks/useAuth';
+import { useTheme } from './hooks/useTheme';
+import { useItems } from './hooks/useItems';
 import AuthScreen from './components/AuthScreen';
-import Inventory from './components/Inventory';
+import AppHeader from './components/AppHeader';
+import AppNav from './components/AppNav';
+import WardrobeView from './components/WardrobeView';
+import ItemDetailView from './components/ItemDetailView';
+import TimelineView from './components/TimelineView';
+import WishlistView from './components/WishlistView';
+import OutfitsView from './components/OutfitsView';
 import ExplorePage from './components/ExplorePage';
 import FriendsPage from './components/FriendsPage';
+import ProfilePanel from './components/ProfilePanel';
+import AddItemModal from './components/AddItemModal';
+import EditItemModal from './components/EditItemModal';
+import Lightbox from './components/Lightbox';
 import { requestGyroPermission } from './lib/gyro';
 import { sb } from './lib/supabase';
 import './App.css';
@@ -31,50 +43,24 @@ function LikeToast({ toasts, onDismiss }) {
   );
 }
 
-function BottomNav({ page, onNavigate, total, showTotal, requestCount }) {
-  return (
-    <div className="bottom-nav">
-      {showTotal && (
-        <div className="bottom-nav-total">
-          <span>COLLECTION VALUE</span>
-          <span>${total.toLocaleString()}</span>
-        </div>
-      )}
-      <div className="bottom-nav-tabs">
-        <button className={`bottom-nav-tab${page === 'inventory' ? ' active' : ''}`} onClick={() => onNavigate('inventory')}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>
-          </svg>
-          <span>WARDROBE</span>
-        </button>
-        <button className={`bottom-nav-tab${page === 'explore' ? ' active' : ''}`} onClick={() => onNavigate('explore')}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-          </svg>
-          <span>EXPLORE</span>
-        </button>
-        <button className={`bottom-nav-tab${page === 'friends' ? ' active' : ''}`} onClick={() => onNavigate('friends')}>
-          <div style={{ position: 'relative', display: 'inline-flex' }}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
-              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-            </svg>
-            {requestCount > 0 && <span className="nav-badge">{requestCount}</span>}
-          </div>
-          <span>FRIENDS</span>
-        </button>
-      </div>
-    </div>
-  );
-}
-
 export default function App() {
   const { user, authMode, setAuthMode, signIn, signUp, signOut } = useAuth();
-  const [page, setPage]                 = useState('inventory');
-  const [total, setTotal]               = useState(0);
+  const { dark, toggle: toggleTheme } = useTheme();
+  const { items, loading, fetchItems, addItem, editItem, removeItem } = useItems(user);
+
+  const [page, setPage]               = useState(() => sessionStorage.getItem('garderobe-page') || 'wardrobe');
+  const [detailItem, setDetailItem]   = useState(null);
+  const [total, setTotal]             = useState(0);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [avatarUrl, setAvatarUrl]     = useState('');
+  const [userLocation, setUserLocation] = useState('');
+  const [userName, setUserName]       = useState('');
+  const [addOpen, setAddOpen]         = useState(false);
+  const [editItemId, setEditItemId]   = useState(null);
+  const [lbItem, setLbItem]           = useState(null);
   const [requestCount, setRequestCount] = useState(0);
   const [friendsProfile, setFriendsProfile] = useState(null);
-  const [toasts, setToasts]             = useState([]);
+  const [toasts, setToasts]           = useState([]);
 
   useEffect(() => {
     if (!window.DeviceOrientationEvent) return;
@@ -83,37 +69,77 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    if (user) fetchItems();
+  }, [user, fetchItems]);
+
+  useEffect(() => {
+    const t = items.reduce((s, i) => s + (parseFloat(i.price) || 0), 0);
+    setTotal(Math.round(t));
+  }, [items]);
+
+  useEffect(() => {
+    const key = `garderobe-profile-${user?.id || 'guest'}`;
+    try {
+      const p = JSON.parse(localStorage.getItem(key) || '{}');
+      if (p.avatarUrl) setAvatarUrl(p.avatarUrl);
+      if (p['p-location']) setUserLocation(p['p-location']);
+      if (p['p-name']) setUserName(p['p-name']);
+    } catch {}
+    if (user) {
+      sb.auth.getUser().then(({ data: { user: u } }) => {
+        const url = u?.user_metadata?.profile?.avatarUrl;
+        if (url) setAvatarUrl(url);
+        const loc = u?.user_metadata?.profile?.location;
+        if (loc) setUserLocation(loc);
+        const name = u?.user_metadata?.profile?.name;
+        if (name) setUserName(name);
+      });
+    }
+  }, [user?.id]);
+
+  useEffect(() => {
     if (!user) return;
     pollRequests(user.id, setRequestCount);
   }, [user]);
 
-  const dismissToast = useCallback(id => {
-    setToasts(t => t.filter(x => x.id !== id));
-  }, []);
-
-  // Realtime subscription for new likes
   useEffect(() => {
     if (!user) return;
     const channel = sb.channel('profile-likes-' + user.id)
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'profile_likes',
-        filter: `liked_user_id=eq.${user.id}`,
-      }, async (payload) => {
-        const fromId = payload.new.user_id;
-        const { data: profile } = await sb.from('profiles').select('username, avatar_url').eq('id', fromId).maybeSingle();
-        const toast = {
-          id: Date.now(),
-          name: profile?.username || 'Someone',
-          avatarUrl: profile?.avatar_url || null,
-        };
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'profile_likes', filter: `liked_user_id=eq.${user.id}` }, async (payload) => {
+        const { data: profile } = await sb.from('profiles').select('username, avatar_url').eq('id', payload.new.user_id).maybeSingle();
+        const toast = { id: Date.now(), name: profile?.username || 'Someone', avatarUrl: profile?.avatar_url || null };
         setToasts(t => [...t, toast]);
         setTimeout(() => setToasts(t => t.filter(x => x.id !== toast.id)), 5000);
       })
       .subscribe();
     return () => sb.removeChannel(channel);
   }, [user]);
+
+  const dismissToast = useCallback(id => setToasts(t => t.filter(x => x.id !== id)), []);
+
+  const navigate = useCallback((p) => {
+    sessionStorage.setItem('garderobe-page', p);
+    setPage(p);
+  }, []);
+
+  const handleItemClick = useCallback((item) => {
+    setDetailItem(item);
+    navigate('detail');
+  }, [navigate]);
+
+  const handleBack = useCallback(() => {
+    navigate('wardrobe');
+    setDetailItem(null);
+  }, [navigate]);
+
+  const handleNavigateDetail = useCallback((item) => {
+    setDetailItem(item);
+  }, []);
+
+  const handleViewFriendProfile = (profile) => {
+    setFriendsProfile(profile);
+    navigate('explore');
+  };
 
   if (user === undefined) return (
     <div className="app-loading"><span className="app-loading-text">GARDEROBE</span></div>
@@ -123,19 +149,111 @@ export default function App() {
     <AuthScreen authMode={authMode} setAuthMode={setAuthMode} onLogin={signIn} onSignUp={signUp} />
   );
 
-  function handleViewFriendProfile(profile) {
-    setFriendsProfile(profile);
-    setPage('explore');
-  }
+  const editItemObj = editItemId ? items.find(i => i.id === editItemId) : null;
 
   return (
-    <>
-      {page === 'inventory' && <Inventory user={user} onSignOut={signOut} onTotalChange={setTotal} />}
-      {page === 'explore'   && <ExplorePage user={user} externalProfile={friendsProfile} onExternalProfileClear={() => setFriendsProfile(null)} />}
-      {page === 'friends'   && <FriendsPage user={user} onViewProfile={handleViewFriendProfile} onRequestsViewed={() => setRequestCount(0)} />}
-      <BottomNav page={page} onNavigate={p => { setPage(p); if (p === 'friends') setToasts([]); }} total={total} showTotal={page === 'inventory' && total > 0} requestCount={requestCount} />
+    <div className="app-shell">
+      <AppHeader
+        user={user}
+        dark={dark}
+        onDark={toggleTheme}
+        avatarUrl={avatarUrl}
+        location={userLocation}
+        userName={userName}
+        onProfileOpen={() => setProfileOpen(true)}
+      />
+
+      <div className="app-main">
+        {page === 'wardrobe' && (
+          <WardrobeView
+            items={items}
+            loading={loading}
+            onItemClick={handleItemClick}
+            onAdd={() => setAddOpen(true)}
+            onEdit={id => setEditItemId(id)}
+            onRemove={removeItem}
+          />
+        )}
+        {page === 'detail' && (
+          <ItemDetailView
+            item={items.find(i => i.id === detailItem?.id) ?? detailItem}
+            items={items}
+            onBack={handleBack}
+            onEdit={id => setEditItemId(id)}
+            onNavigate={handleNavigateDetail}
+            onOpenLightbox={item => setLbItem(item)}
+          />
+        )}
+        {page === 'outfits' && <OutfitsView items={items} />}
+        {page === 'timeline' && <TimelineView items={items} onItemClick={handleItemClick} />}
+        {page === 'wishlist' && (
+          <WishlistView items={items} onItemClick={handleItemClick} onAdd={() => setAddOpen(true)} />
+        )}
+        {page === 'explore' && (
+          <ExplorePage
+            user={user}
+            externalProfile={friendsProfile}
+            onExternalProfileClear={() => setFriendsProfile(null)}
+          />
+        )}
+        {page === 'friends' && (
+          <FriendsPage
+            user={user}
+            onViewProfile={handleViewFriendProfile}
+            onRequestsViewed={() => setRequestCount(0)}
+          />
+        )}
+      </div>
+
+      <AppNav
+        page={page}
+        setPage={p => { navigate(p); if (p === 'friends') setToasts([]); }}
+        total={total}
+        requestCount={requestCount}
+      />
+
+      {/* Overlays */}
+      <div className={`profile-overlay${profileOpen ? ' open' : ''}`} onClick={() => setProfileOpen(false)} />
+      <ProfilePanel
+        user={user}
+        open={profileOpen}
+        onClose={() => setProfileOpen(false)}
+        onSignOut={() => { signOut(); setProfileOpen(false); }}
+        avatarUrl={avatarUrl}
+        onAvatarChange={url => setAvatarUrl(url)}
+        onProfileSave={() => {
+          try {
+            const key = `garderobe-profile-${user?.id || 'guest'}`;
+            const p = JSON.parse(localStorage.getItem(key) || '{}');
+            if (p['p-location']) setUserLocation(p['p-location']);
+            if (p['p-name']) setUserName(p['p-name']);
+          } catch {}
+        }}
+      />
+
+      {addOpen && (
+        <AddItemModal
+          onClose={() => setAddOpen(false)}
+          onAdd={async (fields, imgs) => { await addItem(fields, imgs); setAddOpen(false); }}
+        />
+      )}
+      {editItemObj && (
+        <EditItemModal
+          item={editItemObj}
+          onClose={() => setEditItemId(null)}
+          onSave={async (fields, imgs) => { await editItem(editItemObj.id, fields, imgs, editItemObj); setEditItemId(null); }}
+        />
+      )}
+      {lbItem && (
+        <Lightbox
+          item={lbItem}
+          onClose={() => setLbItem(null)}
+          onEdit={id => { setLbItem(null); setEditItemId(id); }}
+        />
+      )}
+
       <LikeToast toasts={toasts} onDismiss={dismissToast} />
-    </>
+    </div>
   );
 }
 

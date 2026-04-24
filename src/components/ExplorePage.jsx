@@ -221,22 +221,23 @@ function NewsFeed({ user }) {
 
   return (
     <div className="news-feed">
-      <div className="news-sort-row">
-        <button className={`news-sort-btn${sort === 'recent'    ? ' active' : ''}`} onClick={() => setSort('recent')}>RECENT</button>
-        <button className={`news-sort-btn${sort === 'relevance' ? ' active' : ''}`} onClick={() => setSort('relevance')} title="Sorted by brands in your wardrobe">FOR YOU</button>
+      <div style={{ display: 'flex', gap: 0, border: '1px solid var(--border)', width: 'fit-content', marginBottom: 16 }}>
+        <button className={`mode-btn bd-r${sort === 'recent'    ? ' active' : ''}`} onClick={() => setSort('recent')}>RECENT</button>
+        <button className={`mode-btn${sort === 'relevance' ? ' active' : ''}`} onClick={() => setSort('relevance')} title="Sorted by brands in your wardrobe">FOR YOU</button>
       </div>
       {sorted.map(a => {
         const score = scoreArticle(a, brandFreq, wishlistBrands, profile);
         return (
           <a key={a.id} className="news-card" href={a.link} target="_blank" rel="noopener noreferrer">
-            {a.image && (
-              <div className="news-card-img">
-                <img src={a.image} alt="" loading="lazy" onError={e => { e.currentTarget.parentElement.style.display = 'none'; }} />
-              </div>
-            )}
+            <div className="news-card-img">
+              {a.image
+                ? <img src={a.image} alt="" loading="lazy" onError={e => { e.currentTarget.style.display = 'none'; }} />
+                : <div className="news-card-img-placeholder">{(a.source || '').toUpperCase()}</div>
+              }
+            </div>
             <div className="news-card-body">
               <div className="news-card-source">
-                {a.source} · {timeAgo(a.date)}
+                {a.source?.toUpperCase()} · {timeAgo(a.date)}
                 {sort === 'relevance' && score > 0 && <span className="news-relevance-dot" title={`${score} brand match${score > 1 ? 'es' : ''}`}> ●</span>}
               </div>
               <div className="news-card-title">{a.title}</div>
@@ -251,11 +252,15 @@ function NewsFeed({ user }) {
 
 // ── Shared sub-components ─────────────────────────────────────────────────────
 
-function Avatar({ url, size = 52 }) {
-  if (url) return <img src={url} alt="" style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', border: '2px solid black', flexShrink: 0 }} />;
+function Avatar({ url, size = 60 }) {
+  if (url) return (
+    <div style={{ width: size, height: size, borderRadius: '50%', border: '1px solid var(--border-light)', overflow: 'hidden', flexShrink: 0 }}>
+      <img src={url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+    </div>
+  );
   return (
-    <div style={{ width: size, height: size, borderRadius: '50%', border: '2px solid black', background: '#f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: '#bbb' }}>
-      <svg width={size * 0.55} height={size * 0.55} viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>
+    <div style={{ width: size, height: size, borderRadius: '50%', border: '1px solid var(--border-light)', background: 'var(--bg3)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: 'var(--text3)' }}>
+      <svg width={size * 0.5} height={size * 0.5} viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>
     </div>
   );
 }
@@ -426,50 +431,64 @@ export default function ExplorePage({ user, externalProfile, onExternalProfileCl
   }
 
   return (
-    <div className="explore-page">
+    <div className="v-screen">
       {selectedProfile ? (
-        <ProfileView profile={selectedProfile} user={user} onBack={handleBack} />
+        <div className="v-body" style={{ padding: '24px 36px' }}>
+          <ProfileView profile={selectedProfile} user={user} onBack={handleBack} />
+        </div>
       ) : (
         <>
-          <div className="explore-page-header">
-            <div className="explore-title">EXPLORE</div>
-            <div className="explore-subtitle">{tab === 'people' ? 'public collections' : 'fashion & culture'}</div>
+          {/* Header */}
+          <div style={{ padding: '12px 36px 12px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
+            <div className="v-screen-title">EXPLORE</div>
+            <div className="v-screen-sub">FASHION & CULTURE · PUBLIC COLLECTIONS</div>
           </div>
 
-          <div className="friends-tabs" style={{ marginBottom: 16 }}>
-            <button className={`friends-tab${tab === 'people' ? ' active' : ''}`} onClick={() => setTab('people')}>PEOPLE</button>
-            <button className={`friends-tab${tab === 'feed'   ? ' active' : ''}`} onClick={() => setTab('feed')}>FEED</button>
+          {/* Tabs */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', margin: '0 36px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
+            {[['people', 'PEOPLE'], ['feed', 'FEED']].map(([k, label]) => (
+              <button key={k} onClick={() => setTab(k)} style={{
+                background: 'none', border: 'none', padding: '14px 0',
+                fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '0.18em',
+                cursor: 'pointer', fontWeight: tab === k ? 700 : 400,
+                color: tab === k ? 'var(--text)' : 'var(--text2)',
+                borderBottom: tab === k ? '2px solid var(--text)' : '2px solid transparent',
+                marginBottom: -1,
+              }}>{label}</button>
+            ))}
           </div>
 
-          {tab === 'people' && (
-            <>
-              <input
-                className="search-input"
-                style={{ marginBottom: 20, width: '100%', boxSizing: 'border-box' }}
-                placeholder="SEARCH NAME, LOCATION"
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-              />
-              {loading && <p className="empty">Loading...</p>}
-              {!loading && filtered.length === 0 && (
-                <p className="empty">{search ? 'No profiles match.' : 'No public profiles yet.'}</p>
-              )}
-              <div className="explore-grid">
-                {filtered.map(p => (
-                  <div key={p.id} className="explore-card" onClick={() => setSelectedProfile(p)}>
-                    <Avatar url={p.avatar_url} size={48} />
-                    <div className="explore-card-info">
-                      <div className="explore-card-name">{p.username || 'Anonymous'}</div>
-                      {p.location && <div className="explore-card-meta">{p.location}</div>}
+          {/* Tab content */}
+          <div className="v-body" style={{ padding: '16px 36px 24px' }}>
+            {tab === 'people' && (
+              <>
+                <input
+                  className="toolbar-search"
+                  style={{ width: '100%', marginBottom: 12, padding: '10px 0', borderBottom: '1px solid var(--border-light)' }}
+                  placeholder="SEARCH NAME, LOCATION"
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                />
+                {loading && <div className="v-empty">LOADING…</div>}
+                {!loading && filtered.length === 0 && (
+                  <div className="v-empty">{search ? 'No profiles match.' : 'No public profiles yet.'}</div>
+                )}
+                <div className="explore-grid">
+                  {filtered.map(p => (
+                    <div key={p.id} className="explore-card" onClick={() => setSelectedProfile(p)}>
+                      <Avatar url={p.avatar_url} size={60} />
+                      <div className="explore-card-info">
+                        <div className="explore-card-name">{p.username || 'Anonymous'}</div>
+                        {p.location && <div className="explore-card-meta">{p.location.toUpperCase()}</div>}
+                      </div>
+                      <SocialButtons user={user} profileId={p.id} />
                     </div>
-                    <SocialButtons user={user} profileId={p.id} />
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-
-          {tab === 'feed'  && <NewsFeed user={user} />}
+                  ))}
+                </div>
+              </>
+            )}
+            {tab === 'feed' && <NewsFeed user={user} />}
+          </div>
         </>
       )}
     </div>

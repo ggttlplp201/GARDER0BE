@@ -7,7 +7,7 @@ import AvatarCropModal from './AvatarCropModal';
 const PROFILE_KEYS = ['p-name', 'p-fav-brand', 'p-location', 'p-bio'];
 
 
-export default function ProfilePanel({ open, user, onClose, onSignOut, avatarUrl, onAvatarChange, onExportCSV }) {
+export default function ProfilePanel({ open, user, onClose, onSignOut, avatarUrl, onAvatarChange, onExportCSV, onProfileSave }) {
   const [profile, setProfile]     = useState({});
   const [isPublic, setIsPublic]   = useState(false);
   const [saveError, setSaveError] = useState('');
@@ -55,6 +55,7 @@ export default function ProfilePanel({ open, user, onClose, onSignOut, avatarUrl
     } else {
       localStorage.setItem(storageKey, JSON.stringify(cleaned));
     }
+    onProfileSave?.();
     onClose();
   }
 

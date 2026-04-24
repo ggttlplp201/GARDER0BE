@@ -89,7 +89,7 @@ export default function AddItemModal({ open, onClose, onAdd }) {
           <input value={fields.size} onChange={e => set('size', e.target.value)} placeholder="e.g. M, L, 42" />
         </div>
         <div className="field">
-          <label>Purchase Price ($)</label>
+          <label>Price ($)</label>
           <input type="number" min="0" value={fields.price} onChange={e => set('price', e.target.value)} placeholder="0" />
         </div>
 

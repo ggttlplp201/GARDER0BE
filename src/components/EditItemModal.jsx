@@ -74,7 +74,7 @@ export default function EditItemModal({ item, onClose, onSave }) {
   async function handleSave() {
     if (!fields.name.trim()) return;
     setSaving(true); setError('');
-    try { await onSave(item.id, fields, editImgs, item); onClose(); }
+    try { await onSave(fields, editImgs); onClose(); }
     catch (err) { setError(err.message || 'Failed to save changes.'); }
     finally { setSaving(false); }
   }
@@ -119,7 +119,7 @@ export default function EditItemModal({ item, onClose, onSave }) {
           <input value={fields.size} onChange={e => set('size', e.target.value)} placeholder="e.g. M, L, 42" />
         </div>
         <div className="field">
-          <label>Purchase Price ($)</label>
+          <label>Price ($)</label>
           <input type="number" min="0" value={fields.price} onChange={e => set('price', e.target.value)} placeholder="0" />
         </div>
         <div className="field">
