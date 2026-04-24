@@ -78,21 +78,23 @@ export default function App() {
   }, [items]);
 
   useEffect(() => {
-    const key = `garderobe-profile-${user?.id || 'guest'}`;
+    setAvatarUrl('');
+    setUserLocation('');
+    setUserName('');
+    if (!user) return;
+    const key = `garderobe-profile-${user.id}`;
     try {
       const p = JSON.parse(localStorage.getItem(key) || '{}');
       if (p.avatarUrl) setAvatarUrl(p.avatarUrl);
       if (p['p-location']) setUserLocation(p['p-location']);
       if (p['p-name']) setUserName(p['p-name']);
     } catch {}
-    if (user) {
-      sb.auth.getUser().then(({ data: { user: u } }) => {
-        const meta = u?.user_metadata?.profile || {};
-        if (meta.avatarUrl) setAvatarUrl(meta.avatarUrl);
-        if (meta['p-location']) setUserLocation(meta['p-location']);
-        if (meta['p-name']) setUserName(meta['p-name']);
-      });
-    }
+    sb.auth.getUser().then(({ data: { user: u } }) => {
+      const meta = u?.user_metadata?.profile || {};
+      if (meta.avatarUrl) setAvatarUrl(meta.avatarUrl);
+      if (meta['p-location']) setUserLocation(meta['p-location']);
+      if (meta['p-name']) setUserName(meta['p-name']);
+    });
   }, [user?.id]);
 
   useEffect(() => {
