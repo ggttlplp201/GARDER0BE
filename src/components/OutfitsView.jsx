@@ -1,10 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { parseImageUrls } from '../lib/imageUtils';
 
-const SLOT_LABELS = ['TOP', 'BOTTOM', 'OUTER', 'SHOE', 'HAT', 'BAG'];
-
-// Display order: head to toe (indexes into SLOT_LABELS)
-const HEAD_TO_TOE = [4, 2, 0, 1, 3, 5]; // HAT, OUTER, TOP, BOTTOM, SHOE, BAG
+const SLOT_LABELS = ['TOP', 'BOTTOM', 'OUTER', 'SHOE', 'HAT', 'BAG', 'ACC1', 'ACC2', 'ACC3', 'ACC4'];
 
 // Which item types each slot accepts (matches ITEM_TYPES in constants.js)
 const SLOT_ACCEPTS = {
@@ -14,7 +11,14 @@ const SLOT_ACCEPTS = {
   SHOE:   ['Footwear'],
   HAT:    ['Accessories'],
   BAG:    ['Accessories'],
+  ACC1:   ['Accessories'],
+  ACC2:   ['Accessories'],
+  ACC3:   ['Accessories'],
+  ACC4:   ['Accessories'],
 };
+
+const ACC_SLOTS = ['ACC1', 'ACC2', 'ACC3', 'ACC4'];
+const ACC_IDXS  = [6, 7, 8, 9];
 
 function slotAccepts(slotLabel, item) {
   if (!item?.type) return false;
@@ -125,7 +129,7 @@ function SmartThumb({ item }) {
 }
 
 // Heights per slot type for the flat-lay look
-const SLOT_H = { TOP: 240, BOTTOM: 250, OUTER: 240, SHOE: 180, HAT: 90, BAG: 110 };
+const SLOT_H = { TOP: 240, BOTTOM: 250, OUTER: 240, SHOE: 180, HAT: 90, BAG: 110, ACC1: 90, ACC2: 90, ACC3: 90, ACC4: 90 };
 
 function FlatSlot({ label, item, onRemove, draggingItem, onDragOver, onDrop, style = {} }) {
   const accepts = draggingItem ? slotAccepts(label, draggingItem) : null;
@@ -165,7 +169,7 @@ function FlatSlot({ label, item, onRemove, draggingItem, onDragOver, onDrop, sty
 }
 
 export default function OutfitsView({ items }) {
-  const [slots, setSlots]         = useState([null, null, null, null, null, null]);
+  const [slots, setSlots]         = useState(Array(10).fill(null));
   const [fitName, setFitName]     = useState('UNTITLED');
   const [savedFits, setSavedFits] = useState(() => {
     try { return JSON.parse(localStorage.getItem('garderobe-saved-fits') || '[]'); } catch { return []; }
@@ -178,7 +182,7 @@ export default function OutfitsView({ items }) {
     try { localStorage.setItem('garderobe-saved-fits', JSON.stringify(savedFits)); } catch {}
   }, [savedFits]);
 
-  const rackItems = items.filter(it => it.status !== 'wishlist');
+  const rackItems = items.filter(it => it.status !== 'wishlist' && it.type !== 'Other');
 
   // Click-to-add: place in first empty slot whose category accepts the item
   const addItem = useCallback((item) => {
@@ -192,8 +196,11 @@ export default function OutfitsView({ items }) {
   const filled = slots.filter(Boolean);
   const value  = filled.reduce((s, i) => s + (parseFloat(i.price) || 0), 0);
 
+  const EMPTY_SLOTS = Array(10).fill(null);
+
   const loadFit = (fit) => {
-    setSlots([...fit.slots]);
+    const padded = [...fit.slots, ...Array(10)].slice(0, 10).map(v => v ?? null);
+    setSlots(padded);
     setFitName(fit.name);
     setLoadedFitId(fit.id);
   };
@@ -201,18 +208,17 @@ export default function OutfitsView({ items }) {
   const saveFit = () => {
     if (!filled.length) return;
     if (loadedFitId) {
-      // Update existing fit in place
       setSavedFits(f => f.map(fit => fit.id === loadedFitId ? { ...fit, name: fitName, slots: [...slots] } : fit));
     } else {
       setSavedFits(f => [...f, { id: Date.now(), name: fitName, slots: [...slots] }]);
     }
-    setSlots([null, null, null, null, null, null]);
+    setSlots(EMPTY_SLOTS);
     setFitName('UNTITLED');
     setLoadedFitId(null);
   };
 
   const newFit = () => {
-    setSlots([null, null, null, null, null, null]);
+    setSlots(EMPTY_SLOTS);
     setFitName('UNTITLED');
     setLoadedFitId(null);
   };
@@ -322,7 +328,7 @@ export default function OutfitsView({ items }) {
                 onChange={e => setFitName(e.target.value.toUpperCase())}
                 className="outfits-name-input"
               />
-              <span className="mono-dim" style={{ fontSize: 10 }}>{filled.length}/6 · ${Math.round(value).toLocaleString()}</span>
+              <span className="mono-dim" style={{ fontSize: 10 }}>{filled.length}/10 · ${Math.round(value).toLocaleString()}</span>
             </div>
 
             <div className="outfit-slots">
@@ -361,6 +367,23 @@ export default function OutfitsView({ items }) {
                     onDrop={e => handleSlotDrop(e, 5, 'BAG')} />
                 </div>
               </div>
+
+              {/* Accessories strip */}
+              <div className="outfit-acc-strip">
+                <div className="mono-dim" style={{ fontSize: 8, letterSpacing: '0.15em', marginBottom: 6 }}>ACCESSORIES</div>
+                <div className="outfit-acc-row">
+                  {ACC_SLOTS.map((label, i) => {
+                    const slotIdx = ACC_IDXS[i];
+                    return (
+                      <FlatSlot key={label} label="ACC" item={slots[slotIdx]} onRemove={() => removeSlot(slotIdx)}
+                        draggingItem={draggingItem}
+                        onDragOver={e => handleSlotDragOver(e, label)}
+                        onDrop={e => handleSlotDrop(e, slotIdx, label)}
+                        style={{ height: SLOT_H.ACC1 }} />
+                    );
+                  })}
+                </div>
+              </div>
             </div>
 
             <div className="outfit-stats">
@@ -375,7 +398,7 @@ export default function OutfitsView({ items }) {
             <div className="outfit-actions" style={{ border: '1px solid var(--border)' }}>
               {loadedFitId
                 ? <button className="mode-btn bd-r" style={{ flex: 1 }} onClick={newFit}>← NEW FIT</button>
-                : <button className="mode-btn bd-r" style={{ flex: 1 }} onClick={() => { setSlots([null,null,null,null,null,null]); setLoadedFitId(null); }}>CLEAR</button>
+                : <button className="mode-btn bd-r" style={{ flex: 1 }} onClick={() => { setSlots(EMPTY_SLOTS); setLoadedFitId(null); }}>CLEAR</button>
               }
               <button className="mode-btn bd-r" style={{ flex: 1 }} onClick={shuffle}>SHUFFLE</button>
               <button
