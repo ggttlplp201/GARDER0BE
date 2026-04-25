@@ -256,7 +256,7 @@ export default function WardrobeView({ items, loading, loadError, onRetry, onIte
                   <div className="list-meta">{it.type}{it.condition ? ` · ${it.condition}` : ''}</div>
                   <div className="list-meta">{it.size || '—'}</div>
                   <div className="list-meta">{dateStr}</div>
-                  <div className="list-price">${parseFloat(it.price || 0).toLocaleString()}</div>
+                  <div className="list-price">{parseFloat(it.price) ? `$${parseFloat(it.price).toLocaleString()}` : 'N/A'}</div>
                 </div>
               );
             })}
