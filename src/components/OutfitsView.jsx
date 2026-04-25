@@ -177,6 +177,7 @@ export default function OutfitsView({ items }) {
   const [draggingItem, setDraggingItem] = useState(null);
   const [loadedFitId, setLoadedFitId]   = useState(null);
   const [showSaved, setShowSaved]       = useState(false);
+  const [pendingDelete, setPendingDelete] = useState(null);
 
   useEffect(() => {
     try { localStorage.setItem('garderobe-saved-fits', JSON.stringify(savedFits)); } catch {}
@@ -292,16 +293,33 @@ export default function OutfitsView({ items }) {
                 <div className="saved-fits-grid">
                   {savedFits.map(fit => {
                     const isActive = fit.id === loadedFitId;
+                    const isPending = pendingDelete === fit.id;
                     return (
                       <div
                         key={fit.id}
                         className="saved-fit-card"
-                        onClick={() => { loadFit(fit); setShowSaved(false); }}
+                        onClick={() => { if (!isPending) { loadFit(fit); setShowSaved(false); } }}
                         style={{
-                          cursor: 'pointer',
+                          cursor: isPending ? 'default' : 'pointer',
                           border: isActive ? '1px solid var(--text)' : '1px solid var(--border)',
+                          position: 'relative',
                         }}
                       >
+                        <button
+                          className="saved-fit-del"
+                          onClick={e => {
+                            e.stopPropagation();
+                            if (isPending) {
+                              setSavedFits(f => f.filter(x => x.id !== fit.id));
+                              if (loadedFitId === fit.id) { setSlots(EMPTY_SLOTS); setLoadedFitId(null); }
+                              setPendingDelete(null);
+                            } else {
+                              setPendingDelete(fit.id);
+                            }
+                          }}
+                          onBlur={() => { if (isPending) setPendingDelete(null); }}
+                          title={isPending ? 'Confirm delete' : 'Delete fit'}
+                        >{isPending ? '?' : '×'}</button>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
                           <div style={{ fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 500 }}>{fit.name}</div>
                           {isActive && <div style={{ fontFamily: 'var(--font-mono)', fontSize: 8, letterSpacing: '0.12em', opacity: 0.6 }}>LOADED</div>}
