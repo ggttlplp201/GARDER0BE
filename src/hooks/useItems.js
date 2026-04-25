@@ -99,5 +99,13 @@ export function useItems(user) {
     await fetchItems();
   }
 
-  return { items, loading, loadError, fetchItems, addItem, editItem, removeItem };
+  async function logWear(id) {
+    const item = items.find(i => i.id === id);
+    if (!item) return;
+    const next = (item.wear_count || 0) + 1;
+    setItems(prev => prev.map(i => i.id === id ? { ...i, wear_count: next } : i));
+    await sb.from('items').update({ wear_count: next }).eq('id', id);
+  }
+
+  return { items, loading, loadError, fetchItems, addItem, editItem, removeItem, logWear };
 }

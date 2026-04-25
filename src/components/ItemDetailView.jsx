@@ -253,9 +253,9 @@ function PriceSources({ item }) {
   );
 }
 
-export default function ItemDetailView({ item, items, onBack, onEdit, onNavigate, onRemove }) {
-  const [imgIdx, setImgIdx]     = useState(0);
-  const [wearLogged, setWear]   = useState(false);
+export default function ItemDetailView({ item, items, onBack, onEdit, onNavigate, onRemove, onLogWear }) {
+  const [imgIdx, setImgIdx]       = useState(0);
+  const [wearLogged, setWear]     = useState(false);
   const [delConfirm, setDelConfirm] = useState(false);
   const delTimer = useRef(null);
 
@@ -271,6 +271,7 @@ export default function ItemDetailView({ item, items, onBack, onEdit, onNavigate
     ? new Date(item.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }).replace(/\//g, '.')
     : '—';
 
+  const wearCount = item.wear_count || 0;
   const fields = [
     ['TYPE',      item.type      || '—'],
     ['CONDITION', item.condition || '—'],
@@ -278,9 +279,11 @@ export default function ItemDetailView({ item, items, onBack, onEdit, onNavigate
     ['STATUS',    (item.status || 'owned').toUpperCase()],
     ['ACQUIRED',  dateStr],
     ['PRICE',     parseFloat(item.price) ? `$${parseFloat(item.price).toLocaleString()}` : 'N/A'],
+    ['WORN',      `${wearCount}×`],
   ];
 
   function logWear() {
+    if (onLogWear) onLogWear(item.id);
     setWear(true);
     setTimeout(() => setWear(false), 2000);
   }
