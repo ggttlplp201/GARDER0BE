@@ -1,36 +1,17 @@
-export const config = { api: { bodyParser: false } };
-
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end('Method Not Allowed');
 
   try {
-    // Read raw body as buffer
-    const chunks = [];
-    for await (const chunk of req) chunks.push(chunk);
-    const buf = Buffer.concat(chunks);
+    const { base64, mediaType = 'image/jpeg' } = req.body;
+    if (!base64) return res.status(400).json({ error: 'No image data' });
 
-    // Forward multipart form to Anthropic after extracting the image
-    const contentType = req.headers['content-type'] || '';
-    const boundary = contentType.split('boundary=')[1];
-    if (!boundary) return res.status(400).json({ error: 'No boundary in multipart' });
-
-    // Parse the single file part from the multipart body
-    const bodyStr = buf.toString('binary');
-    const partStart = bodyStr.indexOf('\r\n\r\n') + 4;
-    const partEnd   = bodyStr.lastIndexOf(`\r\n--${boundary}`);
-    const imageData = buf.slice(partStart, partEnd);
-
-    // Detect media type
-    let mediaType = 'image/jpeg';
-    if (imageData[0] === 0x89 && imageData[1] === 0x50) mediaType = 'image/png';
-    else if (imageData[0] === 0x52 && imageData[1] === 0x49) mediaType = 'image/webp';
-
-    const base64 = imageData.toString('base64');
+    const key = process.env.CLAUDE_API_KEY || process.env.ANTHROPIC_API_KEY || '';
+    if (!key) return res.status(503).json({ error: 'CLAUDE_API_KEY not set' });
 
     const anthropicRes = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
-        'x-api-key': process.env.CLAUDE_API_KEY || process.env.ANTHROPIC_API_KEY || '',
+        'x-api-key': key,
         'anthropic-version': '2023-06-01',
         'content-type': 'application/json',
       },
@@ -48,10 +29,8 @@ export default async function handler(req, res) {
     });
 
     const data = await anthropicRes.json();
-    const raw   = data?.content?.[0]?.text?.trim() || '';
-    const match = raw.match(/\{[\s\S]*\}/);
-    if (!match) return res.status(422).json({ error: 'Could not parse tags' });
-    return res.status(200).json(JSON.parse(match[0]));
+    // Return raw Anthropic response so the client-side parser in autoTagWithClaude works
+    return res.status(200).json(data);
   } catch (e) {
     return res.status(500).json({ error: e.message });
   }
