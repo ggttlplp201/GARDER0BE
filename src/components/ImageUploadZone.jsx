@@ -34,7 +34,8 @@ export default function ImageUploadZone({ pending, onChange, onTagApply, isFirst
         const tags    = await autoTagWithClaude(firstBlob.blob);
         const patches = applyTags(tags, {});
         if (Object.keys(patches).length) { onTagApply(patches); setDzMsg('AI TAGGED ✓'); }
-      } catch { /* silent — tagging is best-effort */ }
+        else setDzMsg('AI: no tags returned');
+      } catch (e) { setDzMsg(`AI ERR: ${e.message?.slice(0, 60)}`); }
       finally { setTagging(false); }
     }
   }
