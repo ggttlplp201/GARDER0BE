@@ -1,6 +1,5 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
-import { maybeConvertHeic, removeBg } from '../lib/imageUtils';
-import { API_URL } from '../lib/constants';
+import { maybeConvertHeic, removeBg, autoTagWithClaude, applyTags } from '../lib/imageUtils';
 
 export default function ImageUploadZone({ pending, onChange, onTagApply, isFirstUpload }) {
   const [dzState, setDzState] = useState('');
@@ -32,19 +31,9 @@ export default function ImageUploadZone({ pending, onChange, onTagApply, isFirst
     if (onTagApply && isFirstUpload && firstBlob) {
       setTagging(true);
       try {
-        const form = new FormData();
-        form.append('file', firstBlob.blob, firstBlob.originalFile.name || 'image.jpg');
-        const res = await fetch(`${API_URL}/tag`, { method: 'POST', body: form });
-        if (res.ok) {
-          const tags = await res.json();
-          const patches = {};
-          if (tags.name)  patches.name  = tags.name;
-          if (tags.brand) patches.brand = tags.brand;
-          if (tags.color) patches.color = tags.color;
-          if (tags.type)  patches.type  = tags.type;
-          onTagApply(patches);
-          setDzMsg('AI TAGGED ✓');
-        }
+        const tags    = await autoTagWithClaude(firstBlob.blob);
+        const patches = applyTags(tags, {});
+        if (Object.keys(patches).length) { onTagApply(patches); setDzMsg('AI TAGGED ✓'); }
       } catch { /* silent — tagging is best-effort */ }
       finally { setTagging(false); }
     }

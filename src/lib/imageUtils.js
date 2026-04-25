@@ -48,8 +48,8 @@ export async function autoTagWithClaude(blob) {
   });
   const mediaType = blob.type === 'image/png' ? 'image/png' : 'image/jpeg';
 
-  // Netlify serverless function — same domain, no CORS issues
-  const resp = await fetch('/.netlify/functions/claude-tag', {
+  // Vercel serverless function — same domain, no CORS issues
+  const resp = await fetch('/api/tag', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ base64, mediaType }),

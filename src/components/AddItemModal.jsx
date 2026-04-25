@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import ImageUploadZone from './ImageUploadZone';
 import BrandInput from './BrandInput';
-import { ITEM_TYPES, API_URL } from '../lib/constants';
-import { removeBg } from '../lib/imageUtils';
+import { ITEM_TYPES } from '../lib/constants';
+import { removeBg, autoTagWithClaude, applyTags } from '../lib/imageUtils';
 
 const DEFAULT_FIELDS = { name: '', color: '', brand: '', type: 'Shirt', size: '', price: '', urlInput: '', status: 'owned', condition: '' };
 
@@ -46,18 +46,11 @@ export default function AddItemModal({ open, onClose, onAdd }) {
       const src = URL.createObjectURL(blob);
       setPending(p => [...p, { src, blob, url: null }]);
       if (isFirst) {
-        const form = new FormData();
-        form.append('file', blob, 'image.jpg');
-        const tagRes = await fetch(`${API_URL}/tag`, { method: 'POST', body: form });
-        if (tagRes.ok) {
-          const tags = await tagRes.json();
-          const patches = {};
-          if (tags.name)  patches.name  = tags.name;
-          if (tags.brand) patches.brand = tags.brand;
-          if (tags.color) patches.color = tags.color;
-          if (tags.type)  patches.type  = tags.type;
-          handleTagApply(patches);
-        }
+        try {
+          const tags    = await autoTagWithClaude(blob);
+          const patches = applyTags(tags, fields);
+          if (Object.keys(patches).length) handleTagApply(patches);
+        } catch { /* silent */ }
       }
     } catch {
       setPending(p => [...p, { src: url, blob: null, url }]);
