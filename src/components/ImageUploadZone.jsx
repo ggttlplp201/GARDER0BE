@@ -27,6 +27,8 @@ export default function ImageUploadZone({ pending, onChange, onTagApply, isFirst
     const n = rawFiles.length;
     setDropzone('done', `${n} PHOTO${n > 1 ? 'S' : ''} ADDED`);
 
+    setDzMsg(`cb=${!!onTagApply} 1st=${isFirstUpload} blob=${!!firstBlob}`);
+
     // AI tag only on first-ever upload and only if callback provided
     if (onTagApply && isFirstUpload && firstBlob) {
       setTagging(true);

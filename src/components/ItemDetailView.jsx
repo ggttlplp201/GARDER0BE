@@ -133,8 +133,12 @@ function PriceSources({ item }) {
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ source_name: srcName.trim(), source_url: srcUrl.trim() }),
       });
-      if (res.ok) { setSrcName(''); setSrcUrl(''); await load(); }
-      else { const b = await res.json().catch(() => ({})); setError(b.detail ?? 'Failed to add source.'); }
+      if (res.ok) {
+        const newSrc = await res.json().catch(() => ({}));
+        setSrcName(''); setSrcUrl('');
+        await load();
+        if (newSrc?.id) refreshSource(newSrc.id);
+      } else { const b = await res.json().catch(() => ({})); setError(b.detail ?? 'Failed to add source.'); }
     } catch (err) {
       setError(`Network error: ${err.message}`);
     } finally {
