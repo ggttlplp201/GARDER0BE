@@ -4,6 +4,18 @@ import { isGyroActive } from '../lib/gyro';
 import { ITEM_TYPES } from '../lib/constants';
 import ItemCard from './ItemCard';
 
+function useConfirm() {
+  const [pending, setPending] = useState(null);
+  const timer = useRef(null);
+  function arm(id) {
+    clearTimeout(timer.current);
+    setPending(id);
+    timer.current = setTimeout(() => setPending(null), 2500);
+  }
+  function disarm() { clearTimeout(timer.current); setPending(null); }
+  return { pending, arm, disarm };
+}
+
 function Hanger({ size = 34 }) {
   return (
     <svg width={size} height={size * 0.64} viewBox="0 0 44 28" style={{ display: 'block' }}>
@@ -17,7 +29,7 @@ function catNum(idx) {
   return String(idx + 1).padStart(3, '0');
 }
 
-function RackCard({ item, globalIdx, onClick }) {
+function RackCard({ item, globalIdx, onClick, onRemove, confirmPending, onArmConfirm }) {
   const cardRef  = useRef(null);
   const shineRef = useRef(null);
   const reducedMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -115,6 +127,14 @@ function RackCard({ item, globalIdx, onClick }) {
       </div>
       <div className="rack-brand">{item.brand || '—'}</div>
       <div className="rack-name">{item.name || 'Untitled'}</div>
+      <button
+        className={`rack-del${confirmPending ? ' confirming' : ''}`}
+        onClick={e => {
+          e.stopPropagation();
+          if (confirmPending) onRemove(item.id);
+          else onArmConfirm(item.id);
+        }}
+      >{confirmPending ? '?' : '×'}</button>
     </div>
   );
 }
@@ -125,6 +145,7 @@ export default function WardrobeView({ items, loading, loadError, onRetry, onIte
   const [mode, setMode]         = useState('RACK');
   const [search, setSearch]     = useState('');
   const [filterType, setFilterType] = useState('ALL');
+  const confirm = useConfirm();
 
   const filtered = items.filter(it => {
     if (search) {
@@ -212,7 +233,10 @@ export default function WardrobeView({ items, loading, loadError, onRetry, onIte
                   <div className="rack-rail-line" />
                   <div className="rack-cards">
                     {grouped[brand].map(it => (
-                      <RackCard key={it.id} item={it} globalIdx={itemGlobalIdx(it.id)} onClick={onItemClick} />
+                      <RackCard key={it.id} item={it} globalIdx={itemGlobalIdx(it.id)} onClick={onItemClick}
+                        onRemove={id => { onRemove(id); confirm.disarm(); }}
+                        confirmPending={confirm.pending === it.id}
+                        onArmConfirm={confirm.arm} />
                     ))}
                   </div>
                 </div>
@@ -240,14 +264,16 @@ export default function WardrobeView({ items, loading, loadError, onRetry, onIte
               <div>SIZE</div>
               <div>ACQ.</div>
               <div style={{ textAlign: 'right' }}>PRICE</div>
+              <div />
             </div>
             {filtered.map(it => {
               const gi = itemGlobalIdx(it.id);
               const dateStr = it.created_at
                 ? new Date(it.created_at).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' }).replace(/\//g, '.')
                 : '—';
+              const isPending = confirm.pending === it.id;
               return (
-                <div key={it.id} className="list-row" onClick={() => onItemClick(it)}>
+                <div key={it.id} className="list-row" onClick={() => { if (!isPending) onItemClick(it); }}>
                   <div className="list-cat">{catNum(gi)}</div>
                   <div>
                     <div className="list-brand-sm">{it.brand || '—'}</div>
@@ -257,6 +283,15 @@ export default function WardrobeView({ items, loading, loadError, onRetry, onIte
                   <div className="list-meta">{it.size || '—'}</div>
                   <div className="list-meta">{dateStr}</div>
                   <div className="list-price">{parseFloat(it.price) ? `$${parseFloat(it.price).toLocaleString()}` : 'N/A'}</div>
+                  <button
+                    className={`rack-del${isPending ? ' confirming' : ''}`}
+                    style={{ marginLeft: 8 }}
+                    onClick={e => {
+                      e.stopPropagation();
+                      if (isPending) { onRemove(it.id); confirm.disarm(); }
+                      else confirm.arm(it.id);
+                    }}
+                  >{isPending ? '?' : '×'}</button>
                 </div>
               );
             })}

@@ -734,6 +734,10 @@ input[type=range].vol-slider::-webkit-slider-thumb { -webkit-appearance: none; a
   pointer-events: none;
 }
 .rack-card:hover .rack-arrow { opacity: 1; }
+.rack-del { position: absolute; top: 6px; right: 6px; width: 18px; height: 18px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-family: var(--font-mono); font-size: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; line-height: 1; z-index: 4; opacity: 0; transition: opacity 0.15s; }
+.rack-card:hover .rack-del, .rack-del.confirming { opacity: 1; }
+.rack-del.confirming { background: var(--text); color: var(--bg); border-color: var(--text); }
+.list-row .rack-del { position: static; opacity: 1; flex-shrink: 0; }
 .rack-arrow-l { left: -10px; }
 .rack-arrow-r { right: -10px; }
 .rack-arrow:hover span { background: var(--text); color: var(--bg); border-color: var(--text); }
@@ -845,6 +849,7 @@ input[type=range].vol-slider::-webkit-slider-thumb { -webkit-appearance: none; a
 .det-btn:hover { background: var(--bg2); }
 .det-btn.det-btn-primary { background: var(--text); color: var(--bg); }
 .det-btn.det-btn-primary:hover { opacity: 0.85; }
+.det-btn.det-btn-danger { background: #c0392b; color: #fff; border-color: #c0392b; }
 
 /* ── Price sources panel ── */
 .price-sources { margin-top: 24px; border-top: 1px solid var(--border-light); padding-top: 16px; }

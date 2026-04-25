@@ -253,9 +253,11 @@ function PriceSources({ item }) {
   );
 }
 
-export default function ItemDetailView({ item, items, onBack, onEdit, onNavigate }) {
-  const [imgIdx, setImgIdx]   = useState(0);
-  const [wearLogged, setWear] = useState(false);
+export default function ItemDetailView({ item, items, onBack, onEdit, onNavigate, onRemove }) {
+  const [imgIdx, setImgIdx]     = useState(0);
+  const [wearLogged, setWear]   = useState(false);
+  const [delConfirm, setDelConfirm] = useState(false);
+  const delTimer = useRef(null);
 
   if (!item) return null;
 
@@ -350,6 +352,21 @@ export default function ItemDetailView({ item, items, onBack, onEdit, onNavigate
               </button>
               <button className="det-btn" onClick={() => onEdit(item.id)}>EDIT</button>
               <button className="det-btn">SELL</button>
+              {onRemove && (
+                <button
+                  className={`det-btn${delConfirm ? ' det-btn-danger' : ''}`}
+                  onClick={() => {
+                    if (delConfirm) {
+                      clearTimeout(delTimer.current);
+                      onRemove(item.id);
+                      onBack();
+                    } else {
+                      setDelConfirm(true);
+                      delTimer.current = setTimeout(() => setDelConfirm(false), 2500);
+                    }
+                  }}
+                >{delConfirm ? 'CONFIRM?' : 'DELETE'}</button>
+              )}
             </div>
 
             {item.status === 'wishlist' && <PriceSources item={item} />}

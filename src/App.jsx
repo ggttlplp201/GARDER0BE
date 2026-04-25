@@ -232,6 +232,7 @@ export default function App() {
             onEdit={id => setEditItemId(id)}
             onNavigate={handleNavigateDetail}
             onOpenLightbox={item => setLbItem(item)}
+            onRemove={removeItem}
           />
         )}
         {page === 'outfits' && <OutfitsView items={items} />}
