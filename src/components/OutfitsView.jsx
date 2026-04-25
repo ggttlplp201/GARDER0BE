@@ -127,7 +127,7 @@ function SmartThumb({ item }) {
 // Heights per slot type for the flat-lay look
 const SLOT_H = { TOP: 240, BOTTOM: 250, OUTER: 240, SHOE: 180, HAT: 90, BAG: 110 };
 
-function FlatSlot({ label, item, idx, onRemove, draggingItem, onDragOver, onDrop, style = {} }) {
+function FlatSlot({ label, item, onRemove, draggingItem, onDragOver, onDrop, style = {} }) {
   const accepts = draggingItem ? slotAccepts(label, draggingItem) : null;
   const compatible = draggingItem && accepts;
   const incompatible = draggingItem && !accepts;
