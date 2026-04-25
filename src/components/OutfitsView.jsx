@@ -10,7 +10,7 @@ const SLOT_ACCEPTS = {
   OUTER:  [],
   SHOE:   ['Footwear'],
   HAT:    ['Headwear'],
-  BAG:    ['Accessories'],
+  BAG:    ['Bag'],
   ACC1:   ['Accessories'],
   ACC2:   ['Accessories'],
   ACC3:   ['Accessories'],

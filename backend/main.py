@@ -321,7 +321,7 @@ async def tag_item(file: UploadFile = File(...)):
                                 "Identify this clothing item. Reply with only a JSON object: "
                                 '{"name": "item name", "brand": "brand or unknown", '
                                 '"color": "primary color", "type": "one of: Shirt/T-Shirt/'
-                                'Sweatshirt/Jeans/Jacket/Coat/Trousers/Shorts/Footwear/Accessories/Headwear/Other"}'
+                                'Sweatshirt/Jeans/Jacket/Coat/Trousers/Shorts/Footwear/Accessories/Headwear/Bag/Other"}'
                             ),
                         },
                     ],
@@ -334,7 +334,7 @@ async def tag_item(file: UploadFile = File(...)):
 
     ITEM_TYPES = {
         "Shirt", "T-Shirt", "Sweatshirt", "Jeans", "Jacket",
-        "Coat", "Trousers", "Shorts", "Footwear", "Accessories", "Headwear", "Other",
+        "Coat", "Trousers", "Shorts", "Footwear", "Accessories", "Headwear", "Bag", "Other",
     }
 
     raw = message.content[0].text.strip()

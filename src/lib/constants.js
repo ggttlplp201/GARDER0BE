@@ -19,4 +19,4 @@ export const QUOTES = [
   { text: "Always be knolling.", author: "Tom Sachs" },
 ];
 
-export const ITEM_TYPES = ['Shirt','T-Shirt','Sweatshirt','Jeans','Jacket','Coat','Trousers','Shorts','Footwear','Accessories','Headwear','Other'];
+export const ITEM_TYPES = ['Shirt','T-Shirt','Sweatshirt','Jeans','Jacket','Coat','Trousers','Shorts','Footwear','Accessories','Headwear','Bag','Other'];
