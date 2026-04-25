@@ -146,20 +146,36 @@ export default function App() {
 
   const dismissToast = useCallback(id => setToasts(t => t.filter(x => x.id !== id)), []);
 
-  const prevPageRef = useRef('wardrobe');
+  const prevPageRef = useRef(sessionStorage.getItem('garderobe-prev-page') || 'wardrobe');
+
+  // Restore detail item after refresh if items have loaded
+  useEffect(() => {
+    if (page === 'detail' && !detailItem && items.length > 0) {
+      const savedId = sessionStorage.getItem('garderobe-detail-id');
+      if (savedId) {
+        const found = items.find(i => i.id === savedId);
+        if (found) setDetailItem(found);
+        else navigate('wardrobe');
+      } else {
+        navigate('wardrobe');
+      }
+    }
+  }, [items, page]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const navigate = useCallback((p) => {
     sessionStorage.setItem('garderobe-page', p);
-    setPage(prev => { prevPageRef.current = prev; return p; });
+    setPage(prev => { prevPageRef.current = prev; sessionStorage.setItem('garderobe-prev-page', prev); return p; });
   }, []);
 
   const handleItemClick = useCallback((item) => {
     setDetailItem(item);
+    sessionStorage.setItem('garderobe-detail-id', item.id);
     navigate('detail');
   }, [navigate]);
 
   const handleBack = useCallback(() => {
     const dest = prevPageRef.current || 'wardrobe';
+    sessionStorage.removeItem('garderobe-detail-id');
     navigate(dest);
     setDetailItem(null);
   }, [navigate]);
