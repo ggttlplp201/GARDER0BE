@@ -19,7 +19,13 @@ export default function ImageUploadZone({ pending, onChange, onTagApply, isFirst
     let firstBlob = null;
     for (const raw of rawFiles) {
       const file = await maybeConvertHeic(raw);
-      const blob = await removeBg(file, raw.name);
+      let blob;
+      try {
+        blob = await removeBg(file);
+      } catch (e) {
+        blob = file;
+        setDzMsg(`BG ERR: ${e.message?.slice(0, 60)}`);
+      }
       if (!firstBlob) firstBlob = { blob, originalFile: raw };
       newItems.push({ src: URL.createObjectURL(blob), blob, url: null });
     }

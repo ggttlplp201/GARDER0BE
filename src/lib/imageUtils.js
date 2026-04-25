@@ -21,14 +21,8 @@ export async function maybeConvertHeic(file) {
 }
 
 export async function removeBg(file) {
-  try {
-    const { removeBackground } = await import('@imgly/background-removal');
-    const blob = await removeBackground(file);
-    return blob;
-  } catch (e) {
-    console.warn('removeBg failed:', e.message);
-    return file;
-  }
+  const { removeBackground } = await import('@imgly/background-removal');
+  return await removeBackground(file);
 }
 
 export async function autoTagWithClaude(blob) {

@@ -42,7 +42,12 @@ export default function AddItemModal({ open, onClose, onAdd }) {
     try {
       const resp = await fetch(url);
       const rawBlob = await resp.blob();
-      const blob = await removeBg(new File([rawBlob], 'image.jpg', { type: rawBlob.type }));
+      let blob;
+      try {
+        blob = await removeBg(new File([rawBlob], 'image.jpg', { type: rawBlob.type }));
+      } catch {
+        blob = rawBlob;
+      }
       const src = URL.createObjectURL(blob);
       setPending(p => [...p, { src, blob, url: null }]);
       if (isFirst) {
