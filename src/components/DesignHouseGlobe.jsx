@@ -190,6 +190,7 @@ export default function DesignHouseGlobe({ mini = false, onViewProfile }) {
   const gradCacheRef  = useRef({ W: 0, H: 0, r: 0, isDark: null, atmos: null, hl: null, dark: null });
   const labelCacheRef = useRef({ key: '', measured: [] });
   const pausedRef     = useRef(false);
+  const labBoxesRef   = useRef([]); // [{bx,by,bw,bh,houseIdx}] — zoomed label hit areas
 
   const [hovCluster, setHovCluster] = useState(null);
   const [dragging, setDragging]     = useState(false);
@@ -444,16 +445,18 @@ export default function DesignHouseGlobe({ mini = false, onViewProfile }) {
           const h0 = houses[indices[0]];
           const textLines = [];
           if (isStack && count > 1) {
-            for (const idx of indices) textLines.push({ text: houses[idx].name, bold: true, sz: 8 });
+            for (const idx of indices) textLines.push({ text: houses[idx].name, bold: true, sz: 8, friendBadge: houses[idx].isFriend });
             textLines.push({ text: `${h0.city} · ${localTime(h0.tz, nowT)}`, bold: false, sz: 7, dim: true });
           } else {
-            textLines.push({ text: h0.name, bold: true, sz: 8 });
+            textLines.push({ text: h0.name, bold: true, sz: 8, friendBadge: h0.isFriend });
             textLines.push({ text: `${h0.city} · ${localTime(h0.tz, nowT)}`, bold: false, sz: 7, dim: true });
           }
           let maxW = 0;
           for (const l of textLines) {
             ctx.font = `${l.bold ? 'bold ' : ''}${l.sz}px Arial`;
-            maxW = Math.max(maxW, ctx.measureText(l.text).width);
+            let lw = ctx.measureText(l.text).width;
+            if (l.friendBadge) { ctx.font = `${l.sz - 1}px Arial`; lw += 5 + ctx.measureText('FRIENDS').width; }
+            maxW = Math.max(maxW, lw);
           }
           return { textLines, bw: maxW + padX * 2, bh: textLines.length * lineH + padY * 2 };
         });
@@ -514,6 +517,12 @@ export default function DesignHouseGlobe({ mini = false, onViewProfile }) {
         if (!moved) break;
       }
 
+      // Store label bounding boxes for click detection
+      labBoxesRef.current = labs.map((lab, ci) => ({
+        bx: lab.bx, by: lab.by, bw: lab.bw, bh: lab.bh,
+        houseIdx: clusters[ci]?.indices[0] ?? null,
+      }));
+
       // Draw all labels with final positions
       for (const lab of labs) {
         const { sx, sy, ux, uy, toRight, stemX, stemY, bx, bw, bh, by, textLines } = lab;
@@ -542,9 +551,17 @@ export default function DesignHouseGlobe({ mini = false, onViewProfile }) {
           ctx.font = `${l.bold ? 'bold ' : ''}${l.sz}px Arial`;
           ctx.fillStyle = l.dim ? (isDark ? '#888' : '#aaa') : fg;
           ctx.fillText(l.text, bx + padX, by + padY + i * lineH);
+          if (l.friendBadge) {
+            const nw = ctx.measureText(l.text).width;
+            ctx.font = `${l.sz - 1}px Arial`;
+            ctx.fillStyle = isDark ? '#888' : '#aaa';
+            ctx.fillText('FRIENDS', bx + padX + nw + 5, by + padY + i * lineH);
+          }
         });
       }
     }
+
+    if (!isZoomedRef.current) labBoxesRef.current = [];
 
     ctx.restore();
   }, []);
@@ -696,7 +713,14 @@ export default function DesignHouseGlobe({ mini = false, onViewProfile }) {
       setHovCluster(ci !== null ? (clustersRef.current[ci] ?? null) : null);
       if (ci !== null) setTooltip({ x: mx, y: my });
     }
-  }, [hitCluster]);
+    // Pointer cursor when hovering a zoomed label box
+    if (canvasRef.current && isZoomedRef.current && onViewProfile) {
+      const overLabel = labBoxesRef.current.some(lb =>
+        mx >= lb.bx && mx <= lb.bx + lb.bw && my >= lb.by && my <= lb.by + lb.bh
+      );
+      canvasRef.current.style.cursor = overLabel ? 'pointer' : 'grab';
+    }
+  }, [hitCluster, onViewProfile]);
 
   const onPointerUp = useCallback((e) => {
     if (dragRef.current && !dragRef.current.moved) {
@@ -704,6 +728,17 @@ export default function DesignHouseGlobe({ mini = false, onViewProfile }) {
       const rect   = canvas?.getBoundingClientRect();
       if (rect) {
         const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+
+        // Click on a zoomed label box → navigate to profile
+        if (isZoomedRef.current && onViewProfile) {
+          for (const lb of labBoxesRef.current) {
+            if (mx >= lb.bx && mx <= lb.bx + lb.bw && my >= lb.by && my <= lb.by + lb.bh) {
+              const house = housesRef.current[lb.houseIdx];
+              if (house?.profile) { onViewProfile(house.profile); dragRef.current = null; setDragging(false); return; }
+            }
+          }
+        }
+
         const ci = hitCluster(mx, my);
         if (ci !== null && !isZoomedRef.current) {
           const cl = clustersRef.current[ci];
@@ -737,16 +772,7 @@ export default function DesignHouseGlobe({ mini = false, onViewProfile }) {
     setShowBack(false);
   }, []);
 
-  const hovHouse    = hovCluster?.count === 1 ? housesRef.current[hovCluster.indices[0]] : null;
-  const isHovStack  = hovCluster?.isStack && hovCluster.count > 1;
-  const cursorStyle = (hovCluster?.count > 1 && !isHovStack) ? 'pointer' : (dragging ? 'grabbing' : 'grab');
-
-  // Tooltip positioning — flip to left if near right edge
-  const tooltipStyle = {
-    left:  tooltipPos.x + 16 > containerW - 170 ? undefined : tooltipPos.x + 16,
-    right: tooltipPos.x + 16 > containerW - 170 ? containerW - tooltipPos.x + 8 : undefined,
-    top:   Math.max(0, tooltipPos.y - 12),
-  };
+  const cursorStyle = dragging ? 'grabbing' : 'grab';
 
   const globeCanvas = (
     <canvas
@@ -758,54 +784,6 @@ export default function DesignHouseGlobe({ mini = false, onViewProfile }) {
       onPointerUp={onPointerUp}
       onMouseLeave={onMouseLeave}
     />
-  );
-
-  const tooltip = hovCluster && (
-    <div
-      className="globe-tooltip"
-      style={{
-        ...tooltipStyle,
-        cursor: hovHouse && onViewProfile ? 'pointer' : 'default',
-      }}
-      onClick={hovHouse && onViewProfile ? () => onViewProfile(hovHouse.profile) : undefined}
-    >
-      {hovHouse ? (
-        <>
-          <div className="globe-tt-name" style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-            {hovHouse.name}
-            {hovHouse.isFriend && (
-              <span style={{ fontSize: 8, fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', opacity: 0.6 }}>FRIENDS</span>
-            )}
-          </div>
-          <div className="globe-tt-city">{hovHouse.city} · {localTime(hovHouse.tz, now)}</div>
-          {onViewProfile && (
-            <div style={{ fontSize: 9, letterSpacing: '0.12em', opacity: 0.45, marginTop: 6, fontFamily: 'var(--font-mono)' }}>
-              VIEW PROFILE →
-            </div>
-          )}
-        </>
-      ) : isHovStack ? (
-        <>
-          <div className="globe-tt-name">{hovCluster.label}</div>
-          <div className="globe-tt-time">{localTime(housesRef.current[hovCluster.indices[0]]?.tz, now)}</div>
-          {hovCluster.indices.map(idx => {
-            const h = housesRef.current[idx];
-            return h ? (
-              <div key={idx} className="globe-tt-stack-row">
-                <span className="globe-tt-stack-name">{h.name}</span>
-                {h.isFriend && <span style={{ fontSize: 8, opacity: 0.55, marginLeft: 6 }}>FRIEND</span>}
-              </div>
-            ) : null;
-          })}
-        </>
-      ) : (
-        <>
-          <div className="globe-tt-name">{hovCluster.label}</div>
-          <div className="globe-tt-city">{hovCluster.count} members</div>
-          {!isZoomed && <div className="globe-tt-coords">click to zoom in</div>}
-        </>
-      )}
-    </div>
   );
 
   if (mini) {
@@ -823,7 +801,6 @@ export default function DesignHouseGlobe({ mini = false, onViewProfile }) {
           }}
         >
           {globeCanvas}
-          {tooltip}
           {showBack && (
             <button className="globe-back-btn" onClick={handleBack}>← BACK</button>
           )}
@@ -835,7 +812,6 @@ export default function DesignHouseGlobe({ mini = false, onViewProfile }) {
   return (
     <div className="globe-wrap" ref={containerRef}>
       {globeCanvas}
-      {tooltip}
       {isZoomed && (
         <button className="globe-back-btn" onClick={handleBack}>← BACK</button>
       )}
