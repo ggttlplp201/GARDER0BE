@@ -209,6 +209,7 @@ export default function App() {
         location={userLocation}
         userName={userName}
         onProfileOpen={() => setProfileOpen(true)}
+        onViewProfile={handleViewFriendProfile}
       />
 
       <div className="app-main">

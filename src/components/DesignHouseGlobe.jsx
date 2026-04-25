@@ -62,6 +62,7 @@ const CITY_COORDS = {
   'warsaw':        { lat: 52.2297, lng:  21.0122, country: 'Poland',       tz: 'Europe/Warsaw'     },
   'san francisco': { lat: 37.7749, lng:-122.4194, country: 'USA',          tz: 'America/Los_Angeles'},
   'sf':            { lat: 37.7749, lng:-122.4194, country: 'USA',          tz: 'America/Los_Angeles'},
+  'irvine':        { lat: 33.6846, lng:-117.8265, country: 'USA',          tz: 'America/Los_Angeles'},
   'seattle':       { lat: 47.6062, lng:-122.3321, country: 'USA',          tz: 'America/Los_Angeles'},
   'boston':        { lat: 42.3601, lng: -71.0589, country: 'USA',          tz: 'America/New_York'  },
   'atlanta':       { lat: 33.7490, lng: -84.3880, country: 'USA',          tz: 'America/New_York'  },
@@ -164,8 +165,9 @@ function buildClusters(visible) {
   return out;
 }
 
-export default function DesignHouseGlobe({ mini = false }) {
-  const housesRef    = useRef([]); // populated from friends' profiles
+export default function DesignHouseGlobe({ mini = false, onViewProfile }) {
+  const housesRef    = useRef([]); // populated from other users' profiles
+  const friendIdsRef = useRef(new Set()); // IDs of accepted friends
   const canvasRef    = useRef(null);
   const containerRef = useRef(null);
   const rotYRef      = useRef(INIT_ROTY);
@@ -204,9 +206,9 @@ export default function DesignHouseGlobe({ mini = false }) {
     return () => clearInterval(t);
   }, []);
 
-  // Fetch friends' locations and build the pins dataset
+  // Fetch all profiles with locations + track which are friends
   useEffect(() => {
-    async function loadFriends() {
+    async function loadProfiles() {
       const { data: { session } } = await sb.auth.getSession();
       if (!session?.user) return;
       const uid = session.user.id;
@@ -216,35 +218,40 @@ export default function DesignHouseGlobe({ mini = false }) {
         .select('from_user_id, to_user_id')
         .eq('status', 'accepted')
         .or(`from_user_id.eq.${uid},to_user_id.eq.${uid}`);
-      if (!reqs?.length) return;
+      const friendIds = new Set(
+        (reqs || []).map(r => r.from_user_id === uid ? r.to_user_id : r.from_user_id)
+      );
+      friendIdsRef.current = friendIds;
 
-      const friendIds = [...new Set(reqs.map(r => r.from_user_id === uid ? r.to_user_id : r.from_user_id))];
+      // Load all profiles that have a location set (future: filter is_public=true)
       const { data: profiles } = await sb.from('profiles')
-        .select('id, username, location')
-        .in('id', friendIds);
+        .select('id, username, location, avatar_url')
+        .neq('id', uid)
+        .not('location', 'is', null);
       if (!profiles?.length) return;
 
       const pins = [];
       profiles.forEach(p => {
-        if (!p.location) return;
+        if (!p.location?.trim()) return;
         const geo = geocodeLocation(p.location);
         if (!geo) return;
-        // Scatter friends in same city slightly so pins don't stack
         const jitter = () => (Math.random() - 0.5) * 0.008;
         pins.push({
-          name:    p.username || 'Friend',
-          city:    geo.city,
-          country: geo.country,
-          lat:     geo.lat + jitter(),
-          lng:     geo.lng + jitter(),
-          tz:      geo.tz,
+          id:        p.id,
+          name:      p.username || 'Member',
+          city:      geo.city,
+          country:   geo.country,
+          lat:       geo.lat + jitter(),
+          lng:       geo.lng + jitter(),
+          tz:        geo.tz,
+          isFriend:  friendIds.has(p.id),
+          profile:   p,
         });
       });
       housesRef.current = pins;
-      // Bust the label cache so new pins are re-measured
       labelCacheRef.current = { key: '', measured: [] };
     }
-    loadFriends();
+    loadProfiles();
   }, []);
 
   // Pause RAF when tab is hidden
@@ -754,12 +761,28 @@ export default function DesignHouseGlobe({ mini = false }) {
   );
 
   const tooltip = hovCluster && (
-    <div className="globe-tooltip" style={tooltipStyle}>
+    <div
+      className="globe-tooltip"
+      style={{
+        ...tooltipStyle,
+        cursor: hovHouse && onViewProfile ? 'pointer' : 'default',
+      }}
+      onClick={hovHouse && onViewProfile ? () => onViewProfile(hovHouse.profile) : undefined}
+    >
       {hovHouse ? (
         <>
           <div className="globe-tt-name">{hovHouse.name}</div>
-          <div className="globe-tt-city">{hovHouse.city}, {hovHouse.country}</div>
-          <div className="globe-tt-time">{localTime(hovHouse.tz, now)}</div>
+          <div className="globe-tt-city">{hovHouse.city} · {localTime(hovHouse.tz, now)}</div>
+          {hovHouse.isFriend && (
+            <div style={{ fontSize: 9, letterSpacing: '0.12em', opacity: 0.6, marginTop: 4, fontFamily: 'var(--font-mono)' }}>
+              YOU ARE FRIENDS
+            </div>
+          )}
+          {onViewProfile && (
+            <div style={{ fontSize: 9, letterSpacing: '0.12em', opacity: 0.45, marginTop: 6, fontFamily: 'var(--font-mono)' }}>
+              VIEW PROFILE →
+            </div>
+          )}
         </>
       ) : isHovStack ? (
         <>
@@ -770,6 +793,7 @@ export default function DesignHouseGlobe({ mini = false }) {
             return h ? (
               <div key={idx} className="globe-tt-stack-row">
                 <span className="globe-tt-stack-name">{h.name}</span>
+                {h.isFriend && <span style={{ fontSize: 8, opacity: 0.55, marginLeft: 6 }}>FRIEND</span>}
               </div>
             ) : null;
           })}
@@ -777,7 +801,7 @@ export default function DesignHouseGlobe({ mini = false }) {
       ) : (
         <>
           <div className="globe-tt-name">{hovCluster.label}</div>
-          <div className="globe-tt-city">{hovCluster.count} friends</div>
+          <div className="globe-tt-city">{hovCluster.count} members</div>
           {!isZoomed && <div className="globe-tt-coords">click to zoom in</div>}
         </>
       )}

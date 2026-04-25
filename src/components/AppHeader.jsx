@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import DesignHouseGlobe from './DesignHouseGlobe';
 
-export default function AppHeader({ onDark, avatarUrl, location, userName, onProfileOpen }) {
+export default function AppHeader({ onDark, avatarUrl, location, userName, onProfileOpen, onViewProfile }) {
   const [now, setNow] = useState(new Date());
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 1000);
@@ -26,7 +26,7 @@ export default function AppHeader({ onDark, avatarUrl, location, userName, onPro
           <div>{dateStr} · {timeStr}</div>
         </div>
         <div className="app-globe-slot">
-          <DesignHouseGlobe mini />
+          <DesignHouseGlobe mini onViewProfile={onViewProfile} />
         </div>
         <div className="app-header-controls">
           <button className="app-avatar-btn" onClick={onProfileOpen} aria-label="Profile">
