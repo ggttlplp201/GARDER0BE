@@ -322,17 +322,17 @@ export default function DesignHouseGlobe({ mini = false, onViewProfile }) {
     }
     const { night } = solarCacheRef.current;
     ctx.beginPath(); path(night);
-    ctx.fillStyle = isDark ? 'rgba(0,0,0,0.45)' : 'rgba(0,0,0,0.13)';
+    ctx.fillStyle = isDark ? 'rgba(0,0,0,0.28)' : 'rgba(0,0,0,0.07)';
     ctx.fill();
 
     if (!isMini) {
       ctx.beginPath(); path(GRATICULE);
-      ctx.strokeStyle = isDark ? 'rgba(232,232,232,0.20)' : 'rgba(0,0,0,0.18)';
+      ctx.strokeStyle = isDark ? 'rgba(232,232,232,0.12)' : 'rgba(0,0,0,0.10)';
       ctx.lineWidth = 0.7; ctx.stroke();
     }
 
     ctx.beginPath(); path(night);
-    ctx.strokeStyle = isDark ? 'rgba(232,232,232,0.35)' : 'rgba(0,0,0,0.25)';
+    ctx.strokeStyle = isDark ? 'rgba(232,232,232,0.18)' : 'rgba(0,0,0,0.14)';
     ctx.lineWidth = 0.8; ctx.stroke();
 
     const houses = housesRef.current;
@@ -361,14 +361,14 @@ export default function DesignHouseGlobe({ mini = false, onViewProfile }) {
     if (_gc.W !== W || _gc.H !== H || _gc.r !== r || _gc.isDark !== isDark) {
       const _atmos = ctx.createRadialGradient(cx, cy, r * 0.72, cx, cy, r * 1.0);
       _atmos.addColorStop(0, 'transparent');
-      _atmos.addColorStop(1, isDark ? 'rgba(120,160,255,0.22)' : 'rgba(100,140,255,0.14)');
+      _atmos.addColorStop(1, isDark ? 'rgba(120,160,255,0.10)' : 'rgba(100,140,255,0.07)');
       const _hlx = cx - r * 0.28, _hly = cy - r * 0.30;
       const _hl = ctx.createRadialGradient(_hlx, _hly, 0, _hlx, _hly, r * 0.52);
-      _hl.addColorStop(0, isDark ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.30)');
+      _hl.addColorStop(0, isDark ? 'rgba(255,255,255,0.09)' : 'rgba(255,255,255,0.14)');
       _hl.addColorStop(1, 'transparent');
       const _dark = ctx.createRadialGradient(cx + r * 0.20, cy + r * 0.20, r * 0.45, cx, cy, r);
       _dark.addColorStop(0, 'transparent');
-      _dark.addColorStop(1, isDark ? 'rgba(0,0,0,0.32)' : 'rgba(0,0,0,0.18)');
+      _dark.addColorStop(1, isDark ? 'rgba(0,0,0,0.18)' : 'rgba(0,0,0,0.10)');
       gradCacheRef.current = { W, H, r, isDark, atmos: _atmos, hl: _hl, dark: _dark };
     }
     const { atmos: atmosGrad, hl: hlGrad, dark: darkGrad } = gradCacheRef.current;
