@@ -938,17 +938,19 @@ input[type=range].vol-slider::-webkit-slider-thumb { -webkit-appearance: none; a
   letter-spacing: -0.01em; border: none; border-bottom: 1px solid var(--border);
   background: transparent; padding: 2px 4px; outline: none; width: 220px; color: var(--text);
 }
-.outfit-slots { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-.outfit-slot {
-  aspect-ratio: 3/4; border: 1px dashed var(--border); display: flex;
-  flex-direction: column; position: relative; background: var(--bg2);
-}
-.outfit-slot.filled { border-style: solid; background: var(--bg); }
-.outfit-slot-label { position: absolute; top: 5px; left: 7px; font-family: var(--font-mono); font-size: 7px; letter-spacing: 0.15em; opacity: 0.6; }
-.outfit-slot-img { flex: 1; padding: 20px 8px 4px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-.outfit-slot-info { padding: 5px 7px; border-top: 1px solid var(--border); }
-.outfit-slot-empty { flex: 1; display: flex; align-items: center; justify-content: center; font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.2em; opacity: 0.4; }
-.outfit-slot-x { position: absolute; top: 5px; right: 7px; font-family: var(--font-mono); font-size: 9px; opacity: 0.4; }
+.outfit-slots { display: flex; flex-direction: column; gap: 0; max-width: 360px; margin: 0 auto; width: 100%; }
+.outfit-body-row { display: flex; gap: 0; align-items: flex-start; }
+.outfit-center-col { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.outfit-bag-col { width: 100px; flex-shrink: 0; padding-top: 120px; }
+.outfit-row-pair { display: flex; gap: 0; overflow: visible; }
+.flat-slot { position: relative; overflow: hidden; transition: opacity 0.15s; }
+.flat-slot.flat-empty { background: transparent; }
+.flat-slot.flat-filled { background: transparent; }
+.flat-img { width: 100%; height: calc(100% - 22px); display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.flat-caption { height: 16px; display: flex; align-items: center; justify-content: flex-end; padding: 0 4px; }
+.flat-x { background: none; border: none; cursor: pointer; color: var(--text); font-size: 12px; line-height: 1; padding: 0 2px; opacity: 0.5; }
+.flat-x:hover { opacity: 1; }
+.flat-empty-label { height: 100%; display: flex; align-items: center; justify-content: center; font-family: var(--font-mono); font-size: 8px; letter-spacing: 0.18em; opacity: 0.25; }
 .outfit-stats {
   margin-top: 12px; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
   padding: 8px 0; display: flex; justify-content: space-between;

@@ -2,6 +2,7 @@ import { useRef, useEffect, useState, useCallback } from 'react';
 import { geoOrthographic, geoPath, geoGraticule } from 'd3-geo';
 import { feature } from 'topojson-client';
 import worldData from 'world-atlas/countries-110m.json';
+import { sb } from '../lib/supabase';
 
 const INIT_ROTY  = -0.18;
 const INIT_ROTX  =  0.50;
@@ -20,35 +21,70 @@ const ZOOM_CLIP  = 28;   // fixed clip angle (°) for all zoom-ins
 const LAND      = (() => { try { return feature(worldData, worldData.objects.land); } catch { return null; } })();
 const GRATICULE = geoGraticule().step([30, 30])();
 
-const HOUSES = [
-  // Paris — Golden Triangle / 8th arr / 1st arr
-  { name: 'Chanel',            city: 'Paris',    country: 'France', lat: 48.8657, lng:   2.3291, tz: 'Europe/Paris'    }, // 31 Rue Cambon
-  { name: 'Louis Vuitton',     city: 'Paris',    country: 'France', lat: 48.8716, lng:   2.3005, tz: 'Europe/Paris'    }, // 101 Ave des Champs-Élysées
-  { name: 'Dior',              city: 'Paris',    country: 'France', lat: 48.8667, lng:   2.3061, tz: 'Europe/Paris'    }, // 30 Ave Montaigne
-  { name: 'Balenciaga',        city: 'Paris',    country: 'France', lat: 48.8663, lng:   2.3014, tz: 'Europe/Paris'    }, // 10 Ave George V
-  { name: 'Saint Laurent',     city: 'Paris',    country: 'France', lat: 48.8668, lng:   2.3054, tz: 'Europe/Paris'    }, // 35 Ave Montaigne
-  { name: 'Givenchy',          city: 'Paris',    country: 'France', lat: 48.8660, lng:   2.3009, tz: 'Europe/Paris'    }, // 36 Ave George V
-  { name: 'Hermès',            city: 'Paris',    country: 'France', lat: 48.8689, lng:   2.3217, tz: 'Europe/Paris'    }, // 24 Rue du Faubourg Saint-Honoré
-  // Milan — Quadrilatero della Moda
-  { name: 'Prada',             city: 'Milan',    country: 'Italy',  lat: 45.4700, lng:   9.1971, tz: 'Europe/Rome'     }, // Via della Spiga 18
-  { name: 'Versace',           city: 'Milan',    country: 'Italy',  lat: 45.4699, lng:   9.1955, tz: 'Europe/Rome'     }, // Via Gesù 12
-  { name: 'Dolce & Gabbana',   city: 'Milan',    country: 'Italy',  lat: 45.4714, lng:   9.1973, tz: 'Europe/Rome'     }, // Via della Spiga 2
-  // Rome — Spanish Steps area
-  { name: 'Valentino',         city: 'Rome',     country: 'Italy',  lat: 41.9031, lng:  12.4820, tz: 'Europe/Rome'     }, // Via Condotti 13
-  { name: 'Fendi',             city: 'Rome',     country: 'Italy',  lat: 41.9043, lng:  12.4797, tz: 'Europe/Rome'     }, // Largo Goldoni 420
-  // Florence & Vicenza
-  { name: 'Gucci',             city: 'Florence', country: 'Italy',  lat: 43.7696, lng:  11.2558, tz: 'Europe/Rome'     }, // Piazza della Signoria 10
-  { name: 'Bottega Veneta',    city: 'Vicenza',  country: 'Italy',  lat: 45.5455, lng:  11.5356, tz: 'Europe/Rome'     }, // Vicenza centro
-  // London — Mayfair
-  { name: 'Burberry',          city: 'London',   country: 'UK',     lat: 51.5115, lng:  -0.1390, tz: 'Europe/London'   }, // 121 Regent Street
-  { name: 'Alexander McQueen', city: 'London',   country: 'UK',     lat: 51.5093, lng:  -0.1438, tz: 'Europe/London'   }, // 4-5 Old Bond Street
-  // Tokyo — Minami-Aoyama
-  { name: 'Comme des Garçons', city: 'Tokyo',    country: 'Japan',  lat: 35.6641, lng: 139.7186, tz: 'Asia/Tokyo'      }, // 5-2-1 Minami-Aoyama
-  { name: 'Yohji Yamamoto',    city: 'Tokyo',    country: 'Japan',  lat: 35.6638, lng: 139.7194, tz: 'Asia/Tokyo'      }, // 5-3-6 Minami-Aoyama
-  // New York — Upper East Side
-  { name: 'Ralph Lauren',      city: 'New York', country: 'USA',    lat: 40.7731, lng: -73.9631, tz: 'America/New_York' }, // 867 Madison Ave
-  { name: 'Calvin Klein',      city: 'New York', country: 'USA',    lat: 40.7636, lng: -73.9706, tz: 'America/New_York' }, // 654 Madison Ave
-];
+// City → coordinates lookup for geocoding free-text profile locations
+const CITY_COORDS = {
+  'paris':         { lat: 48.8566, lng:   2.3522, country: 'France',       tz: 'Europe/Paris'      },
+  'milan':         { lat: 45.4642, lng:   9.1900, country: 'Italy',        tz: 'Europe/Rome'       },
+  'london':        { lat: 51.5074, lng:  -0.1278, country: 'UK',           tz: 'Europe/London'     },
+  'new york':      { lat: 40.7128, lng: -74.0060, country: 'USA',          tz: 'America/New_York'  },
+  'nyc':           { lat: 40.7128, lng: -74.0060, country: 'USA',          tz: 'America/New_York'  },
+  'tokyo':         { lat: 35.6762, lng: 139.6503, country: 'Japan',        tz: 'Asia/Tokyo'        },
+  'los angeles':   { lat: 34.0522, lng:-118.2437, country: 'USA',          tz: 'America/Los_Angeles'},
+  'la':            { lat: 34.0522, lng:-118.2437, country: 'USA',          tz: 'America/Los_Angeles'},
+  'seoul':         { lat: 37.5665, lng: 126.9780, country: 'South Korea',  tz: 'Asia/Seoul'        },
+  'sydney':        { lat:-33.8688, lng: 151.2093, country: 'Australia',    tz: 'Australia/Sydney'  },
+  'berlin':        { lat: 52.5200, lng:  13.4050, country: 'Germany',      tz: 'Europe/Berlin'     },
+  'amsterdam':     { lat: 52.3676, lng:   4.9041, country: 'Netherlands',  tz: 'Europe/Amsterdam'  },
+  'copenhagen':    { lat: 55.6761, lng:  12.5683, country: 'Denmark',      tz: 'Europe/Copenhagen' },
+  'stockholm':     { lat: 59.3293, lng:  18.0686, country: 'Sweden',       tz: 'Europe/Stockholm'  },
+  'miami':         { lat: 25.7617, lng: -80.1918, country: 'USA',          tz: 'America/New_York'  },
+  'chicago':       { lat: 41.8781, lng: -87.6298, country: 'USA',          tz: 'America/Chicago'   },
+  'dubai':         { lat: 25.2048, lng:  55.2708, country: 'UAE',          tz: 'Asia/Dubai'        },
+  'singapore':     { lat:  1.3521, lng: 103.8198, country: 'Singapore',    tz: 'Asia/Singapore'    },
+  'hong kong':     { lat: 22.3193, lng: 114.1694, country: 'Hong Kong',    tz: 'Asia/Hong_Kong'    },
+  'shanghai':      { lat: 31.2304, lng: 121.4737, country: 'China',        tz: 'Asia/Shanghai'     },
+  'beijing':       { lat: 39.9042, lng: 116.4074, country: 'China',        tz: 'Asia/Shanghai'     },
+  'rome':          { lat: 41.9028, lng:  12.4964, country: 'Italy',        tz: 'Europe/Rome'       },
+  'florence':      { lat: 43.7696, lng:  11.2558, country: 'Italy',        tz: 'Europe/Rome'       },
+  'barcelona':     { lat: 41.3851, lng:   2.1734, country: 'Spain',        tz: 'Europe/Madrid'     },
+  'madrid':        { lat: 40.4168, lng:  -3.7038, country: 'Spain',        tz: 'Europe/Madrid'     },
+  'osaka':         { lat: 34.6937, lng: 135.5023, country: 'Japan',        tz: 'Asia/Tokyo'        },
+  'toronto':       { lat: 43.6532, lng: -79.3832, country: 'Canada',       tz: 'America/Toronto'   },
+  'montreal':      { lat: 45.5017, lng: -73.5673, country: 'Canada',       tz: 'America/Toronto'   },
+  'vancouver':     { lat: 49.2827, lng:-123.1207, country: 'Canada',       tz: 'America/Vancouver' },
+  'mexico city':   { lat: 19.4326, lng: -99.1332, country: 'Mexico',       tz: 'America/Mexico_City'},
+  'moscow':        { lat: 55.7558, lng:  37.6176, country: 'Russia',       tz: 'Europe/Moscow'     },
+  'istanbul':      { lat: 41.0082, lng:  28.9784, country: 'Turkey',       tz: 'Europe/Istanbul'   },
+  'zurich':        { lat: 47.3769, lng:   8.5417, country: 'Switzerland',  tz: 'Europe/Zurich'     },
+  'vienna':        { lat: 48.2082, lng:  16.3738, country: 'Austria',      tz: 'Europe/Vienna'     },
+  'brussels':      { lat: 50.8503, lng:   4.3517, country: 'Belgium',      tz: 'Europe/Brussels'   },
+  'lisbon':        { lat: 38.7223, lng:  -9.1393, country: 'Portugal',     tz: 'Europe/Lisbon'     },
+  'warsaw':        { lat: 52.2297, lng:  21.0122, country: 'Poland',       tz: 'Europe/Warsaw'     },
+  'san francisco': { lat: 37.7749, lng:-122.4194, country: 'USA',          tz: 'America/Los_Angeles'},
+  'sf':            { lat: 37.7749, lng:-122.4194, country: 'USA',          tz: 'America/Los_Angeles'},
+  'seattle':       { lat: 47.6062, lng:-122.3321, country: 'USA',          tz: 'America/Los_Angeles'},
+  'boston':        { lat: 42.3601, lng: -71.0589, country: 'USA',          tz: 'America/New_York'  },
+  'atlanta':       { lat: 33.7490, lng: -84.3880, country: 'USA',          tz: 'America/New_York'  },
+  'las vegas':     { lat: 36.1699, lng:-115.1398, country: 'USA',          tz: 'America/Los_Angeles'},
+  'denver':        { lat: 39.7392, lng:-104.9903, country: 'USA',          tz: 'America/Denver'    },
+  'delhi':         { lat: 28.6139, lng:  77.2090, country: 'India',        tz: 'Asia/Kolkata'      },
+  'mumbai':        { lat: 19.0760, lng:  72.8777, country: 'India',        tz: 'Asia/Kolkata'      },
+  'bangkok':       { lat: 13.7563, lng: 100.5018, country: 'Thailand',     tz: 'Asia/Bangkok'      },
+  'taipei':        { lat: 25.0330, lng: 121.5654, country: 'Taiwan',       tz: 'Asia/Taipei'       },
+  'johannesburg':  { lat:-26.2041, lng:  28.0473, country: 'South Africa', tz: 'Africa/Johannesburg'},
+  'lagos':         { lat:  6.5244, lng:   3.3792, country: 'Nigeria',      tz: 'Africa/Lagos'      },
+  'nairobi':       { lat: -1.2921, lng:  36.8219, country: 'Kenya',        tz: 'Africa/Nairobi'    },
+};
+
+function geocodeLocation(locationStr) {
+  if (!locationStr) return null;
+  const lower = locationStr.toLowerCase().trim();
+  if (CITY_COORDS[lower]) return { city: locationStr, ...CITY_COORDS[lower] };
+  for (const [key, coords] of Object.entries(CITY_COORDS)) {
+    if (lower.includes(key)) return { city: key.charAt(0).toUpperCase() + key.slice(1), ...coords };
+  }
+  return null;
+}
 
 function localTime(tz, now) {
   try {
@@ -80,7 +116,7 @@ function nightCircle(sunLng, sunLat) {
   return { type: 'Polygon', coordinates: [coords] };
 }
 
-function buildZoomedClusters(visible) {
+function buildZoomedClusters(visible, houses) {
   const used = new Set();
   const out  = [];
   for (let a = 0; a < visible.length; a++) {
@@ -97,7 +133,7 @@ function buildZoomedClusters(visible) {
     const sy  = group.reduce((s, i) => s + visible[i].sy, 0) / n;
     const lat = group.reduce((s, i) => s + visible[i].lat, 0) / n;
     const lng = group.reduce((s, i) => s + visible[i].lng, 0) / n;
-    const h0  = HOUSES[visible[group[0]].i];
+    const h0  = houses[visible[group[0]].i];
     out.push({ sx, sy, lat, lng, count: n, indices: group.map(i => visible[i].i),
                label: `${h0.city}, ${h0.country}`, isStack: true });
   }
@@ -129,6 +165,7 @@ function buildClusters(visible) {
 }
 
 export default function DesignHouseGlobe({ mini = false }) {
+  const housesRef    = useRef([]); // populated from friends' profiles
   const canvasRef    = useRef(null);
   const containerRef = useRef(null);
   const rotYRef      = useRef(INIT_ROTY);
@@ -165,6 +202,49 @@ export default function DesignHouseGlobe({ mini = false }) {
   useEffect(() => {
     const t = setInterval(() => { const d = new Date(); nowRef.current = d; setNow(d); }, 60000);
     return () => clearInterval(t);
+  }, []);
+
+  // Fetch friends' locations and build the pins dataset
+  useEffect(() => {
+    async function loadFriends() {
+      const { data: { session } } = await sb.auth.getSession();
+      if (!session?.user) return;
+      const uid = session.user.id;
+
+      // Get accepted friend IDs (either direction)
+      const { data: reqs } = await sb.from('friend_requests')
+        .select('from_user_id, to_user_id')
+        .eq('status', 'accepted')
+        .or(`from_user_id.eq.${uid},to_user_id.eq.${uid}`);
+      if (!reqs?.length) return;
+
+      const friendIds = [...new Set(reqs.map(r => r.from_user_id === uid ? r.to_user_id : r.from_user_id))];
+      const { data: profiles } = await sb.from('profiles')
+        .select('id, username, location')
+        .in('id', friendIds);
+      if (!profiles?.length) return;
+
+      const pins = [];
+      profiles.forEach(p => {
+        if (!p.location) return;
+        const geo = geocodeLocation(p.location);
+        if (!geo) return;
+        // Scatter friends in same city slightly so pins don't stack
+        const jitter = () => (Math.random() - 0.5) * 0.008;
+        pins.push({
+          name:    p.username || 'Friend',
+          city:    geo.city,
+          country: geo.country,
+          lat:     geo.lat + jitter(),
+          lng:     geo.lng + jitter(),
+          tz:      geo.tz,
+        });
+      });
+      housesRef.current = pins;
+      // Bust the label cache so new pins are re-measured
+      labelCacheRef.current = { key: '', measured: [] };
+    }
+    loadFriends();
   }, []);
 
   // Pause RAF when tab is hidden
@@ -247,10 +327,12 @@ export default function DesignHouseGlobe({ mini = false }) {
     ctx.strokeStyle = isDark ? 'rgba(232,232,232,0.35)' : 'rgba(0,0,0,0.25)';
     ctx.lineWidth = 0.8; ctx.stroke();
 
-    // City lights in dark mode — glowing dots at all visible design house locations
+    const houses = housesRef.current;
+
+    // City lights in dark mode — glowing dots at friend locations
     if (isDark) {
-      for (let i = 0; i < HOUSES.length; i++) {
-        const h = HOUSES[i];
+      for (let i = 0; i < houses.length; i++) {
+        const h = houses[i];
         const pos = proj([h.lng, h.lat]);
         if (!pos) continue;
         const [lx, ly] = pos;
@@ -296,14 +378,14 @@ export default function DesignHouseGlobe({ mini = false }) {
     ctx.fillStyle = darkGrad; ctx.fill();
 
     const visible = [];
-    for (let i = 0; i < HOUSES.length; i++) {
-      const pos = proj([HOUSES[i].lng, HOUSES[i].lat]);
+    for (let i = 0; i < houses.length; i++) {
+      const pos = proj([houses[i].lng, houses[i].lat]);
       if (!pos) continue;
       const [sx, sy] = pos;
       if (Math.hypot(sx - cx, sy - cy) > r - 2) continue;
-      visible.push({ i, sx, sy, lat: HOUSES[i].lat, lng: HOUSES[i].lng, city: HOUSES[i].city });
+      visible.push({ i, sx, sy, lat: houses[i].lat, lng: houses[i].lng, city: houses[i].city });
     }
-    const clusters = isZoomedRef.current ? buildZoomedClusters(visible) : buildClusters(visible);
+    const clusters = isZoomedRef.current ? buildZoomedClusters(visible, houses) : buildClusters(visible);
     clustersRef.current = clusters;
 
     const hovIdx = hovIdxRef.current;
@@ -352,10 +434,10 @@ export default function DesignHouseGlobe({ mini = false }) {
       if (_labKey !== labelCacheRef.current.key) {
         const _measured = clusters.map(cl => {
           const { indices, isStack, count } = cl;
-          const h0 = HOUSES[indices[0]];
+          const h0 = houses[indices[0]];
           const textLines = [];
           if (isStack && count > 1) {
-            for (const idx of indices) textLines.push({ text: HOUSES[idx].name, bold: true, sz: 8 });
+            for (const idx of indices) textLines.push({ text: houses[idx].name, bold: true, sz: 8 });
             textLines.push({ text: `${h0.city} · ${localTime(h0.tz, nowT)}`, bold: false, sz: 7, dim: true });
           } else {
             textLines.push({ text: h0.name, bold: true, sz: 8 });
@@ -377,7 +459,7 @@ export default function DesignHouseGlobe({ mini = false }) {
       // This keeps paired clusters (e.g. the two Paris groups) visually balanced.
       const _cityMap = new Map();
       clusters.forEach((cl, ci) => {
-        const city = HOUSES[cl.indices[0]].city;
+        const city = houses[cl.indices[0]].city;
         if (!_cityMap.has(city)) _cityMap.set(city, []);
         _cityMap.get(city).push(ci);
       });
@@ -385,7 +467,7 @@ export default function DesignHouseGlobe({ mini = false }) {
       _cityMap.forEach(cis => {
         if (cis.length < 2) return;
         const sorted = [...cis].sort((a, b) => {
-          const avgLng = ci => clusters[ci].indices.reduce((s, i) => s + HOUSES[i].lng, 0) / clusters[ci].indices.length;
+          const avgLng = ci => clusters[ci].indices.reduce((s, i) => s + houses[i].lng, 0) / clusters[ci].indices.length;
           return avgLng(a) - avgLng(b);
         });
         sorted.forEach((ci, rank) => { _forcedUy[ci] = rank === 0 ? 1 : -1; });
@@ -464,7 +546,7 @@ export default function DesignHouseGlobe({ mini = false }) {
   useEffect(() => {
     function frame(ts) {
       if (pausedRef.current) { animRef.current = requestAnimationFrame(frame); return; }
-      const isActive = dragRef.current || flyRef.current || hovIdxRef.current !== null;
+      const isActive = dragRef.current || flyRef.current;
       const interval = isActive ? 16 : 50;
 
       if (ts - lastDrawRef.current >= interval) {
@@ -616,7 +698,7 @@ export default function DesignHouseGlobe({ mini = false }) {
       if (rect) {
         const mx = e.clientX - rect.left, my = e.clientY - rect.top;
         const ci = hitCluster(mx, my);
-        if (ci !== null && clustersRef.current[ci]?.count > 1 && !isZoomedRef.current) {
+        if (ci !== null && !isZoomedRef.current) {
           const cl = clustersRef.current[ci];
           flyRef.current = {
             tRotY: -cl.lng * Math.PI / 180,
@@ -648,7 +730,7 @@ export default function DesignHouseGlobe({ mini = false }) {
     setShowBack(false);
   }, []);
 
-  const hovHouse    = hovCluster?.count === 1 ? HOUSES[hovCluster.indices[0]] : null;
+  const hovHouse    = hovCluster?.count === 1 ? housesRef.current[hovCluster.indices[0]] : null;
   const isHovStack  = hovCluster?.isStack && hovCluster.count > 1;
   const cursorStyle = (hovCluster?.count > 1 && !isHovStack) ? 'pointer' : (dragging ? 'grabbing' : 'grab');
 
@@ -677,35 +759,25 @@ export default function DesignHouseGlobe({ mini = false }) {
         <>
           <div className="globe-tt-name">{hovHouse.name}</div>
           <div className="globe-tt-city">{hovHouse.city}, {hovHouse.country}</div>
-          <div className="globe-tt-coords">
-            {Math.abs(hovHouse.lat).toFixed(4)}°&thinsp;{hovHouse.lat >= 0 ? 'N' : 'S'}
-            &ensp;
-            {Math.abs(hovHouse.lng).toFixed(4)}°&thinsp;{hovHouse.lng >= 0 ? 'E' : 'W'}
-          </div>
           <div className="globe-tt-time">{localTime(hovHouse.tz, now)}</div>
         </>
       ) : isHovStack ? (
         <>
           <div className="globe-tt-name">{hovCluster.label}</div>
-          <div className="globe-tt-time">{localTime(HOUSES[hovCluster.indices[0]].tz, now)}</div>
+          <div className="globe-tt-time">{localTime(housesRef.current[hovCluster.indices[0]]?.tz, now)}</div>
           {hovCluster.indices.map(idx => {
-            const h = HOUSES[idx];
-            return (
+            const h = housesRef.current[idx];
+            return h ? (
               <div key={idx} className="globe-tt-stack-row">
                 <span className="globe-tt-stack-name">{h.name}</span>
-                <span className="globe-tt-coords">
-                  {Math.abs(h.lat).toFixed(4)}°&thinsp;{h.lat >= 0 ? 'N' : 'S'}
-                  &ensp;
-                  {Math.abs(h.lng).toFixed(4)}°&thinsp;{h.lng >= 0 ? 'E' : 'W'}
-                </span>
               </div>
-            );
+            ) : null;
           })}
         </>
       ) : (
         <>
           <div className="globe-tt-name">{hovCluster.label}</div>
-          <div className="globe-tt-city">{hovCluster.count} design houses</div>
+          <div className="globe-tt-city">{hovCluster.count} friends</div>
           {!isZoomed && <div className="globe-tt-coords">click to zoom in</div>}
         </>
       )}
@@ -727,7 +799,6 @@ export default function DesignHouseGlobe({ mini = false }) {
           }}
         >
           {globeCanvas}
-          {!isZoomed && tooltip}
           {showBack && (
             <button className="globe-back-btn" onClick={handleBack}>← BACK</button>
           )}

@@ -121,7 +121,7 @@ function RackCard({ item, globalIdx, onClick }) {
 
 const TYPES = ['ALL', ...ITEM_TYPES];
 
-export default function WardrobeView({ items, loading, onItemClick, onAdd, onEdit, onRemove }) {
+export default function WardrobeView({ items, loading, loadError, onRetry, onItemClick, onAdd, onEdit, onRemove }) {
   const [mode, setMode]         = useState('RACK');
   const [search, setSearch]     = useState('');
   const [filterType, setFilterType] = useState('ALL');
@@ -189,6 +189,12 @@ export default function WardrobeView({ items, loading, onItemClick, onAdd, onEdi
 
       <div className="v-body">
         {loading && <div className="v-empty">LOADING…</div>}
+        {!loading && loadError && (
+          <div className="v-empty" style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center' }}>
+            <span>Failed to load items.</span>
+            <button onClick={onRetry} style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.15em', padding: '8px 20px', border: '1px solid var(--border)', background: 'transparent', cursor: 'pointer', color: 'var(--text)' }}>↻ RETRY</button>
+          </div>
+        )}
 
         {!loading && mode === 'RACK' && (
           <div className="mob-pad" style={{ padding: '0 36px 24px' }}>

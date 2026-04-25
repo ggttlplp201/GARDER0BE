@@ -47,7 +47,7 @@ function NotifToast({ toasts, onDismiss }) {
 export default function App() {
   const { user, authMode, setAuthMode, signIn, signUp, signOut } = useAuth();
   const { dark, toggle: toggleTheme } = useTheme();
-  const { items, loading, fetchItems, addItem, editItem, removeItem } = useItems(user);
+  const { items, loading, loadError, fetchItems, addItem, editItem, removeItem } = useItems(user);
 
   const [page, setPage]               = useState(() => sessionStorage.getItem('garderobe-page') || 'wardrobe');
   const [detailItem, setDetailItem]   = useState(null);
@@ -197,6 +197,8 @@ export default function App() {
           <WardrobeView
             items={items}
             loading={loading}
+            loadError={loadError}
+            onRetry={fetchItems}
             onItemClick={handleItemClick}
             onAdd={() => setAddOpen(true)}
             onEdit={id => setEditItemId(id)}

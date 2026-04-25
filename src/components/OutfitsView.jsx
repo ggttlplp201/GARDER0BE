@@ -1,13 +1,16 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { parseImageUrls } from '../lib/imageUtils';
 
 const SLOT_LABELS = ['TOP', 'BOTTOM', 'OUTER', 'SHOE', 'HAT', 'BAG'];
 
+// Display order: head to toe (indexes into SLOT_LABELS)
+const HEAD_TO_TOE = [4, 2, 0, 1, 3, 5]; // HAT, OUTER, TOP, BOTTOM, SHOE, BAG
+
 // Which item types each slot accepts (matches ITEM_TYPES in constants.js)
 const SLOT_ACCEPTS = {
-  TOP:    ['Shirt', 'T-Shirt', 'Sweatshirt'],
+  TOP:    ['Shirt', 'T-Shirt', 'Sweatshirt', 'Jacket', 'Coat'],
   BOTTOM: ['Jeans', 'Trousers', 'Shorts'],
-  OUTER:  ['Jacket', 'Coat'],
+  OUTER:  [],
   SHOE:   ['Footwear'],
   HAT:    ['Accessories'],
   BAG:    ['Accessories'],
@@ -35,44 +38,126 @@ function ItemThumb({ item }) {
     : <div className="rack-img-placeholder" style={{ height: '100%' }}><span>{(item.brand || '').slice(0, 3)}</span></div>;
 }
 
-function OutfitSlot({ label, item, idx, onRemove, draggingItem, onDragOver, onDrop }) {
-  const accepts = draggingItem ? slotAccepts(label, draggingItem) : null;
-  const isDraggingCompatible = draggingItem && accepts;
-  const isDraggingIncompatible = draggingItem && !accepts;
+// Scans image pixels to find tight bounding box of non-white/non-transparent content,
+// then redraws zoomed to that box so every item fills its slot at true visual size.
+function SmartThumb({ item }) {
+  const canvasRef = useRef(null);
+  const imgs = parseImageUrls(item?.image_url);
+  const src = imgs[0];
 
-  let borderStyle = '1px dashed var(--border)';
-  let bg = 'var(--bg2)';
-  if (item) { borderStyle = '1px solid var(--border)'; bg = 'var(--bg)'; }
-  if (isDraggingCompatible) { borderStyle = '2px dashed #5a8a5a'; bg = 'rgba(90,138,90,0.08)'; }
-  if (isDraggingIncompatible) { bg = item ? 'var(--bg)' : 'var(--bg2)'; }
+  useEffect(() => {
+    if (!src || !canvasRef.current) return;
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      // Scan at reduced resolution for speed
+      const scan = document.createElement('canvas');
+      const SW = Math.min(img.width, 400), SH = Math.round(img.height * SW / img.width);
+      scan.width = SW; scan.height = SH;
+      const sCtx = scan.getContext('2d');
+      sCtx.drawImage(img, 0, 0, SW, SH);
+      let data;
+      try { data = sCtx.getImageData(0, 0, SW, SH).data; }
+      catch { fallback(); return; }
+
+      let minX = SW, maxX = 0, minY = SH, maxY = 0;
+      for (let y = 0; y < SH; y++) {
+        for (let x = 0; x < SW; x++) {
+          const i = (y * SW + x) * 4;
+          const a = data[i + 3];
+          const r = data[i], g = data[i + 1], b = data[i + 2];
+          if (a > 20 && !(r > 235 && g > 235 && b > 235)) {
+            if (x < minX) minX = x;
+            if (x > maxX) maxX = x;
+            if (y < minY) minY = y;
+            if (y > maxY) maxY = y;
+          }
+        }
+      }
+
+      if (maxX <= minX || maxY <= minY) { fallback(); return; }
+
+      // Scale detected bounds back to original image coords
+      const scaleX = img.width / SW, scaleY = img.height / SH;
+      const pad = 8;
+      const sx = Math.max(0, minX * scaleX - pad);
+      const sy = Math.max(0, minY * scaleY - pad);
+      const sw = Math.min(img.width, maxX * scaleX + pad) - sx;
+      const sh = Math.min(img.height, maxY * scaleY + pad) - sy;
+
+      const cw = canvas.offsetWidth || 200;
+      const ch = canvas.offsetHeight || 200;
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = cw * dpr; canvas.height = ch * dpr;
+      ctx.scale(dpr, dpr);
+
+      const fit = Math.min(cw / sw, ch / sh);
+      const dx = (cw - sw * fit) / 2;
+      const dy = (ch - sh * fit) / 2;
+      ctx.clearRect(0, 0, cw, ch);
+      ctx.drawImage(img, sx, sy, sw, sh, dx, dy, sw * fit, sh * fit);
+    };
+    img.onerror = fallback;
+    img.src = src;
+
+    function fallback() {
+      // CORS blocked or no content — just draw the full image centered
+      const cw = canvas.offsetWidth || 200;
+      const ch = canvas.offsetHeight || 200;
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = cw * dpr; canvas.height = ch * dpr;
+      const fc = canvas.getContext('2d');
+      fc.scale(dpr, dpr);
+      const img2 = new Image();
+      img2.onload = () => {
+        const fit = Math.min(cw / img2.width, ch / img2.height);
+        fc.drawImage(img2, (cw - img2.width * fit) / 2, (ch - img2.height * fit) / 2, img2.width * fit, img2.height * fit);
+      };
+      img2.src = src;
+    }
+  }, [src]);
+
+  if (!item) return <div style={{ background: 'var(--bg2)', width: '100%', height: '100%' }} />;
+  if (!src) return <div className="rack-img-placeholder" style={{ height: '100%' }}><span>{(item.brand || '').slice(0, 3)}</span></div>;
+  return <canvas ref={canvasRef} style={{ width: '100%', height: '100%', display: 'block' }} />;
+}
+
+// Heights per slot type for the flat-lay look
+const SLOT_H = { TOP: 240, BOTTOM: 250, OUTER: 240, SHOE: 180, HAT: 90, BAG: 110 };
+
+function FlatSlot({ label, item, idx, onRemove, draggingItem, onDragOver, onDrop, style = {} }) {
+  const accepts = draggingItem ? slotAccepts(label, draggingItem) : null;
+  const compatible = draggingItem && accepts;
+  const incompatible = draggingItem && !accepts;
+  const h = SLOT_H[label] || 160;
 
   return (
     <div
-      className={`outfit-slot${item ? ' filled' : ''}`}
+      className={`flat-slot${item ? ' flat-filled' : ' flat-empty'}`}
       style={{
+        height: h,
+        outline: compatible ? '2px dashed #5a8a5a' : 'none',
+        outlineOffset: 2,
+        opacity: incompatible && !item ? 0.3 : 1,
         cursor: item ? 'pointer' : 'default',
-        border: borderStyle,
-        background: bg,
-        opacity: isDraggingIncompatible ? 0.45 : 1,
-        transition: 'border-color 0.12s, background 0.12s, opacity 0.12s',
+        ...style,
       }}
       onClick={item ? onRemove : undefined}
       onDragOver={onDragOver}
       onDrop={onDrop}
     >
-      <div className="outfit-slot-label">0{idx + 1} · {label}</div>
       {item ? (
         <>
-          <div className="outfit-slot-img"><ItemThumb item={item} /></div>
-          <div className="outfit-slot-info">
-            <div className="mono-dim" style={{ fontSize: 8, letterSpacing: '0.1em' }}>{item.brand || '—'}</div>
-            <div style={{ fontSize: 11, fontWeight: 500, lineHeight: 1.1 }}>{item.name || 'Untitled'}</div>
+          <div className="flat-img"><ItemThumb item={item} /></div>
+          <div className="flat-caption">
+            <button className="flat-x" onClick={e => { e.stopPropagation(); onRemove(); }}>×</button>
           </div>
-          <div className="outfit-slot-x">×</div>
         </>
       ) : (
-        <div className="outfit-slot-empty">
-          {isDraggingCompatible ? '↓ DROP HERE' : `+ ${label}`}
+        <div className="flat-empty-label">
+          {compatible ? '↓ DROP' : `+ ${label}`}
         </div>
       )}
     </div>
@@ -82,10 +167,16 @@ function OutfitSlot({ label, item, idx, onRemove, draggingItem, onDragOver, onDr
 export default function OutfitsView({ items }) {
   const [slots, setSlots]         = useState([null, null, null, null, null, null]);
   const [fitName, setFitName]     = useState('UNTITLED');
-  const [savedFits, setSavedFits] = useState([]);
+  const [savedFits, setSavedFits] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('garderobe-saved-fits') || '[]'); } catch { return []; }
+  });
   const [draggingItem, setDraggingItem] = useState(null);
   const [loadedFitId, setLoadedFitId]   = useState(null);
   const [showSaved, setShowSaved]       = useState(false);
+
+  useEffect(() => {
+    try { localStorage.setItem('garderobe-saved-fits', JSON.stringify(savedFits)); } catch {}
+  }, [savedFits]);
 
   const rackItems = items.filter(it => it.status !== 'wishlist');
 
@@ -235,18 +326,41 @@ export default function OutfitsView({ items }) {
             </div>
 
             <div className="outfit-slots">
-              {SLOT_LABELS.map((label, i) => (
-                <OutfitSlot
-                  key={label}
-                  idx={i}
-                  label={label}
-                  item={slots[i]}
-                  onRemove={() => removeSlot(i)}
-                  draggingItem={draggingItem}
-                  onDragOver={e => handleSlotDragOver(e, label)}
-                  onDrop={e => handleSlotDrop(e, i, label)}
-                />
-              ))}
+              <div className="outfit-body-row">
+                {/* Center column: head → torso → legs → feet */}
+                <div className="outfit-center-col">
+                  {/* HAT */}
+                  <FlatSlot idx={4} label="HAT" item={slots[4]} onRemove={() => removeSlot(4)}
+                    draggingItem={draggingItem}
+                    onDragOver={e => handleSlotDragOver(e, 'HAT')}
+                    onDrop={e => handleSlotDrop(e, 4, 'HAT')}
+                    style={{ marginBottom: -28 }} />
+                  {/* TOP (single slot, accepts all topwear) */}
+                  <FlatSlot idx={0} label="TOP" item={slots[0]} onRemove={() => removeSlot(0)}
+                    draggingItem={draggingItem}
+                    onDragOver={e => handleSlotDragOver(e, 'TOP')}
+                    onDrop={e => handleSlotDrop(e, 0, 'TOP')}
+                    style={{ marginBottom: -75 }} />
+                  {/* BOTTOM */}
+                  <FlatSlot idx={1} label="BOTTOM" item={slots[1]} onRemove={() => removeSlot(1)}
+                    draggingItem={draggingItem}
+                    onDragOver={e => handleSlotDragOver(e, 'BOTTOM')}
+                    onDrop={e => handleSlotDrop(e, 1, 'BOTTOM')}
+                    style={{ marginBottom: -65 }} />
+                  {/* SHOE */}
+                  <FlatSlot idx={3} label="SHOE" item={slots[3]} onRemove={() => removeSlot(3)}
+                    draggingItem={draggingItem}
+                    onDragOver={e => handleSlotDragOver(e, 'SHOE')}
+                    onDrop={e => handleSlotDrop(e, 3, 'SHOE')} />
+                </div>
+                {/* BAG column — right, separate */}
+                <div className="outfit-bag-col">
+                  <FlatSlot idx={5} label="BAG" item={slots[5]} onRemove={() => removeSlot(5)}
+                    draggingItem={draggingItem}
+                    onDragOver={e => handleSlotDragOver(e, 'BAG')}
+                    onDrop={e => handleSlotDrop(e, 5, 'BAG')} />
+                </div>
+              </div>
             </div>
 
             <div className="outfit-stats">

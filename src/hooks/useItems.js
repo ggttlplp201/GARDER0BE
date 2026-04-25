@@ -3,17 +3,26 @@ import { sb } from '../lib/supabase';
 import { parseImageUrls, uploadImageBlob, deleteStorageUrl } from '../lib/imageUtils';
 
 export function useItems(user) {
-  const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [items, setItems]       = useState([]);
+  const [loading, setLoading]   = useState(true);
+  const [loadError, setLoadError] = useState(false);
 
   const fetchItems = useCallback(async () => {
     if (!user) return;
     setLoading(true);
-    const { data, error } = await sb.from('items').select('*').eq('user_id', user.id).order('created_at', { ascending: true });
+    setLoadError(false);
+
+    let { data, error } = await sb.from('items').select('*').eq('user_id', user.id).order('created_at', { ascending: true });
+
+    // One automatic retry after 900 ms on transient failure
+    if (error) {
+      await new Promise(r => setTimeout(r, 900));
+      ({ data, error } = await sb.from('items').select('*').eq('user_id', user.id).order('created_at', { ascending: true }));
+    }
+
     setLoading(false);
-    if (error) { console.error(error); return; }
+    if (error) { console.error(error); setLoadError(true); return; }
     setItems(data);
-    // Cache preview URLs for scatter cards
     try {
       const urls = data.map(it => parseImageUrls(it.image_url)[0]).filter(Boolean);
       if (urls.length) localStorage.setItem('garderobe-preview-imgs', JSON.stringify(urls));
@@ -85,5 +94,5 @@ export function useItems(user) {
     await fetchItems();
   }
 
-  return { items, loading, fetchItems, addItem, editItem, removeItem };
+  return { items, loading, loadError, fetchItems, addItem, editItem, removeItem };
 }
