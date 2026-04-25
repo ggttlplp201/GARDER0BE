@@ -1,7 +1,30 @@
+import { useEffect, useState } from 'react';
 import { parseImageUrls } from '../lib/imageUtils';
+import { sb } from '../lib/supabase';
 
 export default function WishlistView({ items, onItemClick, onAdd }) {
   const wishlist = items.filter(i => i.status === 'wishlist');
+  const [bestPrices, setBestPrices] = useState({}); // itemId → { price, source }
+
+  useEffect(() => {
+    if (!wishlist.length) return;
+    const ids = wishlist.map(i => i.id);
+    sb.from('wishlist_price_sources')
+      .select('item_id, source_name, last_price')
+      .in('item_id', ids)
+      .not('last_price', 'is', null)
+      .then(({ data }) => {
+        if (!data) return;
+        const map = {};
+        for (const row of data) {
+          const existing = map[row.item_id];
+          if (!existing || row.last_price < existing.price) {
+            map[row.item_id] = { price: row.last_price, source: row.source_name };
+          }
+        }
+        setBestPrices(map);
+      });
+  }, [items]);
 
   return (
     <div className="v-screen">
@@ -28,13 +51,13 @@ export default function WishlistView({ items, onItemClick, onAdd }) {
                 <div></div>
                 <div>BRAND · ITEM</div>
                 <div>TREND · 12WK</div>
-                <div style={{ textAlign: 'right' }}>CURRENT</div>
-                <div style={{ textAlign: 'right' }}>Δ%</div>
+                <div style={{ textAlign: 'right' }}>BEST PRICE</div>
+                <div style={{ textAlign: 'right' }}>SOURCE</div>
                 <div style={{ textAlign: 'right' }}>ACTION</div>
               </div>
               {wishlist.map((it, i) => {
                 const imgs = parseImageUrls(it.image_url);
-                const price = parseFloat(it.price) || 0;
+                const best = bestPrices[it.id];
                 return (
                   <div key={it.id} className="wish-row">
                     <div className="mono-dim" style={{ fontSize: 10 }}>W.{String(i + 1).padStart(2, '0')}</div>
@@ -52,9 +75,13 @@ export default function WishlistView({ items, onItemClick, onAdd }) {
                       <div style={{ height: 1, width: '100%', background: 'var(--border-light)' }} />
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                      <div className="wish-current">{price ? `$${price.toLocaleString()}` : 'N/A'}</div>
+                      <div className="wish-current">
+                        {best ? `$${Number(best.price).toLocaleString()}` : '—'}
+                      </div>
                     </div>
-                    <div className="mono-dim" style={{ fontSize: 10, textAlign: 'right' }}>—</div>
+                    <div className="mono-dim" style={{ fontSize: 9, textAlign: 'right', letterSpacing: '0.08em' }}>
+                      {best ? best.source.toUpperCase() : '—'}
+                    </div>
                     <div style={{ textAlign: 'right' }}>
                       <button className="mode-btn" style={{ border: '1px solid var(--border)', padding: '7px 14px' }} onClick={() => onItemClick(it)}>VIEW →</button>
                     </div>

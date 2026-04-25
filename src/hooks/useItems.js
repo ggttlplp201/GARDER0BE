@@ -1,14 +1,16 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { sb } from '../lib/supabase';
 import { parseImageUrls, uploadImageBlob, deleteStorageUrl } from '../lib/imageUtils';
 
 export function useItems(user) {
-  const [items, setItems]       = useState([]);
-  const [loading, setLoading]   = useState(true);
+  const [items, setItems]         = useState([]);
+  const [loading, setLoading]     = useState(false);
   const [loadError, setLoadError] = useState(false);
+  const fetchGenRef               = useRef(0);
 
   const fetchItems = useCallback(async () => {
     if (!user) return;
+    const gen = ++fetchGenRef.current;
     setLoading(true);
     setLoadError(false);
 
@@ -19,6 +21,9 @@ export function useItems(user) {
       await new Promise(r => setTimeout(r, 900));
       ({ data, error } = await sb.from('items').select('*').eq('user_id', user.id).order('created_at', { ascending: true }));
     }
+
+    // Discard stale responses if a newer fetch has started
+    if (gen !== fetchGenRef.current) return;
 
     setLoading(false);
     if (error) { console.error(error); setLoadError(true); return; }

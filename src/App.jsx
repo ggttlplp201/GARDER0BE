@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useAuth } from './hooks/useAuth';
 import { useTheme } from './hooks/useTheme';
 import { useItems } from './hooks/useItems';
@@ -146,9 +146,11 @@ export default function App() {
 
   const dismissToast = useCallback(id => setToasts(t => t.filter(x => x.id !== id)), []);
 
+  const prevPageRef = useRef('wardrobe');
+
   const navigate = useCallback((p) => {
     sessionStorage.setItem('garderobe-page', p);
-    setPage(p);
+    setPage(prev => { prevPageRef.current = prev; return p; });
   }, []);
 
   const handleItemClick = useCallback((item) => {
@@ -157,7 +159,8 @@ export default function App() {
   }, [navigate]);
 
   const handleBack = useCallback(() => {
-    navigate('wardrobe');
+    const dest = prevPageRef.current || 'wardrobe';
+    navigate(dest);
     setDetailItem(null);
   }, [navigate]);
 
