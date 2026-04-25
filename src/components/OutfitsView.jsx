@@ -9,7 +9,7 @@ const SLOT_ACCEPTS = {
   BOTTOM: ['Jeans', 'Trousers', 'Shorts'],
   OUTER:  [],
   SHOE:   ['Footwear'],
-  HAT:    ['Accessories'],
+  HAT:    ['Headwear'],
   BAG:    ['Accessories'],
   ACC1:   ['Accessories'],
   ACC2:   ['Accessories'],
@@ -333,45 +333,9 @@ export default function OutfitsView({ items }) {
 
             <div className="outfit-slots">
               <div className="outfit-body-row">
-                {/* Center column: head → torso → legs → feet */}
-                <div className="outfit-center-col">
-                  {/* HAT */}
-                  <FlatSlot idx={4} label="HAT" item={slots[4]} onRemove={() => removeSlot(4)}
-                    draggingItem={draggingItem}
-                    onDragOver={e => handleSlotDragOver(e, 'HAT')}
-                    onDrop={e => handleSlotDrop(e, 4, 'HAT')}
-                    style={{ marginBottom: -28 }} />
-                  {/* TOP (single slot, accepts all topwear) */}
-                  <FlatSlot idx={0} label="TOP" item={slots[0]} onRemove={() => removeSlot(0)}
-                    draggingItem={draggingItem}
-                    onDragOver={e => handleSlotDragOver(e, 'TOP')}
-                    onDrop={e => handleSlotDrop(e, 0, 'TOP')}
-                    style={{ marginBottom: -75 }} />
-                  {/* BOTTOM */}
-                  <FlatSlot idx={1} label="BOTTOM" item={slots[1]} onRemove={() => removeSlot(1)}
-                    draggingItem={draggingItem}
-                    onDragOver={e => handleSlotDragOver(e, 'BOTTOM')}
-                    onDrop={e => handleSlotDrop(e, 1, 'BOTTOM')}
-                    style={{ marginBottom: -65 }} />
-                  {/* SHOE */}
-                  <FlatSlot idx={3} label="SHOE" item={slots[3]} onRemove={() => removeSlot(3)}
-                    draggingItem={draggingItem}
-                    onDragOver={e => handleSlotDragOver(e, 'SHOE')}
-                    onDrop={e => handleSlotDrop(e, 3, 'SHOE')} />
-                </div>
-                {/* BAG column — right, separate */}
-                <div className="outfit-bag-col">
-                  <FlatSlot idx={5} label="BAG" item={slots[5]} onRemove={() => removeSlot(5)}
-                    draggingItem={draggingItem}
-                    onDragOver={e => handleSlotDragOver(e, 'BAG')}
-                    onDrop={e => handleSlotDrop(e, 5, 'BAG')} />
-                </div>
-              </div>
-
-              {/* Accessories strip */}
-              <div className="outfit-acc-strip">
-                <div className="mono-dim" style={{ fontSize: 8, letterSpacing: '0.15em', marginBottom: 6 }}>ACCESSORIES</div>
-                <div className="outfit-acc-row">
+                {/* ACC column — left */}
+                <div className="outfit-acc-col">
+                  <div className="mono-dim" style={{ fontSize: 7, letterSpacing: '0.12em', marginBottom: 6, textAlign: 'center' }}>ACC</div>
                   {ACC_SLOTS.map((label, i) => {
                     const slotIdx = ACC_IDXS[i];
                     return (
@@ -379,9 +343,40 @@ export default function OutfitsView({ items }) {
                         draggingItem={draggingItem}
                         onDragOver={e => handleSlotDragOver(e, label)}
                         onDrop={e => handleSlotDrop(e, slotIdx, label)}
-                        style={{ height: SLOT_H.ACC1 }} />
+                        style={{ height: SLOT_H.ACC1, marginBottom: 8 }} />
                     );
                   })}
+                </div>
+
+                {/* Center column: head → torso → legs → feet */}
+                <div className="outfit-center-col">
+                  <FlatSlot idx={4} label="HAT" item={slots[4]} onRemove={() => removeSlot(4)}
+                    draggingItem={draggingItem}
+                    onDragOver={e => handleSlotDragOver(e, 'HAT')}
+                    onDrop={e => handleSlotDrop(e, 4, 'HAT')}
+                    style={{ marginBottom: -28 }} />
+                  <FlatSlot idx={0} label="TOP" item={slots[0]} onRemove={() => removeSlot(0)}
+                    draggingItem={draggingItem}
+                    onDragOver={e => handleSlotDragOver(e, 'TOP')}
+                    onDrop={e => handleSlotDrop(e, 0, 'TOP')}
+                    style={{ marginBottom: -75 }} />
+                  <FlatSlot idx={1} label="BOTTOM" item={slots[1]} onRemove={() => removeSlot(1)}
+                    draggingItem={draggingItem}
+                    onDragOver={e => handleSlotDragOver(e, 'BOTTOM')}
+                    onDrop={e => handleSlotDrop(e, 1, 'BOTTOM')}
+                    style={{ marginBottom: -65 }} />
+                  <FlatSlot idx={3} label="SHOE" item={slots[3]} onRemove={() => removeSlot(3)}
+                    draggingItem={draggingItem}
+                    onDragOver={e => handleSlotDragOver(e, 'SHOE')}
+                    onDrop={e => handleSlotDrop(e, 3, 'SHOE')} />
+                </div>
+
+                {/* BAG column — right */}
+                <div className="outfit-bag-col">
+                  <FlatSlot idx={5} label="BAG" item={slots[5]} onRemove={() => removeSlot(5)}
+                    draggingItem={draggingItem}
+                    onDragOver={e => handleSlotDragOver(e, 'BAG')}
+                    onDrop={e => handleSlotDrop(e, 5, 'BAG')} />
                 </div>
               </div>
             </div>

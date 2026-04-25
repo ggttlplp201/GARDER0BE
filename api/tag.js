@@ -22,7 +22,7 @@ export default async function handler(req, res) {
           role: 'user',
           content: [
             { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } },
-            { type: 'text', text: 'Identify this clothing item. Reply with only a JSON object: {"name": "item name", "brand": "brand or unknown", "color": "primary color", "type": "one of: Shirt/T-Shirt/Sweatshirt/Jeans/Jacket/Coat/Trousers/Shorts/Footwear/Accessories/Other"}' },
+            { type: 'text', text: 'Identify this clothing item. Reply with only a JSON object: {"name": "item name", "brand": "brand or unknown", "color": "primary color", "type": "one of: Shirt/T-Shirt/Sweatshirt/Jeans/Jacket/Coat/Trousers/Shorts/Footwear/Accessories/Headwear/Other"}' },
           ],
         }],
       }),

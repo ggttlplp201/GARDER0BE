@@ -942,9 +942,8 @@ input[type=range].vol-slider::-webkit-slider-thumb { -webkit-appearance: none; a
 .outfit-slots { display: flex; flex-direction: column; gap: 0; max-width: 360px; margin: 0 auto; width: 100%; }
 .outfit-body-row { display: flex; gap: 0; align-items: flex-start; }
 .outfit-center-col { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.outfit-acc-col { width: 80px; flex-shrink: 0; padding-top: 100px; }
 .outfit-bag-col { width: 100px; flex-shrink: 0; padding-top: 120px; }
-.outfit-acc-strip { margin-top: 16px; }
-.outfit-acc-row { display: flex; gap: 8px; }
 .outfit-row-pair { display: flex; gap: 0; overflow: visible; }
 .flat-slot { position: relative; overflow: hidden; transition: opacity 0.15s; }
 .flat-slot.flat-empty { background: transparent; }
