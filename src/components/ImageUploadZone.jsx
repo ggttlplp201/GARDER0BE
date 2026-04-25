@@ -1,9 +1,11 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
 import { maybeConvertHeic, removeBg } from '../lib/imageUtils';
+import { API_URL } from '../lib/constants';
 
-export default function ImageUploadZone({ pending, onChange }) {
+export default function ImageUploadZone({ pending, onChange, onTagApply, isFirstUpload }) {
   const [dzState, setDzState] = useState('');
   const [dzMsg, setDzMsg]     = useState('');
+  const [tagging, setTagging] = useState(false);
   const inputRef = useRef(null);
 
   const setDropzone = useCallback((state, msg = '') => {
@@ -15,14 +17,37 @@ export default function ImageUploadZone({ pending, onChange }) {
     if (!rawFiles.length) return;
     setDropzone('processing');
     const newItems = [];
+    let firstBlob = null;
     for (const raw of rawFiles) {
       const file = await maybeConvertHeic(raw);
       const blob = await removeBg(file, raw.name);
+      if (!firstBlob) firstBlob = { blob, originalFile: raw };
       newItems.push({ src: URL.createObjectURL(blob), blob, url: null });
     }
     onChange([...pending, ...newItems]);
     const n = rawFiles.length;
     setDropzone('done', `${n} PHOTO${n > 1 ? 'S' : ''} ADDED`);
+
+    // AI tag only on first-ever upload and only if callback provided
+    if (onTagApply && isFirstUpload && firstBlob) {
+      setTagging(true);
+      try {
+        const form = new FormData();
+        form.append('file', firstBlob.blob, firstBlob.originalFile.name || 'image.jpg');
+        const res = await fetch(`${API_URL}/tag`, { method: 'POST', body: form });
+        if (res.ok) {
+          const tags = await res.json();
+          const patches = {};
+          if (tags.name)  patches.name  = tags.name;
+          if (tags.brand) patches.brand = tags.brand;
+          if (tags.color) patches.color = tags.color;
+          if (tags.type)  patches.type  = tags.type;
+          onTagApply(patches);
+          setDzMsg('AI TAGGED ✓');
+        }
+      } catch { /* silent — tagging is best-effort */ }
+      finally { setTagging(false); }
+    }
   }
 
   function handleChange(e) {
@@ -59,6 +84,7 @@ export default function ImageUploadZone({ pending, onChange }) {
   }
 
   const mainText = dzState === 'drag-over' ? 'RELEASE TO UPLOAD'
+                 : tagging            ? 'AI TAGGING…'
                  : dzState === 'processing' ? 'PROCESSING...'
                  : 'DRAG & DROP OR CLICK TO UPLOAD';
 
