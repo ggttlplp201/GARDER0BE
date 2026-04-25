@@ -130,8 +130,8 @@ h1 { font-size: 2rem; font-weight: bold; margin-bottom: 2px; }
 .card-img-next { right: 4px; }
 .card-img-counter { position: absolute; bottom: 6px; right: 7px; font-size: 10px; color: var(--text2); background: rgba(128,128,128,0.15); padding: 2px 5px; pointer-events: none; z-index: 1; }
 .card-remove-x { position: absolute; top: 6px; right: 6px; width: 22px; height: 22px; border: 1.5px solid var(--border); background: var(--bg); color: var(--text); cursor: pointer; font-size: 13px; font-weight: bold; display: flex; align-items: center; justify-content: center; line-height: 1; z-index: 4; transition: background 0.15s; }
-.card-remove-x:hover { background: var(--text); color: var(--bg); }
-.card-remove-x.confirming { background: var(--text); color: var(--bg); border-color: var(--border); }
+.card-remove-x:hover { background: #c0392b; color: #fff; border-color: #c0392b; }
+.card-remove-x.confirming { background: #c0392b; color: #fff; border-color: #c0392b; }
 .edit-btn { display: block; width: 100%; padding: 6px 0; border: 1.5px solid var(--border); background: var(--bg); color: var(--text); font-size: 11px; font-weight: bold; letter-spacing: 0.08em; cursor: pointer; text-align: center; }
 .edit-btn:hover { background: var(--text); color: var(--bg); }
 
@@ -734,9 +734,10 @@ input[type=range].vol-slider::-webkit-slider-thumb { -webkit-appearance: none; a
   pointer-events: none;
 }
 .rack-card:hover .rack-arrow { opacity: 1; }
-.rack-del { position: absolute; top: 6px; right: 6px; width: 18px; height: 18px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-family: var(--font-mono); font-size: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; line-height: 1; z-index: 4; opacity: 0; transition: opacity 0.15s; }
+.rack-del { position: absolute; top: 6px; right: 6px; width: 18px; height: 18px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-family: var(--font-mono); font-size: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; line-height: 1; z-index: 4; opacity: 0; transition: opacity 0.15s, background 0.15s, color 0.15s, border-color 0.15s; }
 .rack-card:hover .rack-del, .rack-del.confirming { opacity: 1; }
-.rack-del.confirming { background: var(--text); color: var(--bg); border-color: var(--text); }
+.rack-del:hover { background: #c0392b; color: #fff; border-color: #c0392b; }
+.rack-del.confirming { background: #c0392b; color: #fff; border-color: #c0392b; }
 .list-row .rack-del { position: static; opacity: 1; flex-shrink: 0; }
 .rack-arrow-l { left: -10px; }
 .rack-arrow-r { right: -10px; }
@@ -982,7 +983,7 @@ html.dark .outfit-in-fit-badge { background: rgba(0,0,0,0.7); }
 .saved-fits-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 .saved-fit-card { border: 1px solid var(--border); padding: 10px; }
 .saved-fit-del { position: absolute; top: 6px; right: 6px; width: 18px; height: 18px; border: 1px solid var(--border); background: transparent; color: var(--text); font-family: var(--font-mono); font-size: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; line-height: 1; }
-.saved-fit-del:hover { border-color: var(--text); }
+.saved-fit-del:hover { background: #c0392b; color: #fff; border-color: #c0392b; }
 .saved-fit-thumb { flex: 1; height: 40px; border: 1px solid var(--border-light); background: var(--bg2); overflow: hidden; display: flex; align-items: center; justify-content: center; }
 
 /* ── Update existing item card to new design ── */
