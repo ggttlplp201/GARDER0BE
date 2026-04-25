@@ -46,7 +46,7 @@ export const BRANDS = [
   'R13','rag & bone','Ralph Lauren Purple Label','RANRA','Ray-Ban','RCOS','RECODE',
   'Reese Cooper','Represent','RETROSUPERFUTURE','Rhude','Rick Owens','Rick Owens DRKSHDW',
   'Rier','Rivington Roi Rebis','ROA','RRL','sacai','SAGE NATION','Saint Laurent',
-  'Salomon','Sanderlak','Satoshi Nakamoto','Saucony','Saul Nash','SC103','Second/Layer',
+  'Salomon','Sanderlak','Satoshi Nakamoto','Saucony','Saul Nash','SC103','Second/Layer','Chrome Hearts','Supreme',
   'Séfr','Serapis','Seventh','Simone Rocha','SIRE','Solid Homme','Song for the Mute',
   'SONIA CARRASCO','South2 West8','ssstein','Stanley Raffington','Stefan Cooke',
   'Still Kelly','Stockholm (Surfboard) Club','Stolen Girlfriends Club','Stone Island',
