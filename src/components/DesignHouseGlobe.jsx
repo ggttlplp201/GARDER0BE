@@ -771,13 +771,13 @@ export default function DesignHouseGlobe({ mini = false, onViewProfile }) {
     >
       {hovHouse ? (
         <>
-          <div className="globe-tt-name">{hovHouse.name}</div>
+          <div className="globe-tt-name" style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+            {hovHouse.name}
+            {hovHouse.isFriend && (
+              <span style={{ fontSize: 8, fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', opacity: 0.6 }}>FRIENDS</span>
+            )}
+          </div>
           <div className="globe-tt-city">{hovHouse.city} · {localTime(hovHouse.tz, now)}</div>
-          {hovHouse.isFriend && (
-            <div style={{ fontSize: 9, letterSpacing: '0.12em', opacity: 0.6, marginTop: 4, fontFamily: 'var(--font-mono)' }}>
-              YOU ARE FRIENDS
-            </div>
-          )}
           {onViewProfile && (
             <div style={{ fontSize: 9, letterSpacing: '0.12em', opacity: 0.45, marginTop: 6, fontFamily: 'var(--font-mono)' }}>
               VIEW PROFILE →
@@ -823,6 +823,7 @@ export default function DesignHouseGlobe({ mini = false, onViewProfile }) {
           }}
         >
           {globeCanvas}
+          {tooltip}
           {showBack && (
             <button className="globe-back-btn" onClick={handleBack}>← BACK</button>
           )}
