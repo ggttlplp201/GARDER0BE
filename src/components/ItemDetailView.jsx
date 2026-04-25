@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { parseImageUrls } from '../lib/imageUtils';
+import { sb } from '../lib/supabase';
+import { API_URL } from '../lib/constants';
 
 function catNum(idx) {
   return String(idx + 1).padStart(3, '0');
@@ -87,6 +89,162 @@ function DetailCarousel({ imgs, imgIdx, onNav }) {
           <button className="detail-img-arrow detail-img-arrow-r" onClick={() => nav(1)}>›</button>
         </>
       )}
+    </div>
+  );
+}
+
+async function getToken() {
+  const { data: { session } } = await sb.auth.getSession();
+  return session?.access_token ?? '';
+}
+
+function PriceSources({ item }) {
+  const [sources, setSources]     = useState([]);
+  const [loadingSrc, setLoadingSrc] = useState(true);
+  const [srcName, setSrcName]     = useState('');
+  const [srcUrl, setSrcUrl]       = useState('');
+  const [adding, setAdding]       = useState(false);
+  const [refreshing, setRefreshing] = useState(null);
+  const [error, setError]         = useState('');
+
+  const load = useCallback(async () => {
+    setLoadingSrc(true);
+    try {
+      const token = await getToken();
+      const res = await fetch(`${API_URL}/wishlist/${item.id}/prices`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) setSources((await res.json()).sources ?? []);
+    } finally {
+      setLoadingSrc(false);
+    }
+  }, [item.id]);
+
+  useEffect(() => { load(); }, [load]);
+
+  async function addSource() {
+    setError('');
+    if (!srcName.trim() || !srcUrl.trim()) return;
+    setAdding(true);
+    try {
+      const token = await getToken();
+      const res = await fetch(`${API_URL}/wishlist/${item.id}/sources`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ source_name: srcName.trim(), source_url: srcUrl.trim() }),
+      });
+      if (res.ok) { setSrcName(''); setSrcUrl(''); await load(); }
+      else { const b = await res.json().catch(() => ({})); setError(b.detail ?? 'Failed to add source.'); }
+    } catch (err) {
+      setError(`Network error: ${err.message}`);
+    } finally {
+      setAdding(false);
+    }
+  }
+
+  async function removeSource(id) {
+    setError('');
+    try {
+      const token = await getToken();
+      await fetch(`${API_URL}/wishlist/sources/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      await load();
+    } catch (err) {
+      setError(`Network error: ${err.message}`);
+    }
+  }
+
+  async function refreshSource(id) {
+    setRefreshing(id);
+    setError('');
+    try {
+      const res = await fetch(`${API_URL}/wishlist/sources/${id}/refresh`, { method: 'POST' });
+      if (!res.ok) {
+        const b = await res.json().catch(() => ({}));
+        setError(b.detail ?? 'Refresh failed.');
+      }
+      await load();
+    } catch (err) {
+      setError(`Network error: ${err.message}`);
+    } finally {
+      setRefreshing(null);
+    }
+  }
+
+  return (
+    <div className="price-sources">
+      <div className="price-sources-hd">
+        <span>PRICE SOURCES</span>
+        <span className="price-sources-hint">SSENSE · FARFETCH · MYTHERESA · GRAILED · STOCKX · JUSTIN REED · KITH · END</span>
+      </div>
+
+      {loadingSrc ? (
+        <div className="price-src-empty">LOADING…</div>
+      ) : sources.length === 0 ? (
+        <div className="price-src-empty">NO SOURCES — ADD ONE BELOW</div>
+      ) : (
+        <div className="price-src-list">
+          {sources.map(src => (
+            <div key={src.id} className="price-src-row">
+              <div className="price-src-name">{src.source_name.toUpperCase()}</div>
+              <div className="price-src-price">
+                {src.last_price ? `$${parseFloat(src.last_price).toLocaleString()}` : '—'}
+              </div>
+              <div className="price-src-date">
+                {src.last_seen_at
+                  ? new Date(src.last_seen_at).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }).replace(/\//g, '.')
+                  : 'NEVER'}
+              </div>
+              <div className="price-src-btns">
+                <button
+                  className="price-src-btn"
+                  onClick={() => refreshSource(src.id)}
+                  disabled={refreshing === src.id}
+                  title="Refresh price"
+                >
+                  {refreshing === src.id ? '…' : '↻'}
+                </button>
+                <button
+                  className="price-src-btn"
+                  onClick={() => removeSource(src.id)}
+                  title="Remove source"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {error && <div className="price-src-error">{error}</div>}
+
+      <div className="price-src-form">
+        <input
+          className="price-src-input"
+          placeholder="SOURCE  (e.g. SSENSE)"
+          value={srcName}
+          onChange={e => setSrcName(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && addSource()}
+        />
+        <input
+          className="price-src-input price-src-url"
+          placeholder="PRODUCT PAGE URL"
+          value={srcUrl}
+          onChange={e => setSrcUrl(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && addSource()}
+        />
+        <button
+          className="price-src-add"
+          type="button"
+          onClick={addSource}
+          disabled={adding || !srcName.trim() || !srcUrl.trim()}
+        >
+          {adding ? '…' : '+ ADD'}
+        </button>
+      </div>
     </div>
   );
 }
@@ -189,6 +347,8 @@ export default function ItemDetailView({ item, items, onBack, onEdit, onNavigate
               <button className="det-btn" onClick={() => onEdit(item.id)}>EDIT</button>
               <button className="det-btn">SELL</button>
             </div>
+
+            {item.status === 'wishlist' && <PriceSources item={item} />}
           </div>
         </div>
       </div>

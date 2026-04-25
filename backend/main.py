@@ -7,28 +7,60 @@ import os
 import re
 import time
 import xml.etree.ElementTree as ET
+from contextlib import asynccontextmanager
 from typing import Dict, List, Optional, Set
 
 import anthropic
 import httpx
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, File, Header, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
+from pydantic import BaseModel
+
+from price_parsers import PriceExtractionError, fetch_price
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
-
-app = FastAPI(title="GARDEROBE API")
 
 ALLOWED_ORIGINS = os.environ.get(
     "ALLOWED_ORIGINS",
     "https://the-garderobe.com,http://localhost:5173",
 ).split(",")
 
+SUPABASE_URL          = os.environ.get("SUPABASE_URL", "")
+SUPABASE_SERVICE_KEY  = os.environ.get("SUPABASE_SERVICE_KEY", "")
+PRICE_REFRESH_INTERVAL = int(os.environ.get("PRICE_REFRESH_INTERVAL_SECONDS", str(6 * 60 * 60)))
+
+
+# ── Background price-refresh loop ─────────────────────────────────────────────
+
+async def _price_refresh_loop():
+    await asyncio.sleep(60)  # short delay after startup
+    while True:
+        try:
+            await _refresh_sources()
+        except Exception as exc:
+            logger.error("Scheduled price refresh failed: %s", exc)
+        await asyncio.sleep(PRICE_REFRESH_INTERVAL)
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    task = asyncio.create_task(_price_refresh_loop())
+    yield
+    task.cancel()
+    try:
+        await task
+    except asyncio.CancelledError:
+        pass
+
+
+app = FastAPI(title="GARDEROBE API", lifespan=lifespan)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
-    allow_methods=["GET", "POST"],
+    allow_methods=["GET", "POST", "DELETE"],
     allow_headers=["*"],
 )
 
@@ -322,3 +354,259 @@ async def tag_item(file: UploadFile = File(...)):
         tags["type"] = "Other"
 
     return tags
+
+
+# ── Price tracking ────────────────────────────────────────────────────────────
+
+_SCRAPE_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+    ),
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.9",
+}
+
+
+class SourceCreate(BaseModel):
+    source_name: str
+    source_url: str
+    currency: str = "USD"
+
+
+def _sb_headers() -> dict:
+    return {
+        "apikey": SUPABASE_SERVICE_KEY,
+        "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+        "Content-Type": "application/json",
+        "Prefer": "return=minimal",
+    }
+
+
+def _user_sb_headers(token: str) -> dict:
+    """Supabase headers using the caller's JWT — RLS is enforced."""
+    return {
+        "apikey": SUPABASE_SERVICE_KEY,
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json",
+    }
+
+
+def _bearer_token(authorization: Optional[str]) -> str:
+    if authorization and authorization.lower().startswith("bearer "):
+        return authorization[7:]
+    raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
+
+
+def _jwt_sub(token: str) -> Optional[str]:
+    """Extract the 'sub' claim (user UUID) without verifying the signature.
+    Supabase PostgREST verifies the JWT; we only read the claim to include user_id in inserts."""
+    try:
+        segment = token.split(".")[1]
+        segment += "=" * (4 - len(segment) % 4)
+        payload = json.loads(base64.urlsafe_b64decode(segment))
+        return payload.get("sub")
+    except Exception:
+        return None
+
+
+async def _refresh_sources(item_id: Optional[str] = None) -> dict:
+    if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
+        logger.warning("Price refresh skipped: SUPABASE_URL or SUPABASE_SERVICE_KEY not configured")
+        return {"refreshed": 0, "errors": 0, "skipped": True}
+
+    sb_rest = f"{SUPABASE_URL}/rest/v1"
+    qs = "is_active=eq.true&select=id,item_id,source_name,source_url,currency"
+    if item_id:
+        qs += f"&item_id=eq.{item_id}"
+
+    async with httpx.AsyncClient(timeout=15) as db:
+        resp = await db.get(f"{sb_rest}/wishlist_price_sources?{qs}", headers=_sb_headers())
+
+    if not resp.is_success:
+        logger.error("Failed to fetch price sources: %s", resp.text)
+        return {"refreshed": 0, "errors": 1}
+
+    sources = resp.json()
+    if not sources:
+        return {"refreshed": 0, "errors": 0}
+
+    refreshed = 0
+    errors = 0
+    now_iso = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
+    async with httpx.AsyncClient(timeout=20, headers=_SCRAPE_HEADERS, follow_redirects=True) as scraper:
+        async with httpx.AsyncClient(timeout=15) as db:
+            for source in sources:
+                sid = source["id"]
+                try:
+                    page = await scraper.get(source["source_url"])
+                    if not page.is_success:
+                        logger.warning("Scrape HTTP %d for source %s", page.status_code, sid)
+                        errors += 1
+                        continue
+
+                    result = fetch_price(source["source_name"], source["source_url"], page.text)
+
+                    await db.post(
+                        f"{sb_rest}/wishlist_price_history",
+                        headers=_sb_headers(),
+                        json={
+                            "source_id": sid,
+                            "item_id": source["item_id"],
+                            "observed_price": result.price,
+                            "currency": result.currency,
+                            "observed_at": now_iso,
+                        },
+                    )
+                    await db.patch(
+                        f"{sb_rest}/wishlist_price_sources?id=eq.{sid}",
+                        headers=_sb_headers(),
+                        json={"last_price": result.price, "last_seen_at": now_iso, "updated_at": now_iso},
+                    )
+
+                    refreshed += 1
+                    logger.info("Priced %.2f %s source=%s", result.price, result.currency, sid)
+
+                except PriceExtractionError as exc:
+                    logger.info("No price for source %s: %s", sid, exc)
+                    errors += 1
+                except Exception as exc:
+                    logger.warning("Error on source %s: %s", sid, exc)
+                    errors += 1
+
+    logger.info("Price refresh complete: %d ok, %d errors", refreshed, errors)
+    return {"refreshed": refreshed, "errors": errors}
+
+
+# ── Wishlist price endpoints ───────────────────────────────────────────────────
+
+@app.get("/wishlist/{item_id}/prices")
+async def get_item_prices(
+    item_id: str,
+    authorization: Optional[str] = Header(None),
+):
+    token = _bearer_token(authorization)
+    select = (
+        "id,source_name,source_url,currency,last_price,last_seen_at,is_active,created_at,"
+        "wishlist_price_history(observed_price,currency,observed_at)"
+    )
+    qs = (
+        f"item_id=eq.{item_id}&is_active=eq.true&select={select}"
+        "&wishlist_price_history.order=observed_at.desc"
+        "&wishlist_price_history.limit=12"
+    )
+    async with httpx.AsyncClient(timeout=10) as client:
+        resp = await client.get(
+            f"{SUPABASE_URL}/rest/v1/wishlist_price_sources?{qs}",
+            headers=_user_sb_headers(token),
+        )
+    if not resp.is_success:
+        raise HTTPException(status_code=502, detail="Failed to fetch price data")
+    return {"sources": resp.json()}
+
+
+@app.post("/wishlist/{item_id}/sources", status_code=201)
+async def add_price_source(
+    item_id: str,
+    body: SourceCreate,
+    authorization: Optional[str] = Header(None),
+):
+    token = _bearer_token(authorization)
+    user_id = _jwt_sub(token)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Could not determine user from token")
+
+    async with httpx.AsyncClient(timeout=10) as client:
+        resp = await client.post(
+            f"{SUPABASE_URL}/rest/v1/wishlist_price_sources",
+            headers={**_user_sb_headers(token), "Prefer": "return=representation"},
+            json={
+                "item_id": item_id,
+                "user_id": user_id,
+                "source_name": body.source_name,
+                "source_url": body.source_url,
+                "currency": body.currency,
+            },
+        )
+    if not resp.is_success:
+        raise HTTPException(status_code=502, detail=f"Failed to create source: {resp.text}")
+    rows = resp.json()
+    return rows[0] if rows else {}
+
+
+@app.delete("/wishlist/sources/{source_id}", status_code=204)
+async def delete_price_source(
+    source_id: str,
+    authorization: Optional[str] = Header(None),
+):
+    token = _bearer_token(authorization)
+    now_iso = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    async with httpx.AsyncClient(timeout=10) as client:
+        resp = await client.patch(
+            f"{SUPABASE_URL}/rest/v1/wishlist_price_sources?id=eq.{source_id}",
+            headers=_user_sb_headers(token),
+            json={"is_active": False, "updated_at": now_iso},
+        )
+    if not resp.is_success:
+        raise HTTPException(status_code=502, detail="Failed to deactivate source")
+    return Response(status_code=204)
+
+
+@app.post("/wishlist/sources/{source_id}/refresh")
+async def refresh_one_source(source_id: str):
+    if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
+        raise HTTPException(status_code=503, detail="Supabase not configured")
+
+    sb_rest = f"{SUPABASE_URL}/rest/v1"
+    async with httpx.AsyncClient(timeout=10) as db:
+        resp = await db.get(
+            f"{sb_rest}/wishlist_price_sources"
+            f"?id=eq.{source_id}&select=id,item_id,source_name,source_url,currency,is_active",
+            headers=_sb_headers(),
+        )
+    if not resp.is_success or not resp.json():
+        raise HTTPException(status_code=404, detail="Source not found")
+
+    source = resp.json()[0]
+    if not source.get("is_active"):
+        raise HTTPException(status_code=400, detail="Source is inactive")
+
+    try:
+        async with httpx.AsyncClient(
+            timeout=20, headers=_SCRAPE_HEADERS, follow_redirects=True
+        ) as scraper:
+            page = await scraper.get(source["source_url"])
+        if not page.is_success:
+            raise PriceExtractionError(f"HTTP {page.status_code} fetching source URL")
+        result = fetch_price(source["source_name"], source["source_url"], page.text)
+    except PriceExtractionError as exc:
+        logger.warning("Price extraction failed source=%s: %s", source_id, exc)
+        raise HTTPException(status_code=422, detail=str(exc))
+
+    now_iso = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    async with httpx.AsyncClient(timeout=10) as db:
+        await db.post(
+            f"{sb_rest}/wishlist_price_history",
+            headers=_sb_headers(),
+            json={
+                "source_id": source_id,
+                "item_id": source["item_id"],
+                "observed_price": result.price,
+                "currency": result.currency,
+                "observed_at": now_iso,
+            },
+        )
+        await db.patch(
+            f"{sb_rest}/wishlist_price_sources?id=eq.{source_id}",
+            headers=_sb_headers(),
+            json={"last_price": result.price, "last_seen_at": now_iso, "updated_at": now_iso},
+        )
+
+    logger.info("Manual refresh: %.2f %s source=%s", result.price, result.currency, source_id)
+    return {"price": result.price, "currency": result.currency, "available": result.available}
+
+
+@app.post("/wishlist/refresh-all")
+async def refresh_all_prices():
+    return await _refresh_sources()

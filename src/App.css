@@ -846,6 +846,51 @@ input[type=range].vol-slider::-webkit-slider-thumb { -webkit-appearance: none; a
 .det-btn.det-btn-primary { background: var(--text); color: var(--bg); }
 .det-btn.det-btn-primary:hover { opacity: 0.85; }
 
+/* ── Price sources panel ── */
+.price-sources { margin-top: 24px; border-top: 1px solid var(--border-light); padding-top: 16px; }
+.price-sources-hd {
+  display: flex; justify-content: space-between; align-items: baseline;
+  font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.14em;
+  opacity: 0.5; margin-bottom: 10px;
+}
+.price-sources-hint { font-size: 8px; opacity: 0.6; }
+.price-src-empty { font-family: var(--font-mono); font-size: 9px; opacity: 0.35; letter-spacing: 0.1em; padding: 6px 0 10px; }
+.price-src-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+.price-src-row {
+  display: grid; grid-template-columns: 1fr auto auto auto;
+  align-items: center; gap: 12px;
+  font-family: var(--font-mono); font-size: 10px;
+  border: 1px solid var(--border-light); padding: 7px 10px;
+}
+.price-src-name { letter-spacing: 0.1em; opacity: 0.7; }
+.price-src-price { font-weight: 600; font-size: 11px; }
+.price-src-date { font-size: 8px; opacity: 0.4; letter-spacing: 0.06em; }
+.price-src-btns { display: flex; gap: 4px; }
+.price-src-btn {
+  background: none; border: 1px solid var(--border-light); color: var(--text);
+  font-family: var(--font-mono); font-size: 11px; cursor: pointer;
+  padding: 2px 7px; line-height: 1; transition: background 0.1s;
+}
+.price-src-btn:hover:not(:disabled) { background: var(--bg2); }
+.price-src-btn:disabled { opacity: 0.3; cursor: default; }
+.price-src-error { font-family: var(--font-mono); font-size: 9px; color: #c00; margin-bottom: 8px; letter-spacing: 0.06em; }
+.price-src-form { display: flex; gap: 6px; align-items: stretch; }
+.price-src-input {
+  flex: 1; background: transparent; border: 1px solid var(--border-light);
+  color: var(--text); font-family: var(--font-mono); font-size: 9px;
+  letter-spacing: 0.08em; padding: 7px 10px; outline: none;
+}
+.price-src-input::placeholder { opacity: 0.3; }
+.price-src-input:focus { border-color: var(--border); }
+.price-src-url { flex: 2.5; }
+.price-src-add {
+  background: var(--text); color: var(--bg); border: none; cursor: pointer;
+  font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.14em;
+  padding: 7px 14px; white-space: nowrap; transition: opacity 0.15s;
+}
+.price-src-add:hover:not(:disabled) { opacity: 0.8; }
+.price-src-add:disabled { opacity: 0.3; cursor: default; }
+
 /* ── Timeline ── */
 .timeline-month-header {
   display: flex; align-items: baseline; gap: 14px;
