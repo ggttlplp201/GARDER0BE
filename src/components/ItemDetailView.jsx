@@ -188,7 +188,7 @@ function PriceSources({ item }) {
         <div className="price-src-list">
           {sources.map(src => (
             <div key={src.id} className="price-src-row">
-              <div className="price-src-name">{src.source_name.toUpperCase()}</div>
+              <a className="price-src-name" href={src.source_url} target="_blank" rel="noopener noreferrer">{src.source_name.toUpperCase()}</a>
               <div className="price-src-price">
                 {src.last_price ? `$${parseFloat(src.last_price).toLocaleString()}` : '—'}
               </div>
