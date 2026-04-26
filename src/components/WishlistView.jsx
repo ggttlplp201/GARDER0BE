@@ -33,6 +33,9 @@ function deriveTracking(sources) {
     const previous = allHistory[1].price;
     deltaAmt = latest - previous;
     deltaPct = previous !== 0 ? ((latest - previous) / previous) * 100 : null;
+  } else if (allHistory.length === 1) {
+    deltaAmt = 0;
+    deltaPct = 0;
   }
 
   return {

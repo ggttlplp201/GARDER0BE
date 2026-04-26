@@ -26,12 +26,17 @@ export async function removeBg(file) {
 }
 
 export async function autoTagWithClaude(blob) {
+  // Try Railway backend first if configured; fall back to Vercel /api/tag
   if (API_URL) {
-    const fd = new FormData();
-    fd.append('file', blob, 'item.jpg');
-    const resp = await fetch(`${API_URL}/tag`, { method: 'POST', body: fd });
-    if (!resp.ok) throw new Error(await readApiError(resp, 'AI tagging failed'));
-    return await resp.json();
+    try {
+      const fd = new FormData();
+      fd.append('file', blob, 'item.jpg');
+      const resp = await fetch(`${API_URL}/tag`, { method: 'POST', body: fd });
+      if (resp.ok) return await resp.json();
+      // Non-ok (e.g. 503 ANTHROPIC_API_KEY not set) → fall through to Vercel
+    } catch {
+      // Network error → fall through to Vercel
+    }
   }
 
   const base64 = await new Promise((res, rej) => {
