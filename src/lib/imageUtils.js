@@ -61,16 +61,6 @@ export async function autoTagWithClaude(blob) {
   return JSON.parse(match[0]);
 }
 
-async function readApiError(response, fallback) {
-  const text = await response.text();
-  try {
-    const data = JSON.parse(text);
-    return data.detail || fallback;
-  } catch {
-    return text || fallback;
-  }
-}
-
 const blank = v => !v || /^(unknown|n\/a|none|unidentified|not visible|unclear|-)$/i.test(v.trim());
 
 export function applyTags(tags, fields) {

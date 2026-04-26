@@ -76,11 +76,9 @@ function DeltaBadge({ amt, pct }) {
 export default function WishlistView({ items, onItemClick, onAdd }) {
   const wishlist = items.filter(i => i.status === 'wishlist');
   const [tracking, setTracking] = useState({}); // itemId → derived tracking object
-  const [loading, setLoading] = useState(false);
 
   const fetchTracking = useCallback(async () => {
     if (!wishlist.length) return;
-    setLoading(true);
     const ids = wishlist.map(i => i.id);
 
     // Fetch sources with last 2 history rows each (for delta)
@@ -105,7 +103,6 @@ export default function WishlistView({ items, onItemClick, onAdd }) {
       }
       setTracking(derived);
     }
-    setLoading(false);
   }, [items]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { fetchTracking(); }, [fetchTracking]);

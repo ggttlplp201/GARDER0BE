@@ -148,6 +148,11 @@ export default function App() {
 
   const prevPageRef = useRef(sessionStorage.getItem('garderobe-prev-page') || 'wardrobe');
 
+  const navigate = useCallback((p) => {
+    sessionStorage.setItem('garderobe-page', p);
+    setPage(prev => { prevPageRef.current = prev; sessionStorage.setItem('garderobe-prev-page', prev); return p; });
+  }, []);
+
   // Restore detail item after refresh if items have loaded
   useEffect(() => {
     if (page === 'detail' && !detailItem && items.length > 0) {
@@ -160,12 +165,7 @@ export default function App() {
         navigate('wardrobe');
       }
     }
-  }, [items, page]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const navigate = useCallback((p) => {
-    sessionStorage.setItem('garderobe-page', p);
-    setPage(prev => { prevPageRef.current = prev; sessionStorage.setItem('garderobe-prev-page', prev); return p; });
-  }, []);
+  }, [items, page, navigate]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleItemClick = useCallback((item) => {
     setDetailItem(item);

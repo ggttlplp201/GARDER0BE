@@ -192,18 +192,14 @@ export default function DesignHouseGlobe({ mini = false, onViewProfile }) {
   const pausedRef     = useRef(false);
   const labBoxesRef   = useRef([]); // [{bx,by,bw,bh,houseIdx}] — zoomed label hit areas
 
-  const [hovCluster, setHovCluster] = useState(null);
   const [dragging, setDragging]     = useState(false);
-  const [tooltipPos, setTooltip]    = useState({ x: 0, y: 0 });
-  const [containerW, setContainerW] = useState(mini ? MINI_SIZE : 400);
   const [isZoomed, setIsZoomed]     = useState(false);
   const [showBack, setShowBack]     = useState(false);
   const isZoomedRef                 = useRef(false);
-  const [now, setNow]               = useState(() => new Date());
 
-  // Tick local time every minute
+  // Tick local time every minute (drives canvas label times via nowRef)
   useEffect(() => {
-    const t = setInterval(() => { const d = new Date(); nowRef.current = d; setNow(d); }, 60000);
+    const t = setInterval(() => { nowRef.current = new Date(); }, 60000);
     return () => clearInterval(t);
   }, []);
 
@@ -652,7 +648,6 @@ export default function DesignHouseGlobe({ mini = false, onViewProfile }) {
     function setSize(s) {
       canvas.width  = s * dpr; canvas.height = s * dpr;
       canvas.style.width = `${s}px`; canvas.style.height = `${s}px`;
-      setContainerW(s);
     }
 
     function resize() {
@@ -710,8 +705,6 @@ export default function DesignHouseGlobe({ mini = false, onViewProfile }) {
     const ci   = hitCluster(mx, my);
     if (ci !== hovIdxRef.current) {
       hovIdxRef.current = ci;
-      setHovCluster(ci !== null ? (clustersRef.current[ci] ?? null) : null);
-      if (ci !== null) setTooltip({ x: mx, y: my });
     }
     // Pointer cursor when hovering a zoomed label box
     if (canvasRef.current && isZoomedRef.current && onViewProfile) {
@@ -750,7 +743,6 @@ export default function DesignHouseGlobe({ mini = false, onViewProfile }) {
           };
           isZoomedRef.current = true;
           hovIdxRef.current = null;
-          setHovCluster(null);
           setShowBack(true);
         }
       }
@@ -761,7 +753,6 @@ export default function DesignHouseGlobe({ mini = false, onViewProfile }) {
 
   const onMouseLeave = useCallback(() => {
     hovIdxRef.current = null;
-    setHovCluster(null);
     setDragging(false);
   }, []);
 
