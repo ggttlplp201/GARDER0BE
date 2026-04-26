@@ -64,12 +64,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-REMOVE_BG_API_KEY = os.environ.get("REMOVE_BG_API_KEY", "")
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # 10 MB
-ALLOWED_MIME = {"image/jpeg", "image/png", "image/webp"}
-TAG_ALLOWED_MIME = {"image/jpeg", "image/png", "image/webp"}  # no GIF for vision tagging
+TAG_ALLOWED_MIME = {"image/jpeg", "image/png", "image/webp"}
 MAGIC_BYTES = {
     b"\xff\xd8\xff": "image/jpeg",
     b"\x89PNG": "image/png",
@@ -268,29 +266,6 @@ async def validate_upload(file: UploadFile, allowed: Set[str]) -> bytes:
 def health():
     return {"status": "ok"}
 
-
-@app.post("/remove-bg")
-async def remove_background(file: UploadFile = File(...)):
-    if not REMOVE_BG_API_KEY:
-        raise HTTPException(status_code=503, detail="REMOVE_BG_API_KEY not configured")
-
-    data = await validate_upload(file, ALLOWED_MIME)
-    async with httpx.AsyncClient(timeout=30) as client:
-        resp = await client.post(
-            "https://api.remove.bg/v1.0/removebg",
-            headers={"X-Api-Key": REMOVE_BG_API_KEY},
-            files={"image_file": (file.filename, data, file.content_type)},
-            data={"size": "auto"},
-        )
-
-    if not resp.is_success:
-        logger.error("remove.bg failed status=%d", resp.status_code)
-        raise HTTPException(status_code=502, detail="Background removal failed")
-
-    return Response(
-        content=resp.content,
-        media_type=resp.headers.get("content-type", "image/png"),
-    )
 
 
 @app.post("/tag")
