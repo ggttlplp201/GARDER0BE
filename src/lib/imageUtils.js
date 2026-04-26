@@ -21,8 +21,9 @@ export async function maybeConvertHeic(file) {
 }
 
 export async function removeBg(file) {
+  // 'small' model is ~3× faster than the default with acceptable quality
   const { removeBackground } = await import('@imgly/background-removal');
-  return await removeBackground(file);
+  return await removeBackground(file, { model: 'small' });
 }
 
 export async function autoTagWithClaude(blob) {
