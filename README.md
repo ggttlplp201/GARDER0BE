@@ -8,7 +8,7 @@ Live at [the-garderobe.com](https://the-garderobe.com)
 
 ## What is this?
 
-GARDEROBE is a personal wardrobe manager — think of it as a living archive for your clothes. You can catalog everything you own, track what you paid, log when you wore something, build outfits, and keep a wishlist with live price tracking. There's also a social layer: you can add friends, explore other people's wardrobes, and see who's liked your profile on a 3D globe.
+GARDEROBE is a personal wardrobe manager — think of it as a living archive for your clothes. You can catalog everything you own, track what you paid, log when you wore something, build outfits, and keep a wishlist with live price tracking. There's also a social layer: you can add friends, explore other people's wardrobes, and see users around the world via a globe (desktop only).
 
 Built mostly as a passion project, but it's fully functional and running in production.
 
@@ -25,12 +25,11 @@ Built mostly as a passion project, but it's fully functional and running in prod
 
 **Backend**
 - Supabase — auth, Postgres database, realtime subscriptions, and image storage
-- FastAPI (Python) on Railway — handles price scraping and background refresh jobs
+- FastAPI — handles price scraping and background refresh jobs
 - Vercel serverless functions — Claude AI tagging endpoint (`/api/tag`)
 
 **AI**
 - Claude (via Anthropic API) — auto-tags uploaded clothing items with name, brand, color, and type from a photo
-- Falls back from Railway → Vercel automatically if one endpoint is unavailable
 
 ---
 
@@ -38,15 +37,13 @@ Built mostly as a passion project, but it's fully functional and running in prod
 
 **Wardrobe**
 - Add items with photos (supports HEIC, JPEG, PNG)
-- AI auto-tagging: upload a photo and Claude fills in the details
-- One-click background removal on item photos
-- Grid and list views, filterable by type, color, brand
+- AI auto-tagging: upload a photo and details fill automatically
+- Auto background removal on item photos to look better
+- Different view options, filterable by type, color, brand
 - Full item detail view with wear logging and condition tracking
 
-**OOTD builder**
-- Drag-and-drop outfit builder with a visual mannequin layout
-- HAT → TOP → BOTTOM → SHOE slots with smart compatibility filtering
-- Accessories and bag slots on the side
+**Outfit builder**
+- Drag-and-drop (or click) outfit builder with a visual mannequin layout
 - Save, load, and shuffle fits from your wardrobe
 
 **Timeline**
@@ -68,13 +65,3 @@ Built mostly as a passion project, but it's fully functional and running in prod
 - View friends' full wardrobes and stats
 
 ---
-
-## Infrastructure
-
-| Layer | Service |
-|---|---|
-| Frontend hosting | Vercel |
-| Database + Auth + Storage | Supabase |
-| Price scraping API | Railway (FastAPI) |
-| AI tagging fallback | Vercel serverless |
-| Domain | the-garderobe.com |
