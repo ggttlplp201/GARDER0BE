@@ -128,9 +128,9 @@ function SmartThumb({ item }) {
   return <canvas ref={canvasRef} style={{ width: '100%', height: '100%', display: 'block' }} />;
 }
 
-const SLOT_H_DESK   = { TOP: 240, BOTTOM: 250, OUTER: 240, SHOE: 180, HAT: 90,  BAG: 110, ACC1: 90,  ACC2: 90,  ACC3: 90,  ACC4: 90  };
+const SLOT_H_DESK   = { TOP: 290, BOTTOM: 300, OUTER: 290, SHOE: 220, HAT: 110, BAG: 130, ACC1: 110, ACC2: 110, ACC3: 110, ACC4: 110 };
 const SLOT_H_MOB    = { TOP: 165, BOTTOM: 175, OUTER: 165, SHOE: 125, HAT: 65,  BAG: 80,  ACC1: 65,  ACC2: 65,  ACC3: 65,  ACC4: 65  };
-const SLOT_MB_DESK  = { HAT: -28, TOP: -75, BOTTOM: -65 }; // negative overlap margins
+const SLOT_MB_DESK  = { HAT: -34, TOP: -90, BOTTOM: -80 }; // negative overlap margins
 const SLOT_MB_MOB   = { HAT: -20, TOP: -52, BOTTOM: -46 };
 
 function FlatSlot({ label, item, onRemove, draggingItem, onDragOver, onDrop, h = 160, style = {} }) {
