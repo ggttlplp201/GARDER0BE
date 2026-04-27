@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { parseImageUrls } from '../lib/imageUtils';
 
 const SLOT_LABELS = ['TOP', 'BOTTOM', 'OUTER', 'SHOE', 'HAT', 'BAG', 'ACC1', 'ACC2', 'ACC3', 'ACC4'];
@@ -128,14 +128,15 @@ function SmartThumb({ item }) {
   return <canvas ref={canvasRef} style={{ width: '100%', height: '100%', display: 'block' }} />;
 }
 
-// Heights per slot type for the flat-lay look
-const SLOT_H = { TOP: 240, BOTTOM: 250, OUTER: 240, SHOE: 180, HAT: 90, BAG: 110, ACC1: 90, ACC2: 90, ACC3: 90, ACC4: 90 };
+const SLOT_H_DESK   = { TOP: 240, BOTTOM: 250, OUTER: 240, SHOE: 180, HAT: 90,  BAG: 110, ACC1: 90,  ACC2: 90,  ACC3: 90,  ACC4: 90  };
+const SLOT_H_MOB    = { TOP: 165, BOTTOM: 175, OUTER: 165, SHOE: 125, HAT: 65,  BAG: 80,  ACC1: 65,  ACC2: 65,  ACC3: 65,  ACC4: 65  };
+const SLOT_MB_DESK  = { HAT: -28, TOP: -75, BOTTOM: -65 }; // negative overlap margins
+const SLOT_MB_MOB   = { HAT: -20, TOP: -52, BOTTOM: -46 };
 
-function FlatSlot({ label, item, onRemove, draggingItem, onDragOver, onDrop, style = {} }) {
+function FlatSlot({ label, item, onRemove, draggingItem, onDragOver, onDrop, h = 160, style = {} }) {
   const accepts = draggingItem ? slotAccepts(label, draggingItem) : null;
   const compatible = draggingItem && accepts;
   const incompatible = draggingItem && !accepts;
-  const h = SLOT_H[label] || 160;
 
   return (
     <div
@@ -182,6 +183,10 @@ export default function OutfitsView({ items }) {
   useEffect(() => {
     try { localStorage.setItem('garderobe-saved-fits', JSON.stringify(savedFits)); } catch {}
   }, [savedFits]);
+
+  const isMobile = useMemo(() => window.innerWidth < 768, []);
+  const SLOT_H = isMobile ? SLOT_H_MOB : SLOT_H_DESK;
+  const SLOT_MB = isMobile ? SLOT_MB_MOB : SLOT_MB_DESK;
 
   const rackItems = items.filter(it => it.status !== 'wishlist' && it.type !== 'Other');
 
@@ -339,6 +344,14 @@ export default function OutfitsView({ items }) {
               </div>
             )}
 
+            {/* Mobile-only: saved fits toggle bar (desktop uses v-screen-header button) */}
+            <div className="outfit-mobile-bar">
+              <button
+                className={`outfit-mobile-bar-btn${showSaved ? ' active' : ''}`}
+                onClick={() => setShowSaved(s => !s)}
+              >SAVED FITS · {savedFits.length}</button>
+            </div>
+
             <div className="outfits-name-row">
               <span className="mono-dim" style={{ fontSize: 10, letterSpacing: '0.15em' }}>FIT /</span>
               <input
@@ -361,7 +374,8 @@ export default function OutfitsView({ items }) {
                         draggingItem={draggingItem}
                         onDragOver={e => handleSlotDragOver(e, label)}
                         onDrop={e => handleSlotDrop(e, slotIdx, label)}
-                        style={{ height: SLOT_H.ACC1, marginBottom: 8 }} />
+                        h={SLOT_H.ACC1}
+                        style={{ marginBottom: 8 }} />
                     );
                   })}
                 </div>
@@ -372,21 +386,25 @@ export default function OutfitsView({ items }) {
                     draggingItem={draggingItem}
                     onDragOver={e => handleSlotDragOver(e, 'HAT')}
                     onDrop={e => handleSlotDrop(e, 4, 'HAT')}
-                    style={{ marginBottom: -28 }} />
+                    h={SLOT_H.HAT}
+                    style={{ marginBottom: SLOT_MB.HAT }} />
                   <FlatSlot idx={0} label="TOP" item={slots[0]} onRemove={() => removeSlot(0)}
                     draggingItem={draggingItem}
                     onDragOver={e => handleSlotDragOver(e, 'TOP')}
                     onDrop={e => handleSlotDrop(e, 0, 'TOP')}
-                    style={{ marginBottom: -75 }} />
+                    h={SLOT_H.TOP}
+                    style={{ marginBottom: SLOT_MB.TOP }} />
                   <FlatSlot idx={1} label="BOTTOM" item={slots[1]} onRemove={() => removeSlot(1)}
                     draggingItem={draggingItem}
                     onDragOver={e => handleSlotDragOver(e, 'BOTTOM')}
                     onDrop={e => handleSlotDrop(e, 1, 'BOTTOM')}
-                    style={{ marginBottom: -65 }} />
+                    h={SLOT_H.BOTTOM}
+                    style={{ marginBottom: SLOT_MB.BOTTOM }} />
                   <FlatSlot idx={3} label="SHOE" item={slots[3]} onRemove={() => removeSlot(3)}
                     draggingItem={draggingItem}
                     onDragOver={e => handleSlotDragOver(e, 'SHOE')}
-                    onDrop={e => handleSlotDrop(e, 3, 'SHOE')} />
+                    onDrop={e => handleSlotDrop(e, 3, 'SHOE')}
+                    h={SLOT_H.SHOE} />
                 </div>
 
                 {/* BAG column — right */}
@@ -394,7 +412,8 @@ export default function OutfitsView({ items }) {
                   <FlatSlot idx={5} label="BAG" item={slots[5]} onRemove={() => removeSlot(5)}
                     draggingItem={draggingItem}
                     onDragOver={e => handleSlotDragOver(e, 'BAG')}
-                    onDrop={e => handleSlotDrop(e, 5, 'BAG')} />
+                    onDrop={e => handleSlotDrop(e, 5, 'BAG')}
+                    h={SLOT_H.BAG} />
                 </div>
               </div>
             </div>

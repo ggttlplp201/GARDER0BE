@@ -200,7 +200,7 @@ export default function App() {
   const editItemObj = editItemId ? items.find(i => i.id === editItemId) : null;
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell page-${page}`}>
       <AppHeader
         user={user}
         dark={dark}

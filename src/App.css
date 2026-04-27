@@ -965,6 +965,7 @@ input[type=range].vol-slider::-webkit-slider-thumb { -webkit-appearance: none; a
   font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.12em;
 }
 .outfit-actions { display: flex; gap: 8px; margin-top: 12px; }
+.outfit-mobile-bar { display: none; } /* shown only in mobile media query */
 .outfits-rack-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
 .outfit-rack-wrap { position: relative; padding-top: 10px; }
 .outfit-rack-line { position: absolute; left: 0; right: 0; top: 28px; height: 1.5px; background: var(--border); pointer-events: none; }
@@ -1068,10 +1069,18 @@ html.dark .outfit-in-fit-badge { background: rgba(0,0,0,0.7); }
   .detail-main-img { height: 60vw !important; }
   .detail-nav { padding: 8px 16px; font-size: 9px; flex-wrap: wrap; gap: 4px; }
 
-  /* Outfits */
-  .outfits-cols { flex-direction: column !important; }
-  .outfits-left, .outfits-right { width: 100% !important; min-width: 0 !important; }
+  /* Outfits — mobile full-screen layout */
+  .page-outfits .app-header { display: none !important; }
+  .page-outfits .v-screen-header { display: none !important; }
+  .page-outfits .v-body { overflow: hidden; display: flex; flex-direction: column; }
+  .page-outfits .outfits-cols { display: flex !important; flex-direction: column !important; height: 100%; overflow: hidden; }
+  .page-outfits .outfits-left { flex: 3 !important; min-height: 0 !important; overflow-y: auto !important; width: 100% !important; border-right: none !important; border-bottom: 1px solid var(--border); padding: 10px 14px 14px !important; }
+  .page-outfits .outfits-right { flex: 2 !important; min-height: 0 !important; overflow-y: auto !important; width: 100% !important; padding: 10px 14px !important; }
   .outfit-rack-grid { grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)) !important; }
+  /* Mobile saved fits bar — shown only on mobile (hidden on desktop via default display:none) */
+  .outfit-mobile-bar { display: flex; margin-bottom: 10px; }
+  .outfit-mobile-bar-btn { flex: 1; background: transparent; color: var(--text); border: 1px solid var(--border); padding: 7px 14px; font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.15em; cursor: pointer; text-align: center; }
+  .outfit-mobile-bar-btn.active { background: var(--text); color: var(--bg); }
 
   /* Explore tabs */
   .explore-page { padding: 16px 16px 20px; }
