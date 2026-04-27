@@ -1,3 +1,5 @@
-# Fun little project
+# Fun project
 
-Live at [the-garderobe.com](https://the-garderobe.com) 
+Try on both mobile and desktop devices
+
+Live at [the-garderobe.com](https://the-garderobe.com)
