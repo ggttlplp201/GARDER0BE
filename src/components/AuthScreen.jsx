@@ -171,18 +171,18 @@ export default function AuthScreen({ authMode, setAuthMode, onLogin, onSignUp })
           </div>
         )}
 
-        {/* TRY DEMO — primary */}
-        <button
-          onClick={fillDemo}
-          style={{ width: '100%', padding: '14px 0', background: PAPER, color: INK, border: 'none', fontFamily: MONO, fontSize: 11, letterSpacing: '0.22em', cursor: 'pointer', fontWeight: 500, marginTop: 16 }}
-        >TRY DEMO →</button>
-
-        {/* SIGN IN / CREATE — secondary */}
+        {/* SIGN IN / CREATE — primary */}
         <button
           onClick={handleSubmit}
           disabled={loading}
-          style={{ width: '100%', padding: '14px 0', background: 'transparent', color: PAPER, border: '1px solid rgba(245,242,234,0.4)', fontFamily: MONO, fontSize: 11, letterSpacing: '0.22em', cursor: 'pointer', marginTop: 10, opacity: loading ? 0.5 : 1 }}
+          style={{ width: '100%', padding: '14px 0', background: 'transparent', color: PAPER, border: '1px solid rgba(245,242,234,0.4)', fontFamily: MONO, fontSize: 11, letterSpacing: '0.22em', cursor: 'pointer', marginTop: 16, opacity: loading ? 0.5 : 1 }}
         >{loading ? 'LOADING…' : isSignIn ? 'SIGN IN' : 'CREATE ACCOUNT'}</button>
+
+        {/* TRY DEMO — secondary */}
+        <button
+          onClick={fillDemo}
+          style={{ width: '100%', padding: '14px 0', background: PAPER, color: INK, border: 'none', fontFamily: MONO, fontSize: 11, letterSpacing: '0.22em', cursor: 'pointer', fontWeight: 500, marginTop: 10 }}
+        >TRY DEMO →</button>
 
         {/* Toggle sign in / sign up */}
         <div style={{ marginTop: 24, fontSize: 9, letterSpacing: '0.18em', opacity: 0.45, textAlign: 'center' }}>
