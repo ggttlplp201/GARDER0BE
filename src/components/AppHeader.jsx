@@ -26,7 +26,7 @@ export default function AppHeader({ onDark, avatarUrl, location, userName, onPro
           <div>{dateStr} · {timeStr}</div>
         </div>
         <div className="app-globe-slot">
-          <DesignHouseGlobe mini onViewProfile={onViewProfile} />
+          <DesignHouseGlobe mini onViewProfile={onViewProfile} myLocation={location} />
         </div>
         <div className="app-header-controls">
           <button className="app-avatar-btn" onClick={onProfileOpen} aria-label="Profile">

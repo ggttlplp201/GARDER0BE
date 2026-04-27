@@ -165,9 +165,10 @@ function buildClusters(visible) {
   return out;
 }
 
-export default function DesignHouseGlobe({ mini = false, onViewProfile }) {
+export default function DesignHouseGlobe({ mini = false, onViewProfile, myLocation = '' }) {
   const housesRef    = useRef([]); // populated from other users' profiles
   const friendIdsRef = useRef(new Set()); // IDs of accepted friends
+  const myPinRef     = useRef(null); // current user's geocoded location
   const canvasRef    = useRef(null);
   const containerRef = useRef(null);
   const rotYRef      = useRef(INIT_ROTY);
@@ -250,6 +251,11 @@ export default function DesignHouseGlobe({ mini = false, onViewProfile }) {
     }
     loadProfiles();
   }, []);
+
+  // Geocode current user's own location
+  useEffect(() => {
+    myPinRef.current = myLocation ? geocodeLocation(myLocation) : null;
+  }, [myLocation]);
 
   // Pause RAF when tab is hidden
   useEffect(() => {
@@ -424,6 +430,31 @@ export default function DesignHouseGlobe({ mini = false, onViewProfile }) {
         }
       }
     }
+
+    // Draw current user's own location — distinct filled pin with outer ring
+    const myPin = myPinRef.current;
+    if (myPin) {
+      const myPos = proj([myPin.lng, myPin.lat]);
+      if (myPos) {
+        const [mx, my] = myPos;
+        if (Math.hypot(mx - cx, my - cy) <= r - 2) {
+          const mpr = isMini ? 3.5 : pR * 1.15;
+          // Outer ring
+          ctx.beginPath(); ctx.arc(mx, my, mpr + 3.5, 0, Math.PI * 2);
+          ctx.strokeStyle = fg; ctx.lineWidth = 1; ctx.stroke();
+          // Filled dot
+          ctx.beginPath(); ctx.arc(mx, my, mpr, 0, Math.PI * 2);
+          ctx.fillStyle = fg; ctx.fill();
+          // "YOU" label when zoomed
+          if (isZoomedRef.current && !isMini) {
+            ctx.font = 'bold 8px Arial';
+            ctx.fillStyle = fg; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+            ctx.fillText('YOU', mx, my - mpr - 5);
+          }
+        }
+      }
+    }
+
     // Auto-labels when zoomed — with iterative overlap separation
     if (isZoomedRef.current) {
       const nowT = nowRef.current;

@@ -192,7 +192,7 @@ export default function AuthScreen({ authMode, setAuthMode, onLogin, onSignUp })
 
       {/* Footer */}
       <div style={{ position: 'absolute', bottom: 22, left: 0, right: 0, textAlign: 'center', fontSize: 9, letterSpacing: '0.2em', opacity: 0.4 }}>
-        LAST UPDATE {lastUpdate} · IRVINE, CA
+        LAST UPDATE {lastUpdate}
       </div>
     </div>
   );
