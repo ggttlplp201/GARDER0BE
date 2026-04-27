@@ -15,9 +15,8 @@ Built mostly as a passion project, but it's fully functional and running in prod
 
 **Frontend**
 - React (Vite) — component-based UI, fast dev server
-- CSS custom properties for theming (dark/light mode)
 - D3-geo + Canvas for the interactive 3D globe in Explore
-- `@imgly/background-removal` — in-browser ML model that removes photo backgrounds client-side, no server needed
+- `@imgly/background-removal` — in-browser ML model that removes photo backgrounds client-side
 - `heic2any` for converting iPhone HEIC photos on the fly
 
 **Backend**
