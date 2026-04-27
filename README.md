@@ -8,7 +8,7 @@ Live at [the-garderobe.com](https://the-garderobe.com)
 
 ## What is this?
 
-GARDEROBE is a personal wardrobe manager — think of it as a living archive for your clothes. You can catalog everything you own, track what you paid, log when you wore something, build outfits, and keep a wishlist with live price tracking. There's also a social layer: you can add friends, explore other people's wardrobes, and see users around the world via a globe (desktop only).
+GARDEROBE is your personal wardrobe manager — think of it as a living archive for your clothes. You can catalog everything you own, track what you paid, log when you wore something, build outfits, and keep a wishlist with live price tracking. There are also some social features: you can add friends, check the feed on new articles about fashion & culture, explore other people's collections, and see users around the world via a globe (desktop only).
 
 Built mostly as a passion project, but it's fully functional and running in production.
 
