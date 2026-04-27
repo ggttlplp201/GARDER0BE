@@ -445,12 +445,7 @@ export default function DesignHouseGlobe({ mini = false, onViewProfile, myLocati
           // Filled dot
           ctx.beginPath(); ctx.arc(mx, my, mpr, 0, Math.PI * 2);
           ctx.fillStyle = fg; ctx.fill();
-          // "YOU" label when zoomed
-          if (isZoomedRef.current && !isMini) {
-            ctx.font = 'bold 8px Arial';
-            ctx.fillStyle = fg; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
-            ctx.fillText('YOU', mx, my - mpr - 5);
-          }
+          // Label drawn separately in the zoomed label pass below
         }
       }
     }
@@ -585,6 +580,57 @@ export default function DesignHouseGlobe({ mini = false, onViewProfile, myLocati
             ctx.fillText('FRIENDS', bx + padX + nw + 5, by + padY + i * lineH);
           }
         });
+      }
+      // "YOU" label — same card style, always placed above the pin
+      if (myPin) {
+        const myPos2 = proj([myPin.lng, myPin.lat]);
+        if (myPos2) {
+          const [mx, my] = myPos2;
+          if (Math.hypot(mx - cx, my - cy) <= r - 2) {
+            const youLines = [
+              { text: 'YOU', bold: true, sz: 8 },
+              { text: `${myPin.city} · ${localTime(myPin.tz, nowT)}`, bold: false, sz: 7, dim: true },
+            ];
+            let youMaxW = 0;
+            for (const l of youLines) {
+              ctx.font = `${l.bold ? 'bold ' : ''}${l.sz}px Arial`;
+              youMaxW = Math.max(youMaxW, ctx.measureText(l.text).width);
+            }
+            const youBw = youMaxW + padX * 2;
+            const youBh = youLines.length * lineH + padY * 2;
+            const stemLen2 = 28;
+            // Place label above-right of the pin
+            const youStemX = mx + stemLen2 * 0.6;
+            const youStemY = my - stemLen2;
+            const youBx = youStemX + 4;
+            const youBy = youStemY - youBh / 2;
+            const mpr2 = pR * 1.15;
+
+            // Connector line
+            ctx.beginPath();
+            ctx.moveTo(mx + 0.6 * (mpr2 + 2), my - 0.8 * (mpr2 + 2));
+            ctx.lineTo(youStemX, youStemY);
+            ctx.lineTo(youStemX, youBy + youBh / 2);
+            ctx.lineTo(youBx, youBy + youBh / 2);
+            ctx.strokeStyle = isDark ? 'rgba(220,220,220,0.5)' : 'rgba(0,0,0,0.35)';
+            ctx.lineWidth = 0.7; ctx.stroke();
+
+            // Box
+            ctx.fillStyle = isDark ? 'rgba(13,13,13,0.88)' : 'rgba(255,255,255,0.9)';
+            ctx.strokeStyle = fg;
+            ctx.lineWidth = 0.8;
+            ctx.fillRect(youBx, youBy, youBw, youBh);
+            ctx.strokeRect(youBx, youBy, youBw, youBh);
+
+            // Text
+            ctx.textBaseline = 'top'; ctx.textAlign = 'left';
+            youLines.forEach((l, i) => {
+              ctx.font = `${l.bold ? 'bold ' : ''}${l.sz}px Arial`;
+              ctx.fillStyle = l.dim ? (isDark ? '#888' : '#aaa') : fg;
+              ctx.fillText(l.text, youBx + padX, youBy + padY + i * lineH);
+            });
+          }
+        }
       }
     }
 
