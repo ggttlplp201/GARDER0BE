@@ -442,23 +442,20 @@ export default function OutfitsView({ items }) {
               >{loadedFitId ? '✓ UPDATE FIT' : '+ SAVE FIT'}</button>
             </div>
 
-            {/* Mobile-only: toggle rack visibility */}
-            <button className="rack-toggle-btn" onClick={() => setRackOpen(o => !o)}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                {rackOpen
-                  ? <polyline points="18 15 12 9 6 15" />
-                  : <polyline points="6 9 12 15 18 9" />
-                }
-              </svg>
-              <span>{rackOpen ? 'HIDE ITEMS' : 'SHOW ITEMS'}</span>
-            </button>
-
           </div>
 
           {/* RIGHT: rack */}
           <div className="outfits-right">
             <div className="outfits-rack-header">
               <span className="mono-dim" style={{ fontSize: 11 }}>THE RACK · PICK AN ITEM</span>
+              <button className="rack-toggle-btn" onClick={() => setRackOpen(o => !o)} aria-label={rackOpen ? 'Hide items' : 'Show items'}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                  {rackOpen
+                    ? <polyline points="18 15 12 9 6 15" />
+                    : <polyline points="6 9 12 15 18 9" />
+                  }
+                </svg>
+              </button>
               <span className="mono-dim">{rackItems.length} AVAILABLE</span>
             </div>
             <div className="rack-rule" />

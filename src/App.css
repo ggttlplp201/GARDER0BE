@@ -1053,8 +1053,9 @@ html.dark .outfit-in-fit-badge { background: rgba(0,0,0,0.7); }
   .timeline-row > div:nth-child(5) { display: none; }
 
   /* Wishlist */
-  .wish-row    { grid-template-columns: 36px 52px 1fr 100px !important; }
-  .wish-header { grid-template-columns: 36px 52px 1fr 100px !important; }
+  .wish-row    { grid-template-columns: 36px 52px 1fr 88px !important; }
+  .wish-header { grid-template-columns: 36px 52px 1fr 88px !important; }
+  /* !important needed to override inline display:flex on some children */
   .wish-row    > div:nth-child(4),
   .wish-row    > div:nth-child(5),
   .wish-row    > div:nth-child(6),
@@ -1062,7 +1063,9 @@ html.dark .outfit-in-fit-badge { background: rgba(0,0,0,0.7); }
   .wish-header > div:nth-child(4),
   .wish-header > div:nth-child(5),
   .wish-header > div:nth-child(6),
-  .wish-header > div:nth-child(7) { display: none; }
+  .wish-header > div:nth-child(7) { display: none !important; }
+  /* On mobile show only VIEW →, hide + ADD SOURCE */
+  .wish-row > div:nth-child(8) button:first-child { display: none !important; }
 
   /* Detail view */
   .detail-cols { flex-direction: column !important; }
@@ -1083,8 +1086,8 @@ html.dark .outfit-in-fit-badge { background: rgba(0,0,0,0.7); }
   .outfit-mobile-bar-btn { flex: 1; background: transparent; color: var(--text); border: 1px solid var(--border); padding: 7px 14px; font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.15em; cursor: pointer; text-align: center; }
   .outfit-mobile-bar-btn.active { background: var(--text); color: var(--bg); }
 
-  /* Rack toggle arrow */
-  .rack-toggle-btn { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; margin-top: 10px; padding: 8px; background: transparent; color: var(--text2); border: 1px solid var(--border); font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.12em; cursor: pointer; }
+  /* Rack toggle arrow — sits in the rack header between label and count */
+  .rack-toggle-btn { display: flex; align-items: center; justify-content: center; padding: 4px 8px; background: transparent; color: var(--text2); border: 1px solid var(--border); cursor: pointer; }
   .rack-toggle-btn:active { opacity: 0.6; }
 
   /* Collapsed rack: outfits-left fills all space, right hidden */
@@ -1099,7 +1102,14 @@ html.dark .outfit-in-fit-badge { background: rgba(0,0,0,0.7); }
   .avatar-crop-modal { width: calc(100vw - 32px); }
 
   /* Friends / people rows */
-  .design-people-row { padding: 12px 16px !important; }
   .design-people-tabs { margin: 0 16px !important; }
+  .design-people-row { padding: 12px 0 !important; gap: 12px !important; }
+  /* Override inline v-body padding for FriendsPage */
+  .page-friends .v-body { padding: 0 16px 24px !important; }
+  /* Hide wardrobe stats to give name room; shrink avatar */
+  .design-people-stats { display: none; }
+  .design-people-row > div:first-child { width: 44px !important; height: 44px !important; min-width: 44px !important; }
+  .design-people-name { font-size: 15px; }
+  .design-action-btn { font-size: 8px !important; padding: 5px 10px !important; letter-spacing: 0.1em !important; }
 }
 
