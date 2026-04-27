@@ -261,29 +261,14 @@ export default function OutfitsView({ items }) {
 
   return (
     <div className="v-screen">
-      <div className="v-screen-header" style={{ borderBottom: 'none' }}>
+      {/* Mobile-only title header — desktop title moves into right panel */}
+      <div className="v-screen-header outfits-mob-header" style={{ borderBottom: 'none' }}>
         <div>
           <div className="v-screen-title">OOTD</div>
           <div className="v-screen-sub">BUILD A FIT · TAP ITEMS TO ADD · TAP SLOT TO REMOVE</div>
         </div>
-        <button
-          onClick={() => setShowSaved(s => !s)}
-          style={{
-            background: showSaved ? 'var(--text)' : 'transparent',
-            color: showSaved ? 'var(--bg)' : 'var(--text)',
-            border: '1px solid var(--border)',
-            padding: '7px 14px',
-            fontFamily: 'var(--font-mono)',
-            fontSize: 10,
-            letterSpacing: '0.15em',
-            cursor: 'pointer',
-            alignSelf: 'flex-end',
-          }}
-        >
-          SAVED FITS · {savedFits.length}
-        </button>
       </div>
-      <div style={{ borderBottom: '1px solid var(--border)' }} />
+      <div className="outfits-mob-header" style={{ borderBottom: '1px solid var(--border)' }} />
 
       <div className="v-body" style={{ overflow: 'hidden', display: 'flex' }}>
         <div className={`outfits-cols${rackOpen ? '' : ' rack-collapsed'}`} style={{ flex: 1 }}>
@@ -446,6 +431,28 @@ export default function OutfitsView({ items }) {
 
           {/* RIGHT: rack */}
           <div className="outfits-right">
+            {/* Desktop-only: OOTD title lives here so left panel gets full height */}
+            <div className="outfits-right-title">
+              <div>
+                <div className="v-screen-title" style={{ fontSize: 28 }}>OOTD</div>
+                <div className="v-screen-sub">BUILD A FIT</div>
+              </div>
+              <button
+                onClick={() => setShowSaved(s => !s)}
+                style={{
+                  background: showSaved ? 'var(--text)' : 'transparent',
+                  color: showSaved ? 'var(--bg)' : 'var(--text)',
+                  border: '1px solid var(--border)',
+                  padding: '5px 10px',
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: 9,
+                  letterSpacing: '0.15em',
+                  cursor: 'pointer',
+                  alignSelf: 'flex-end',
+                  whiteSpace: 'nowrap',
+                }}
+              >SAVED · {savedFits.length}</button>
+            </div>
             <div className="outfits-rack-header">
               <span className="mono-dim" style={{ fontSize: 11 }}>THE RACK · PICK AN ITEM</span>
               <button className="rack-toggle-btn" onClick={() => setRackOpen(o => !o)} aria-label={rackOpen ? 'Hide items' : 'Show items'}>
