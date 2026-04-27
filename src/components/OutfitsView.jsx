@@ -128,9 +128,9 @@ function SmartThumb({ item }) {
   return <canvas ref={canvasRef} style={{ width: '100%', height: '100%', display: 'block' }} />;
 }
 
-const SLOT_H_DESK   = { TOP: 290, BOTTOM: 300, OUTER: 290, SHOE: 220, HAT: 110, BAG: 130, ACC1: 110, ACC2: 110, ACC3: 110, ACC4: 110 };
+const SLOT_H_DESK   = { TOP: 240, BOTTOM: 250, OUTER: 240, SHOE: 180, HAT: 90,  BAG: 110, ACC1: 90,  ACC2: 90,  ACC3: 90,  ACC4: 90  };
 const SLOT_H_MOB    = { TOP: 165, BOTTOM: 175, OUTER: 165, SHOE: 125, HAT: 65,  BAG: 80,  ACC1: 65,  ACC2: 65,  ACC3: 65,  ACC4: 65  };
-const SLOT_MB_DESK  = { HAT: -34, TOP: -90, BOTTOM: -80 }; // negative overlap margins
+const SLOT_MB_DESK  = { HAT: -28, TOP: -75, BOTTOM: -65 }; // negative overlap margins
 const SLOT_MB_MOB   = { HAT: -20, TOP: -52, BOTTOM: -46 };
 
 function FlatSlot({ label, item, onRemove, draggingItem, onDragOver, onDrop, h = 160, style = {} }) {
@@ -261,14 +261,29 @@ export default function OutfitsView({ items }) {
 
   return (
     <div className="v-screen">
-      {/* Mobile-only title header — desktop title moves into right panel */}
-      <div className="v-screen-header outfits-mob-header" style={{ borderBottom: 'none' }}>
+      <div className="v-screen-header" style={{ borderBottom: 'none' }}>
         <div>
           <div className="v-screen-title">OOTD</div>
           <div className="v-screen-sub">BUILD A FIT · TAP ITEMS TO ADD · TAP SLOT TO REMOVE</div>
         </div>
+        <button
+          onClick={() => setShowSaved(s => !s)}
+          style={{
+            background: showSaved ? 'var(--text)' : 'transparent',
+            color: showSaved ? 'var(--bg)' : 'var(--text)',
+            border: '1px solid var(--border)',
+            padding: '7px 14px',
+            fontFamily: 'var(--font-mono)',
+            fontSize: 10,
+            letterSpacing: '0.15em',
+            cursor: 'pointer',
+            alignSelf: 'flex-end',
+          }}
+        >
+          SAVED FITS · {savedFits.length}
+        </button>
       </div>
-      <div className="outfits-mob-header" style={{ borderBottom: '1px solid var(--border)' }} />
+      <div style={{ borderBottom: '1px solid var(--border)' }} />
 
       <div className="v-body" style={{ overflow: 'hidden', display: 'flex' }}>
         <div className={`outfits-cols${rackOpen ? '' : ' rack-collapsed'}`} style={{ flex: 1 }}>
@@ -431,28 +446,6 @@ export default function OutfitsView({ items }) {
 
           {/* RIGHT: rack */}
           <div className="outfits-right">
-            {/* Desktop-only: OOTD title lives here so left panel gets full height */}
-            <div className="outfits-right-title">
-              <div>
-                <div className="v-screen-title" style={{ fontSize: 28 }}>OOTD</div>
-                <div className="v-screen-sub">BUILD A FIT</div>
-              </div>
-              <button
-                onClick={() => setShowSaved(s => !s)}
-                style={{
-                  background: showSaved ? 'var(--text)' : 'transparent',
-                  color: showSaved ? 'var(--bg)' : 'var(--text)',
-                  border: '1px solid var(--border)',
-                  padding: '5px 10px',
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: 9,
-                  letterSpacing: '0.15em',
-                  cursor: 'pointer',
-                  alignSelf: 'flex-end',
-                  whiteSpace: 'nowrap',
-                }}
-              >SAVED · {savedFits.length}</button>
-            </div>
             <div className="outfits-rack-header">
               <span className="mono-dim" style={{ fontSize: 11 }}>THE RACK · PICK AN ITEM</span>
               <button className="rack-toggle-btn" onClick={() => setRackOpen(o => !o)} aria-label={rackOpen ? 'Hide items' : 'Show items'}>
