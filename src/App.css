@@ -1090,9 +1090,10 @@ html.dark .outfit-in-fit-badge { background: rgba(0,0,0,0.7); }
   .rack-toggle-btn { display: flex; align-items: center; justify-content: center; padding: 4px 8px; background: transparent; color: var(--text2); border: 1px solid var(--border); cursor: pointer; }
   .rack-toggle-btn:active { opacity: 0.6; }
 
-  /* Collapsed rack: outfits-left fills all space, right hidden */
+  /* Collapsed rack: left fills space, right shrinks to just its header */
   .page-outfits .outfits-cols.rack-collapsed .outfits-left { flex: 1 !important; border-bottom: none !important; }
-  .page-outfits .outfits-cols.rack-collapsed .outfits-right { display: none !important; }
+  .page-outfits .outfits-cols.rack-collapsed .outfits-right { flex: none !important; overflow: hidden !important; padding: 8px 14px !important; }
+  .page-outfits .outfits-cols.rack-collapsed .outfits-right > *:not(.outfits-rack-header) { display: none !important; }
 
   /* Explore tabs */
   .explore-page { padding: 16px 16px 20px; }
