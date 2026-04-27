@@ -114,17 +114,13 @@ export default function AuthScreen({ authMode, setAuthMode, onLogin, onSignUp })
       </div>
 
       {/* Top-left brand mark */}
-      <div style={{ position: 'absolute', top: 28, left: 36, fontSize: 10, letterSpacing: '0.15em', opacity: 0.5 }}>
-        / ɡärd ˌrōb / <span style={{ marginLeft: 14 }}>ISSUE 04 · VOL. XXVI</span>
-      </div>
-
-      {/* Top-right timestamp */}
-      <div style={{ position: 'absolute', top: 28, right: 36, fontSize: 10, letterSpacing: '0.15em', opacity: 0.5 }}>
-        <LiveClock />
+      <div className="auth-top-bar" style={{ position: 'absolute', top: 28, left: 0, right: 0, display: 'flex', justifyContent: 'space-between', padding: '0 36px', fontSize: 10, letterSpacing: '0.15em', opacity: 0.5 }}>
+        <span>/ ɡärd ˌrōb / <span style={{ marginLeft: 14 }}>ISSUE 04 · VOL. XXVI</span></span>
+        <span className="auth-clock"><LiveClock /></span>
       </div>
 
       {/* Centered form */}
-      <div style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', width: 380, zIndex: 10 }}>
+      <div style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', width: 'min(380px, calc(100vw - 48px))', zIndex: 10 }}>
         <div style={{ fontSize: 9, letterSpacing: '0.2em', opacity: 0.5, marginBottom: 26, textAlign: 'center' }}>
           ── ENTER THE ARCHIVE ──
         </div>

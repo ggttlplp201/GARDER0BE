@@ -1113,6 +1113,10 @@ html.dark .outfit-in-fit-badge { background: rgba(0,0,0,0.7); }
   /* Explore tabs */
   .explore-page { padding: 16px 16px 20px; }
 
+  /* Auth screen */
+  .auth-top-bar { padding: 0 16px !important; font-size: 9px !important; }
+  .auth-clock { display: none; }
+
   /* Modals */
   .modal { margin: 16px; max-height: calc(100dvh - 32px); }
   .avatar-crop-modal { width: calc(100vw - 32px); }
