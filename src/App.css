@@ -598,6 +598,7 @@ input[type=range].vol-slider::-webkit-slider-thumb { -webkit-appearance: none; a
   flex-shrink: 0;
 }
 .app-nav-tabs { display: flex; gap: 20px; }
+.nav-tab-icon { display: none; }
 .app-nav-tab {
   background: none; border: none; padding: 0;
   font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.14em;
@@ -1015,10 +1016,14 @@ html.dark .outfit-in-fit-badge { background: rgba(0,0,0,0.7); }
   .app-dark-btn { width: 28px; height: 28px; font-size: 12px; }
 
   /* Nav */
-  .app-nav { padding: 10px 12px; }
-  .app-nav-tabs { gap: 10px; flex-wrap: nowrap; overflow-x: auto; }
-  .app-nav-tab { font-size: 9px; letter-spacing: 0.08em; white-space: nowrap; }
+  .app-nav { padding: 8px 0; }
+  .app-nav-tabs { gap: 0; flex-wrap: nowrap; overflow: visible; justify-content: space-evenly; width: 100%; }
+  .app-nav-tab { display: flex; flex-direction: column; align-items: center; padding: 4px 0; min-width: 0; flex: 1; }
+  .nav-tab-icon { display: flex; align-items: center; justify-content: center; }
+  .nav-tab-label { display: none; }
   .app-nav-value { display: none; }
+  /* Shrink badge position for icon-only tabs */
+  .nav-badge { top: -3px; right: 6px; }
 
   /* View shell */
   .v-screen-header { padding: 6px 16px 10px; }
