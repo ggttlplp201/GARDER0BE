@@ -179,6 +179,7 @@ export default function OutfitsView({ items }) {
   const [loadedFitId, setLoadedFitId]   = useState(null);
   const [showSaved, setShowSaved]       = useState(false);
   const [pendingDelete, setPendingDelete] = useState(null);
+  const [rackOpen, setRackOpen]         = useState(true);
 
   useEffect(() => {
     try { localStorage.setItem('garderobe-saved-fits', JSON.stringify(savedFits)); } catch {}
@@ -285,7 +286,7 @@ export default function OutfitsView({ items }) {
       <div style={{ borderBottom: '1px solid var(--border)' }} />
 
       <div className="v-body" style={{ overflow: 'hidden', display: 'flex' }}>
-        <div className="outfits-cols" style={{ flex: 1 }}>
+        <div className={`outfits-cols${rackOpen ? '' : ' rack-collapsed'}`} style={{ flex: 1 }}>
 
           {/* LEFT: builder */}
           <div className="outfits-left">
@@ -440,6 +441,17 @@ export default function OutfitsView({ items }) {
                 onClick={saveFit}
               >{loadedFitId ? '✓ UPDATE FIT' : '+ SAVE FIT'}</button>
             </div>
+
+            {/* Mobile-only: toggle rack visibility */}
+            <button className="rack-toggle-btn" onClick={() => setRackOpen(o => !o)}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                {rackOpen
+                  ? <polyline points="18 15 12 9 6 15" />
+                  : <polyline points="6 9 12 15 18 9" />
+                }
+              </svg>
+              <span>{rackOpen ? 'HIDE ITEMS' : 'SHOW ITEMS'}</span>
+            </button>
 
           </div>
 
