@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { parseImageUrls } from '../lib/imageUtils';
+import { sb } from '../lib/supabase';
 
 const SLOT_LABELS = ['TOP', 'BOTTOM', 'OUTER', 'SHOE', 'HAT', 'BAG', 'ACC1', 'ACC2', 'ACC3', 'ACC4'];
 
@@ -169,21 +170,48 @@ function FlatSlot({ label, item, onRemove, draggingItem, onDragOver, onDrop, h =
   );
 }
 
-export default function OutfitsView({ items }) {
+export default function OutfitsView({ items, user }) {
   const [slots, setSlots]         = useState(Array(10).fill(null));
   const [fitName, setFitName]     = useState('UNTITLED');
-  const [savedFits, setSavedFits] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('garderobe-saved-fits') || '[]'); } catch { return []; }
-  });
+  const [savedFits, setSavedFits] = useState([]);
   const [draggingItem, setDraggingItem] = useState(null);
   const [loadedFitId, setLoadedFitId]   = useState(null);
   const [showSaved, setShowSaved]       = useState(false);
   const [pendingDelete, setPendingDelete] = useState(null);
   const [rackOpen, setRackOpen]         = useState(true);
+  const fitsLoadedRef = useRef(false);
 
+  // Load fits from Supabase (or fall back to localStorage for guests)
   useEffect(() => {
-    try { localStorage.setItem('garderobe-saved-fits', JSON.stringify(savedFits)); } catch {}
-  }, [savedFits]);
+    if (!user?.id) {
+      try { setSavedFits(JSON.parse(localStorage.getItem('garderobe-saved-fits') || '[]')); } catch {}
+      return;
+    }
+    sb.from('saved_fits')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: true })
+      .then(({ data }) => {
+        if (data) {
+          const fits = data.map(r => ({ id: r.id, name: r.name, slots: r.slots }));
+          setSavedFits(fits);
+          fitsLoadedRef.current = true;
+          // Migrate any localStorage fits to Supabase on first load
+          try {
+            const local = JSON.parse(localStorage.getItem('garderobe-saved-fits') || '[]');
+            if (local.length > 0) {
+              const rows = local.map(f => ({ user_id: user.id, name: f.name, slots: f.slots }));
+              sb.from('saved_fits').insert(rows).then(({ data: inserted }) => {
+                if (inserted) {
+                  setSavedFits(prev => [...prev, ...inserted.map(r => ({ id: r.id, name: r.name, slots: r.slots }))]);
+                }
+                localStorage.removeItem('garderobe-saved-fits');
+              });
+            }
+          } catch {}
+        }
+      });
+  }, [user?.id]);
 
   const isMobile = useMemo(() => window.innerWidth < 768, []);
   const SLOT_H = isMobile ? SLOT_H_MOB : SLOT_H_DESK;
@@ -212,12 +240,20 @@ export default function OutfitsView({ items }) {
     setLoadedFitId(fit.id);
   };
 
-  const saveFit = () => {
+  const saveFit = async () => {
     if (!filled.length) return;
     if (loadedFitId) {
       setSavedFits(f => f.map(fit => fit.id === loadedFitId ? { ...fit, name: fitName, slots: [...slots] } : fit));
+      if (user?.id) {
+        await sb.from('saved_fits').update({ name: fitName, slots: [...slots] }).eq('id', loadedFitId).eq('user_id', user.id);
+      }
     } else {
-      setSavedFits(f => [...f, { id: Date.now(), name: fitName, slots: [...slots] }]);
+      if (user?.id) {
+        const { data } = await sb.from('saved_fits').insert({ user_id: user.id, name: fitName, slots: [...slots] }).select().single();
+        if (data) setSavedFits(f => [...f, { id: data.id, name: data.name, slots: data.slots }]);
+      } else {
+        setSavedFits(f => [...f, { id: Date.now(), name: fitName, slots: [...slots] }]);
+      }
     }
     setSlots(EMPTY_SLOTS);
     setFitName('UNTITLED');
@@ -319,6 +355,7 @@ export default function OutfitsView({ items }) {
                               setSavedFits(f => f.filter(x => x.id !== fit.id));
                               if (loadedFitId === fit.id) { setSlots(EMPTY_SLOTS); setLoadedFitId(null); }
                               setPendingDelete(null);
+                              if (user?.id) sb.from('saved_fits').delete().eq('id', fit.id).eq('user_id', user.id);
                             } else {
                               setPendingDelete(fit.id);
                             }

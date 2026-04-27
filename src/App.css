@@ -937,7 +937,7 @@ input[type=range].vol-slider::-webkit-slider-thumb { -webkit-appearance: none; a
 .wish-at-target { font-family: var(--font-mono); font-size: 8px; letter-spacing: 0.1em; background: var(--text); color: var(--bg); padding: 2px 5px; margin-top: 3px; display: inline-block; }
 
 /* ── Outfits ── */
-.outfits-cols { display: grid; grid-template-columns: 1fr 0.8fr; flex: 1; height: 100%; overflow: hidden; }
+.outfits-cols { display: grid; grid-template-columns: 1.5fr 0.6fr; flex: 1; height: 100%; overflow: hidden; }
 .outfits-left { padding: 18px 20px 18px 36px; border-right: 1px solid var(--border); overflow-y: auto; display: flex; flex-direction: column; }
 .outfits-right { padding: 18px 36px 18px 20px; overflow-y: auto; }
 .outfits-name-row { display: flex; align-items: baseline; gap: 10px; margin-bottom: 14px; }
@@ -971,7 +971,7 @@ input[type=range].vol-slider::-webkit-slider-thumb { -webkit-appearance: none; a
 .outfits-rack-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
 .outfit-rack-wrap { position: relative; padding-top: 10px; }
 .outfit-rack-line { position: absolute; left: 0; right: 0; top: 28px; height: 1.5px; background: var(--border); pointer-events: none; }
-.outfit-rack-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding-top: 4px; }
+.outfit-rack-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 8px; padding-top: 4px; }
 .outfit-pick {
   cursor: pointer; position: relative; opacity: 1; transition: opacity 0.15s;
 }

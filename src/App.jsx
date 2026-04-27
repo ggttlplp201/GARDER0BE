@@ -237,7 +237,7 @@ export default function App() {
             onLogWear={logWear}
           />
         )}
-        {page === 'outfits' && <OutfitsView items={items} />}
+        {page === 'outfits' && <OutfitsView items={items} user={user} />}
         {page === 'timeline' && <TimelineView items={items} onItemClick={handleItemClick} />}
         {page === 'wishlist' && (
           <WishlistView items={items} onItemClick={handleItemClick} onAdd={() => setAddOpen(true)} />
