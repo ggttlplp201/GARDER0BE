@@ -318,6 +318,7 @@ function ShareModal({ canvas, fitName, slotCount, totalValue, user, onClose }) {
       if (insErr) throw insErr;
       setPosted(true);
     } catch (e) {
+      console.error('[handlePost] error:', e);
       setError('Upload failed. Try again.');
     } finally {
       setPosting(false);

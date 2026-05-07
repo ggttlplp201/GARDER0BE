@@ -410,14 +410,23 @@ function OutfitsFeed() {
   async function fetchPage(pageNum) {
     setLoading(true);
     const from = pageNum * PAGE_SIZE;
-    const { data } = await sb
+    const { data: rows, error } = await sb
       .from('outfit_posts')
-      .select('*, profiles(username, avatar_url)')
+      .select('*')
       .order('created_at', { ascending: false })
       .range(from, from + PAGE_SIZE - 1);
-    if (data) {
-      setPosts(prev => pageNum === 0 ? data : [...prev, ...data]);
-      setHasMore(data.length === PAGE_SIZE);
+    if (error) { console.error('[OutfitsFeed] fetch error:', error); setLoading(false); return; }
+    if (rows) {
+      // Fetch profiles separately — outfit_posts.user_id → auth.users, not profiles
+      const ids = [...new Set(rows.map(r => r.user_id))];
+      const { data: profileRows } = ids.length
+        ? await sb.from('profiles').select('id, username, avatar_url').in('id', ids)
+        : { data: [] };
+      const pm = {};
+      (profileRows || []).forEach(p => { pm[p.id] = p; });
+      const enriched = rows.map(r => ({ ...r, profiles: pm[r.user_id] || null }));
+      setPosts(prev => pageNum === 0 ? enriched : [...prev, ...enriched]);
+      setHasMore(rows.length === PAGE_SIZE);
       setPage(pageNum);
     }
     setLoading(false);
