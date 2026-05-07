@@ -129,6 +129,130 @@ function SmartThumb({ item }) {
   return <canvas ref={canvasRef} style={{ width: '100%', height: '100%', display: 'block' }} />;
 }
 
+function loadImg(src) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(null);
+    img.src = src;
+  });
+}
+
+function smartCropDraw(ctx, img, dx, dy, dw, dh) {
+  if (!img) return;
+  const scan = document.createElement('canvas');
+  const SW = Math.min(img.width, 200);
+  const SH = Math.round(img.height * SW / img.width);
+  scan.width = SW; scan.height = SH;
+  const sCtx = scan.getContext('2d');
+  sCtx.drawImage(img, 0, 0, SW, SH);
+  let data;
+  try { data = sCtx.getImageData(0, 0, SW, SH).data; }
+  catch { ctx.drawImage(img, dx, dy, dw, dh); return; }
+  let minX = SW, maxX = 0, minY = SH, maxY = 0;
+  for (let y = 0; y < SH; y++) {
+    for (let x = 0; x < SW; x++) {
+      const i = (y * SW + x) * 4;
+      const a = data[i + 3], r = data[i], g = data[i + 1], b = data[i + 2];
+      if (a > 20 && !(r > 235 && g > 235 && b > 235)) {
+        if (x < minX) minX = x; if (x > maxX) maxX = x;
+        if (y < minY) minY = y; if (y > maxY) maxY = y;
+      }
+    }
+  }
+  if (maxX <= minX || maxY <= minY) { ctx.drawImage(img, dx, dy, dw, dh); return; }
+  const scaleX = img.width / SW, scaleY = img.height / SH;
+  const pad = 4;
+  const sx = Math.max(0, minX * scaleX - pad);
+  const sy = Math.max(0, minY * scaleY - pad);
+  const sw = Math.min(img.width, maxX * scaleX + pad) - sx;
+  const sh = Math.min(img.height, maxY * scaleY + pad) - sy;
+  const fit = Math.min(dw / sw, dh / sh);
+  ctx.drawImage(img, sx, sy, sw, sh,
+    dx + (dw - sw * fit) / 2,
+    dy + (dh - sh * fit) / 2,
+    sw * fit, sh * fit);
+}
+
+async function renderFitCanvas(slots, fitName, username) {
+  const W = 800, H = 1000;
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  const images = await Promise.all(slots.map(item => {
+    if (!item) return Promise.resolve(null);
+    const urls = parseImageUrls(item.image_url);
+    return urls.length ? loadImg(urls[0]) : Promise.resolve(null);
+  }));
+
+  ctx.fillStyle = '#0c0c0c';
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 26px "Courier New", monospace';
+  ctx.fillText(fitName, 40, 58);
+  const filled = slots.filter(Boolean);
+  const value = filled.reduce((s, i) => s + (parseFloat(i.price) || 0), 0);
+  ctx.fillStyle = 'rgba(255,255,255,0.45)';
+  ctx.font = '13px "Courier New", monospace';
+  ctx.fillText(`${filled.length} PIECES  ·  $${Math.round(value).toLocaleString()}`, 40, 85);
+
+  ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(40, 105); ctx.lineTo(W - 40, 105); ctx.stroke();
+
+  const bodyTop = 120, bodyH = 750;
+  const accX = 30,    accW = 120;
+  const centerX = 185, centerW = 360;
+  const bagX = 590,   bagW = 150;
+
+  const centerItems = [
+    { idx: 4, h: 80,  mb: -20 },
+    { idx: 0, h: 230, mb: -65 },
+    { idx: 1, h: 240, mb: -55 },
+    { idx: 3, h: 170, mb: 0   },
+  ];
+  let cy = bodyTop;
+  for (const { idx, h, mb } of centerItems) {
+    if (images[idx]) {
+      smartCropDraw(ctx, images[idx], centerX, cy, centerW, h);
+    } else {
+      ctx.fillStyle = 'rgba(255,255,255,0.05)';
+      ctx.fillRect(centerX, cy, centerW, h);
+    }
+    cy += h + mb;
+  }
+
+  const accSlotH = 80, accGap = 8;
+  const accTotalH = 4 * accSlotH + 3 * accGap;
+  let ay = bodyTop + (bodyH - accTotalH) / 2;
+  for (let i = 0; i < 4; i++) {
+    const idx = 6 + i;
+    if (images[idx]) {
+      smartCropDraw(ctx, images[idx], accX, ay, accW, accSlotH);
+    }
+    ay += accSlotH + accGap;
+  }
+
+  if (images[5]) {
+    const bagH = 120;
+    smartCropDraw(ctx, images[5], bagX, bodyTop + (bodyH - bagH) / 2, bagW, bagH);
+  }
+
+  ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+  ctx.beginPath(); ctx.moveTo(40, H - 60); ctx.lineTo(W - 40, H - 60); ctx.stroke();
+  ctx.fillStyle = 'rgba(255,255,255,0.35)';
+  ctx.font = '11px "Courier New", monospace';
+  ctx.fillText((username || 'ANONYMOUS').toUpperCase(), 40, H - 30);
+  ctx.textAlign = 'right';
+  ctx.fillText('GARDEROBE', W - 40, H - 30);
+  ctx.textAlign = 'left';
+
+  return canvas;
+}
+
 const SLOT_H_DESK   = { TOP: 240, BOTTOM: 250, OUTER: 240, SHOE: 180, HAT: 90,  BAG: 110, ACC1: 90,  ACC2: 90,  ACC3: 90,  ACC4: 90  };
 const SLOT_H_MOB    = { TOP: 165, BOTTOM: 175, OUTER: 165, SHOE: 125, HAT: 65,  BAG: 80,  ACC1: 65,  ACC2: 65,  ACC3: 65,  ACC4: 65  };
 const SLOT_MB_DESK  = { HAT: -28, TOP: -75, BOTTOM: -65 }; // negative overlap margins
