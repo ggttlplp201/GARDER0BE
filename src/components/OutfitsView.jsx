@@ -399,6 +399,8 @@ export default function OutfitsView({ items, user }) {
   const [showSaved, setShowSaved]       = useState(false);
   const [pendingDelete, setPendingDelete] = useState(null);
   const [rackOpen, setRackOpen]         = useState(true);
+  const [shareCanvas, setShareCanvas]   = useState(null);
+  const [showShare,   setShowShare]     = useState(false);
   const fitsLoadedRef = useRef(false);
 
   // Load fits from Supabase (or fall back to localStorage for guests)
@@ -496,6 +498,15 @@ export default function OutfitsView({ items, user }) {
       return pick;
     });
     setSlots(newSlots);
+  };
+
+  const handleShare = async () => {
+    if (!filled.length) return;
+    const meta = await sb.auth.getUser();
+    const username = meta?.data?.user?.user_metadata?.profile?.['p-name'] || '';
+    const c = await renderFitCanvas(slots, fitName, username);
+    setShareCanvas(c);
+    setShowShare(true);
   };
 
   // Drag handlers
@@ -697,6 +708,12 @@ export default function OutfitsView({ items, user }) {
                 disabled={filled.length === 0}
                 onClick={saveFit}
               >{loadedFitId ? '✓ UPDATE FIT' : '+ SAVE FIT'}</button>
+              <button
+                className="mode-btn bd-l"
+                style={{ flex: 1 }}
+                disabled={filled.length === 0}
+                onClick={handleShare}
+              >↑ SHARE</button>
             </div>
 
           </div>
@@ -762,6 +779,16 @@ export default function OutfitsView({ items, user }) {
 
         </div>
       </div>
+      {showShare && shareCanvas && (
+        <ShareModal
+          canvas={shareCanvas}
+          fitName={fitName}
+          slotCount={filled.length}
+          totalValue={value}
+          user={user}
+          onClose={() => { setShowShare(false); setShareCanvas(null); }}
+        />
+      )}
     </div>
   );
 }
