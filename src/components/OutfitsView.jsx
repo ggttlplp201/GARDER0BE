@@ -253,6 +253,93 @@ async function renderFitCanvas(slots, fitName, username) {
   return canvas;
 }
 
+function ShareModal({ canvas, fitName, slotCount, totalValue, user, onClose }) {
+  const [posting, setPosting] = useState(false);
+  const [posted,  setPosted]  = useState(false);
+  const [copied,  setCopied]  = useState(false);
+  const [error,   setError]   = useState(null);
+
+  const dataUrl = canvas.toDataURL('image/png');
+
+  function handleDownload() {
+    const a = document.createElement('a');
+    a.href = dataUrl;
+    a.download = `${fitName.toLowerCase().replace(/\s+/g, '-') || 'fit'}.png`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }
+
+  async function handleCopy() {
+    try {
+      const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+      await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+    } catch {
+      await navigator.clipboard.writeText(dataUrl).catch(() => {});
+    }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  async function handlePost() {
+    if (!user?.id) return;
+    setPosting(true);
+    setError(null);
+    try {
+      const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+      const fileName = `${user.id}/${Date.now()}.png`;
+      const { error: upErr } = await sb.storage
+        .from('outfit-shares')
+        .upload(fileName, blob, { contentType: 'image/png' });
+      if (upErr) throw upErr;
+      const { data: { publicUrl } } = sb.storage
+        .from('outfit-shares')
+        .getPublicUrl(fileName);
+      const { error: insErr } = await sb.from('outfit_posts').insert({
+        user_id: user.id, fit_name: fitName,
+        image_url: publicUrl, slot_count: slotCount, total_value: totalValue,
+      });
+      if (insErr) throw insErr;
+      setPosted(true);
+    } catch (e) {
+      setError('Upload failed. Try again.');
+    } finally {
+      setPosting(false);
+    }
+  }
+
+  return (
+    <div className="share-modal-overlay" onClick={onClose}>
+      <div className="share-modal" onClick={e => e.stopPropagation()}>
+        <div className="share-modal-header">
+          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.15em', opacity: 0.6 }}>EXPORT FIT</span>
+          <button className="share-modal-close" onClick={onClose}>×</button>
+        </div>
+        <img src={dataUrl} alt="Fit preview" className="share-modal-preview" />
+        <div className="share-modal-actions">
+          <button className="mode-btn bd-r" style={{ flex: 1 }} onClick={handleDownload}>↓ DOWNLOAD</button>
+          <button className="mode-btn bd-r" style={{ flex: 1 }} onClick={handleCopy}>
+            {copied ? '✓ COPIED' : '⧉ COPY'}
+          </button>
+          {!posted
+            ? <button
+                className={`mode-btn${!posting && user?.id ? ' active' : ''}`}
+                style={{ flex: 1 }}
+                onClick={handlePost}
+                disabled={posting || !user?.id}
+              >{posting ? '…' : '→ POST'}</button>
+            : <button className="mode-btn" style={{ flex: 1 }} disabled>✓ POSTED</button>
+          }
+        </div>
+        {!user?.id && (
+          <div className="share-modal-error">Sign in to post to Explore.</div>
+        )}
+        {error && <div className="share-modal-error">{error}</div>}
+      </div>
+    </div>
+  );
+}
+
 const SLOT_H_DESK   = { TOP: 240, BOTTOM: 250, OUTER: 240, SHOE: 180, HAT: 90,  BAG: 110, ACC1: 90,  ACC2: 90,  ACC3: 90,  ACC4: 90  };
 const SLOT_H_MOB    = { TOP: 165, BOTTOM: 175, OUTER: 165, SHOE: 125, HAT: 65,  BAG: 80,  ACC1: 65,  ACC2: 65,  ACC3: 65,  ACC4: 65  };
 const SLOT_MB_DESK  = { HAT: -28, TOP: -75, BOTTOM: -65 }; // negative overlap margins
