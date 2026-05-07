@@ -258,6 +258,15 @@ function ShareModal({ canvas, fitName, slotCount, totalValue, user, onClose }) {
   const [posted,  setPosted]  = useState(false);
   const [copied,  setCopied]  = useState(false);
   const [error,   setError]   = useState(null);
+  const copyTimerRef = useRef(null);
+
+  useEffect(() => () => { if (copyTimerRef.current) clearTimeout(copyTimerRef.current); }, []);
+
+  useEffect(() => {
+    const handler = (e) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [onClose]);
 
   const dataUrl = canvas.toDataURL('image/png');
 
@@ -278,7 +287,7 @@ function ShareModal({ canvas, fitName, slotCount, totalValue, user, onClose }) {
       await navigator.clipboard.writeText(dataUrl).catch(() => {});
     }
     setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    copyTimerRef.current = setTimeout(() => setCopied(false), 2000);
   }
 
   async function handlePost() {
