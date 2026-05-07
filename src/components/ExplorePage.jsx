@@ -397,6 +397,76 @@ function ProfileView({ profile, user, onBack }) {
   );
 }
 
+function OutfitsFeed() {
+  const PAGE_SIZE = 20;
+  const [posts,   setPosts]   = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [page,    setPage]    = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [lbUrl,   setLbUrl]   = useState(null);
+
+  useEffect(() => { fetchPage(0); }, []);
+
+  async function fetchPage(pageNum) {
+    setLoading(true);
+    const from = pageNum * PAGE_SIZE;
+    const { data } = await sb
+      .from('outfit_posts')
+      .select('*, profiles(username, avatar_url)')
+      .order('created_at', { ascending: false })
+      .range(from, from + PAGE_SIZE - 1);
+    if (data) {
+      setPosts(prev => pageNum === 0 ? data : [...prev, ...data]);
+      setHasMore(data.length === PAGE_SIZE);
+      setPage(pageNum);
+    }
+    setLoading(false);
+  }
+
+  if (loading && posts.length === 0) return <div className="v-empty">LOADING…</div>;
+  if (!loading && posts.length === 0) return <div className="v-empty">No outfits posted yet. Be the first.</div>;
+
+  return (
+    <div className="outfits-feed">
+      {lbUrl && (
+        <div className="outfits-feed-lb" onClick={() => setLbUrl(null)}>
+          <img src={lbUrl} alt="Outfit" />
+        </div>
+      )}
+      <div className="outfits-feed-grid">
+        {posts.map(post => (
+          <div key={post.id} className="outfit-post-card" onClick={() => setLbUrl(post.image_url)}>
+            <div className="outfit-post-img-wrap">
+              <img src={post.image_url} alt={post.fit_name} loading="lazy" />
+            </div>
+            <div className="outfit-post-info">
+              <div className="outfit-post-name">{post.fit_name}</div>
+              <div className="outfit-post-meta">
+                <span className="mono-dim">{post.slot_count} PCS · ${Math.round(post.total_value || 0).toLocaleString()}</span>
+                <span className="mono-dim">{timeAgo(post.created_at)}</span>
+              </div>
+              <div className="outfit-post-user">
+                <Avatar url={post.profiles?.avatar_url} size={18} />
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.08em', marginLeft: 6 }}>
+                  {post.profiles?.username || 'ANONYMOUS'}
+                </span>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+      {hasMore && (
+        <button
+          className="mode-btn"
+          style={{ display: 'block', margin: '20px auto 0', padding: '10px 32px' }}
+          onClick={() => fetchPage(page + 1)}
+          disabled={loading}
+        >{loading ? 'LOADING…' : 'LOAD MORE'}</button>
+      )}
+    </div>
+  );
+}
+
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function ExplorePage({ user, externalProfile, onExternalProfileClear, likeCount, onLikesViewed }) {
@@ -447,8 +517,8 @@ export default function ExplorePage({ user, externalProfile, onExternalProfileCl
           </div>
 
           {/* Tabs */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', margin: '0 36px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
-            {[['feed', 'FEED'], ['people', 'PEOPLE']].map(([k, label]) => (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', margin: '0 36px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
+            {[['feed', 'FEED'], ['outfits', 'OUTFITS'], ['people', 'PEOPLE']].map(([k, label]) => (
               <button key={k} onClick={() => { setTab(k); if (k === 'people') onLikesViewed?.(); }} style={{ position: 'relative',
                 background: 'none', border: 'none', padding: '14px 0',
                 fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '0.18em',
@@ -490,6 +560,7 @@ export default function ExplorePage({ user, externalProfile, onExternalProfileCl
               </>
             )}
             {tab === 'feed' && <NewsFeed user={user} />}
+            {tab === 'outfits' && <OutfitsFeed />}
           </div>
         </>
       )}
