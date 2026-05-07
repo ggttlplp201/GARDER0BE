@@ -397,27 +397,32 @@ function ProfileView({ profile, user, onBack }) {
   );
 }
 
-function OutfitsFeed() {
+function OutfitsFeed({ user }) {
   const PAGE_SIZE = 20;
-  const [posts,   setPosts]   = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [page,    setPage]    = useState(0);
-  const [hasMore, setHasMore] = useState(true);
-  const [lbUrl,   setLbUrl]   = useState(null);
+  const [filter,    setFilter]    = useState('all'); // 'all' | 'mine' | 'others'
+  const [posts,     setPosts]     = useState([]);
+  const [loading,   setLoading]   = useState(true);
+  const [page,      setPage]      = useState(0);
+  const [hasMore,   setHasMore]   = useState(true);
+  const [lbUrl,     setLbUrl]     = useState(null);
+  const [editingId, setEditingId] = useState(null);
+  const [editName,  setEditName]  = useState('');
 
-  useEffect(() => { fetchPage(0); }, []);
+  useEffect(() => { fetchPage(0, filter); }, [filter]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function fetchPage(pageNum) {
+  async function fetchPage(pageNum, activeFilter) {
     setLoading(true);
     const from = pageNum * PAGE_SIZE;
-    const { data: rows, error } = await sb
+    let query = sb
       .from('outfit_posts')
       .select('*')
       .order('created_at', { ascending: false })
       .range(from, from + PAGE_SIZE - 1);
+    if (activeFilter === 'mine'   && user?.id) query = query.eq('user_id', user.id);
+    if (activeFilter === 'others' && user?.id) query = query.neq('user_id', user.id);
+    const { data: rows, error } = await query;
     if (error) { console.error('[OutfitsFeed] fetch error:', error); setLoading(false); return; }
     if (rows) {
-      // Fetch profiles separately — outfit_posts.user_id → auth.users, not profiles
       const ids = [...new Set(rows.map(r => r.user_id))];
       const { data: profileRows } = ids.length
         ? await sb.from('profiles').select('id, username, avatar_url').in('id', ids)
@@ -432,8 +437,20 @@ function OutfitsFeed() {
     setLoading(false);
   }
 
-  if (loading && posts.length === 0) return <div className="v-empty">LOADING…</div>;
-  if (!loading && posts.length === 0) return <div className="v-empty">No outfits posted yet. Be the first.</div>;
+  async function handleDelete(postId) {
+    const { error } = await sb.from('outfit_posts').delete().eq('id', postId).eq('user_id', user.id);
+    if (!error) setPosts(prev => prev.filter(p => p.id !== postId));
+  }
+
+  async function handleRename(postId, newName) {
+    const trimmed = newName.trim();
+    if (!trimmed) { setEditingId(null); return; }
+    const { error } = await sb.from('outfit_posts').update({ fit_name: trimmed }).eq('id', postId).eq('user_id', user.id);
+    if (!error) setPosts(prev => prev.map(p => p.id === postId ? { ...p, fit_name: trimmed } : p));
+    setEditingId(null);
+  }
+
+  const isMine = filter === 'mine';
 
   return (
     <div className="outfits-feed">
@@ -442,35 +459,69 @@ function OutfitsFeed() {
           <img src={lbUrl} alt="Outfit" />
         </div>
       )}
-      <div className="outfits-feed-grid">
-        {posts.map(post => (
-          <div key={post.id} className="outfit-post-card" onClick={() => setLbUrl(post.image_url)}>
-            <div className="outfit-post-img-wrap">
-              <img src={post.image_url} alt={post.fit_name} loading="lazy" />
-            </div>
-            <div className="outfit-post-info">
-              <div className="outfit-post-name">{post.fit_name}</div>
-              <div className="outfit-post-meta">
-                <span className="mono-dim">{post.slot_count} PCS · ${Math.round(post.total_value || 0).toLocaleString()}</span>
-                <span className="mono-dim">{timeAgo(post.created_at)}</span>
-              </div>
-              <div className="outfit-post-user">
-                <Avatar url={post.profiles?.avatar_url} size={18} />
-                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.08em', marginLeft: 6 }}>
-                  {post.profiles?.username || 'ANONYMOUS'}
-                </span>
-              </div>
-            </div>
-          </div>
+
+      <div className="outfits-filter-bar">
+        {[['all', 'ALL'], ['mine', 'BY ME'], ['others', 'OTHERS']].map(([k, label]) => (
+          <button key={k} className={`mode-btn${filter === k ? ' active' : ''}`} onClick={() => setFilter(k)}>{label}</button>
         ))}
       </div>
-      {hasMore && (
-        <button
-          className="mode-btn"
-          style={{ display: 'block', margin: '20px auto 0', padding: '10px 32px' }}
-          onClick={() => fetchPage(page + 1)}
-          disabled={loading}
-        >{loading ? 'LOADING…' : 'LOAD MORE'}</button>
+
+      {loading && posts.length === 0 ? (
+        <div className="v-empty">LOADING…</div>
+      ) : !loading && posts.length === 0 ? (
+        <div className="v-empty">{isMine ? "You haven't posted any outfits yet." : 'No outfits posted yet. Be the first.'}</div>
+      ) : (
+        <>
+          <div className="outfits-feed-grid">
+            {posts.map(post => (
+              <div key={post.id} className="outfit-post-card">
+                <div className="outfit-post-img-wrap" onClick={() => setLbUrl(post.image_url)}>
+                  <img src={post.image_url} alt={post.fit_name} loading="lazy" />
+                </div>
+                <div className="outfit-post-info">
+                  {isMine && editingId === post.id ? (
+                    <input
+                      className="outfit-post-edit-input"
+                      value={editName}
+                      autoFocus
+                      onChange={e => setEditName(e.target.value)}
+                      onBlur={() => handleRename(post.id, editName)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') handleRename(post.id, editName);
+                        if (e.key === 'Escape') setEditingId(null);
+                      }}
+                    />
+                  ) : (
+                    <div className="outfit-post-name">{post.fit_name}</div>
+                  )}
+                  <div className="outfit-post-meta">
+                    <span className="mono-dim">{post.slot_count} PCS · ${Math.round(post.total_value || 0).toLocaleString()}</span>
+                    <span className="mono-dim">{timeAgo(post.created_at)}</span>
+                  </div>
+                  <div className="outfit-post-user">
+                    <Avatar url={post.profiles?.avatar_url} size={18} />
+                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.08em', marginLeft: 6 }}>
+                      {post.profiles?.username || 'ANONYMOUS'}
+                    </span>
+                    {isMine && (
+                      <div className="outfit-post-actions">
+                        <button className="outfit-post-action-btn" title="Rename"
+                          onClick={() => { setEditingId(post.id); setEditName(post.fit_name); }}>✎</button>
+                        <button className="outfit-post-action-btn outfit-post-action-btn--delete" title="Delete"
+                          onClick={() => handleDelete(post.id)}>×</button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          {hasMore && (
+            <button className="mode-btn" style={{ display: 'block', margin: '20px auto 0', padding: '10px 32px' }}
+              onClick={() => fetchPage(page + 1, filter)} disabled={loading}
+            >{loading ? 'LOADING…' : 'LOAD MORE'}</button>
+          )}
+        </>
       )}
     </div>
   );
@@ -569,7 +620,7 @@ export default function ExplorePage({ user, externalProfile, onExternalProfileCl
               </>
             )}
             {tab === 'feed' && <NewsFeed user={user} />}
-            {tab === 'outfits' && <OutfitsFeed />}
+            {tab === 'outfits' && <OutfitsFeed user={user} />}
           </div>
         </>
       )}
