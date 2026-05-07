@@ -4,8 +4,9 @@ import { parseImageUrls } from '../lib/imageUtils';
 import { API_URL } from '../lib/constants';
 
 // ── Feed cache ────────────────────────────────────────────────────────────────
-const FEED_CACHE_KEY = 'garderobe-feed-v1';
-const FEED_CACHE_TTL = 30 * 60 * 1000;
+const FEED_CACHE_KEY    = 'garderobe-feed-v1';
+const FEED_CACHE_TTL    = 30 * 60 * 1000;
+const OUTFITS_PAGE_SIZE = 20;
 
 // ── Time display ──────────────────────────────────────────────────────────────
 function timeAgo(dateStr) {
@@ -196,6 +197,10 @@ function NewsFeed({ user }) {
     load();
   }, []);
 
+  const scoreMap = sort === 'relevance' && articles.length
+    ? new Map(articles.map(a => [a, scoreArticle(a, brandFreq, wishlistBrands, profile)]))
+    : null;
+
   const sorted = (() => {
     if (!articles.length) return [];
     if (sort === 'recent') {
@@ -206,10 +211,8 @@ function NewsFeed({ user }) {
         Object.values(groups).map(g => g.sort((a, b) => new Date(b.date) - new Date(a.date)))
       ).slice(0, 40);
     }
-    // FOR YOU: score → sort → diversity pass
     const scored = [...articles].sort((a, b) => {
-      const diff = scoreArticle(b, brandFreq, wishlistBrands, profile)
-                 - scoreArticle(a, brandFreq, wishlistBrands, profile);
+      const diff = (scoreMap.get(b) ?? 0) - (scoreMap.get(a) ?? 0);
       return diff !== 0 ? diff : new Date(b.date) - new Date(a.date);
     });
     return diversify(scored).slice(0, 40);
@@ -226,7 +229,7 @@ function NewsFeed({ user }) {
         <button className={`mode-btn${sort === 'relevance' ? ' active' : ''}`} onClick={() => setSort('relevance')} title="Sorted by brands in your wardrobe">FOR YOU</button>
       </div>
       {sorted.map(a => {
-        const score = scoreArticle(a, brandFreq, wishlistBrands, profile);
+        const score = scoreMap?.get(a) ?? 0;
         return (
           <a key={a.id} className="news-card" href={a.link} target="_blank" rel="noopener noreferrer">
             <div className="news-card-img">
@@ -398,28 +401,24 @@ function ProfileView({ profile, user, onBack }) {
 }
 
 function OutfitsFeed({ user }) {
-  const PAGE_SIZE = 20;
-  const [filter,    setFilter]    = useState('all'); // 'all' | 'mine' | 'others'
+  const [filter,    setFilter]    = useState('all');
   const [posts,     setPosts]     = useState([]);
   const [loading,   setLoading]   = useState(true);
-  const [page,      setPage]      = useState(0);
   const [hasMore,   setHasMore]   = useState(true);
   const [lbUrl,     setLbUrl]     = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [editName,  setEditName]  = useState('');
 
-  useEffect(() => { fetchPage(0, filter); }, [filter]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  async function fetchPage(pageNum, activeFilter) {
+  const fetchPage = useCallback(async (pageNum) => {
     setLoading(true);
-    const from = pageNum * PAGE_SIZE;
+    const from = pageNum * OUTFITS_PAGE_SIZE;
     let query = sb
       .from('outfit_posts')
       .select('*')
       .order('created_at', { ascending: false })
-      .range(from, from + PAGE_SIZE - 1);
-    if (activeFilter === 'mine'   && user?.id) query = query.eq('user_id', user.id);
-    if (activeFilter === 'others' && user?.id) query = query.neq('user_id', user.id);
+      .range(from, from + OUTFITS_PAGE_SIZE - 1);
+    if (filter === 'mine'   && user?.id) query = query.eq('user_id', user.id);
+    if (filter === 'others' && user?.id) query = query.neq('user_id', user.id);
     const { data: rows, error } = await query;
     if (error) { console.error('[OutfitsFeed] fetch error:', error); setLoading(false); return; }
     if (rows) {
@@ -427,17 +426,18 @@ function OutfitsFeed({ user }) {
       const { data: profileRows } = ids.length
         ? await sb.from('profiles').select('id, username, avatar_url').in('id', ids)
         : { data: [] };
-      const pm = {};
-      (profileRows || []).forEach(p => { pm[p.id] = p; });
+      const pm = Object.fromEntries((profileRows || []).map(p => [p.id, p]));
       const enriched = rows.map(r => ({ ...r, profiles: pm[r.user_id] || null }));
       setPosts(prev => pageNum === 0 ? enriched : [...prev, ...enriched]);
-      setHasMore(rows.length === PAGE_SIZE);
-      setPage(pageNum);
+      setHasMore(rows.length === OUTFITS_PAGE_SIZE);
     }
     setLoading(false);
-  }
+  }, [filter, user?.id]);
+
+  useEffect(() => { fetchPage(0); }, [fetchPage]);
 
   async function handleDelete(postId) {
+    if (!user?.id) return;
     const { error } = await sb.from('outfit_posts').delete().eq('id', postId).eq('user_id', user.id);
     if (!error) setPosts(prev => prev.filter(p => p.id !== postId));
   }
@@ -445,12 +445,19 @@ function OutfitsFeed({ user }) {
   async function handleRename(postId, newName) {
     const trimmed = newName.trim();
     if (!trimmed) { setEditingId(null); return; }
+    const current = posts.find(p => p.id === postId);
+    if (current && trimmed === current.fit_name) { setEditingId(null); return; }
     const { error } = await sb.from('outfit_posts').update({ fit_name: trimmed }).eq('id', postId).eq('user_id', user.id);
     if (!error) setPosts(prev => prev.map(p => p.id === postId ? { ...p, fit_name: trimmed } : p));
     setEditingId(null);
   }
 
-  const isMine = filter === 'mine';
+  const isMine     = filter === 'mine';
+  const showLoad   = loading && posts.length === 0;
+  const showEmpty  = !loading && posts.length === 0;
+  const filterOpts = user
+    ? [['all', 'ALL'], ['mine', 'BY ME'], ['others', 'OTHERS']]
+    : [['all', 'ALL']];
 
   return (
     <div className="outfits-feed">
@@ -461,16 +468,18 @@ function OutfitsFeed({ user }) {
       )}
 
       <div className="outfits-filter-bar">
-        {[['all', 'ALL'], ['mine', 'BY ME'], ['others', 'OTHERS']].map(([k, label]) => (
+        {filterOpts.map(([k, label]) => (
           <button key={k} className={`mode-btn${filter === k ? ' active' : ''}`} onClick={() => setFilter(k)}>{label}</button>
         ))}
       </div>
 
-      {loading && posts.length === 0 ? (
-        <div className="v-empty">LOADING…</div>
-      ) : !loading && posts.length === 0 ? (
-        <div className="v-empty">{isMine ? "You haven't posted any outfits yet." : 'No outfits posted yet. Be the first.'}</div>
-      ) : (
+      {showLoad  && <div className="v-empty">LOADING…</div>}
+      {showEmpty && (
+        <div className="v-empty">
+          {isMine ? "You haven't posted any outfits yet." : 'No outfits posted yet. Be the first.'}
+        </div>
+      )}
+      {!showLoad && !showEmpty && (
         <>
           <div className="outfits-feed-grid">
             {posts.map(post => (
@@ -500,7 +509,7 @@ function OutfitsFeed({ user }) {
                   </div>
                   <div className="outfit-post-user">
                     <Avatar url={post.profiles?.avatar_url} size={18} />
-                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.08em', marginLeft: 6 }}>
+                    <span className="outfit-post-username">
                       {post.profiles?.username || 'ANONYMOUS'}
                     </span>
                     {isMine && (
@@ -518,7 +527,7 @@ function OutfitsFeed({ user }) {
           </div>
           {hasMore && (
             <button className="mode-btn" style={{ display: 'block', margin: '20px auto 0', padding: '10px 32px' }}
-              onClick={() => fetchPage(page + 1, filter)} disabled={loading}
+              onClick={() => fetchPage(Math.floor(posts.length / OUTFITS_PAGE_SIZE))} disabled={loading}
             >{loading ? 'LOADING…' : 'LOAD MORE'}</button>
           )}
         </>
