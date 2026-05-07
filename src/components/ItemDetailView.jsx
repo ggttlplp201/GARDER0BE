@@ -354,8 +354,7 @@ export default function ItemDetailView({ item, items, onBack, onEdit, onNavigate
                 {wearLogged ? '✓ LOGGED' : '+ LOG WEAR'}
               </button>
               <button className="det-btn" onClick={() => onEdit(item.id)}>EDIT</button>
-              <button className="det-btn">SELL</button>
-              {onRemove && (
+{onRemove && (
                 <button
                   className={`det-btn${delConfirm ? ' det-btn-danger' : ''}`}
                   onClick={() => {

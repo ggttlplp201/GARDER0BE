@@ -187,45 +187,51 @@ async function renderFitCanvas(slots, fitName, username) {
     return urls.length ? loadImg(urls[0]) : Promise.resolve(null);
   }));
 
-  ctx.fillStyle = '#0c0c0c';
+  // Light background matching the app's OOTD builder aesthetic
+  ctx.fillStyle = '#f5f5f5';
   ctx.fillRect(0, 0, W, H);
 
-  ctx.fillStyle = '#ffffff';
+  ctx.fillStyle = '#111111';
   ctx.font = 'bold 26px "Courier New", monospace';
   ctx.fillText(fitName, 40, 58);
   const filled = slots.filter(Boolean);
   const value = filled.reduce((s, i) => s + (parseFloat(i.price) || 0), 0);
-  ctx.fillStyle = 'rgba(255,255,255,0.45)';
+  ctx.fillStyle = 'rgba(0,0,0,0.4)';
   ctx.font = '13px "Courier New", monospace';
   ctx.fillText(`${filled.length} PIECES  ·  $${Math.round(value).toLocaleString()}`, 40, 85);
 
-  ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+  ctx.strokeStyle = 'rgba(0,0,0,0.12)';
   ctx.lineWidth = 1;
   ctx.beginPath(); ctx.moveTo(40, 105); ctx.lineTo(W - 40, 105); ctx.stroke();
 
-  const bodyTop = 120, bodyH = 750;
-  const accX = 30,    accW = 120;
-  const centerX = 185, centerW = 360;
-  const bagX = 590,   bagW = 150;
+  // Layout mirrors OOTD builder: ACC | center stack | BAG
+  const bodyTop = 112, bodyH = 758;
+  const accX = 20,     accW = 130;
+  const centerX = 175, centerW = 400;
+  const bagX = 600,    bagW = 165;
 
+  // Center stack: HAT → TOP → BOTTOM → SHOE with breathing room between each
+  const GAP = 6;
   const centerItems = [
-    { idx: 4, h: 80,  mb: -20 },
-    { idx: 0, h: 230, mb: -65 },
-    { idx: 1, h: 240, mb: -55 },
-    { idx: 3, h: 170, mb: 0   },
+    { idx: 4, h: 80  },
+    { idx: 0, h: 230 },
+    { idx: 1, h: 240 },
+    { idx: 3, h: 172 },
   ];
   let cy = bodyTop;
-  for (const { idx, h, mb } of centerItems) {
+  for (let ci = 0; ci < centerItems.length; ci++) {
+    const { idx, h } = centerItems[ci];
     if (images[idx]) {
       smartCropDraw(ctx, images[idx], centerX, cy, centerW, h);
     } else {
-      ctx.fillStyle = 'rgba(255,255,255,0.05)';
+      ctx.fillStyle = 'rgba(0,0,0,0.04)';
       ctx.fillRect(centerX, cy, centerW, h);
     }
-    cy += h + mb;
+    cy += h + (ci < centerItems.length - 1 ? GAP : 0);
   }
 
-  const accSlotH = 80, accGap = 8;
+  // ACC slots: vertically centred in body
+  const accSlotH = 82, accGap = 8;
   const accTotalH = 4 * accSlotH + 3 * accGap;
   let ay = bodyTop + (bodyH - accTotalH) / 2;
   for (let i = 0; i < 4; i++) {
@@ -236,14 +242,15 @@ async function renderFitCanvas(slots, fitName, username) {
     ay += accSlotH + accGap;
   }
 
+  // BAG slot: vertically centred in body
+  const bagH = 155;
   if (images[5]) {
-    const bagH = 120;
     smartCropDraw(ctx, images[5], bagX, bodyTop + (bodyH - bagH) / 2, bagW, bagH);
   }
 
-  ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+  ctx.strokeStyle = 'rgba(0,0,0,0.12)';
   ctx.beginPath(); ctx.moveTo(40, H - 60); ctx.lineTo(W - 40, H - 60); ctx.stroke();
-  ctx.fillStyle = 'rgba(255,255,255,0.35)';
+  ctx.fillStyle = 'rgba(0,0,0,0.35)';
   ctx.font = '11px "Courier New", monospace';
   ctx.fillText((username || 'ANONYMOUS').toUpperCase(), 40, H - 30);
   ctx.textAlign = 'right';
