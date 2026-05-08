@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import AsciiTitle from './AsciiTitle';
+import AsciiBackground from './AsciiBackground';
 
 const PAPER = '#f5f2ea';
 const INK   = '#0a0a0a';
@@ -97,10 +98,13 @@ export default function AuthScreen({ authMode, setAuthMode, onLogin, onSignUp })
   });
 
   // Last commit date — update when deploying
-  const lastUpdate = '04.25.26';
+  const lastUpdate = '05.07.26';
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: INK, color: PAPER, fontFamily: MONO, overflow: 'hidden' }}>
+      {/* ASCII animated background */}
+      <AsciiBackground opacity={0.05} persist={false} />
+
       {/* Fade-in veil */}
       <div ref={veilRef} style={{ position: 'absolute', inset: 0, background: INK, zIndex: 50, pointerEvents: 'none' }} />
 
@@ -109,7 +113,7 @@ export default function AuthScreen({ authMode, setAuthMode, onLogin, onSignUp })
       <div ref={doorRRef} className="auth-door" id="door-right" />
 
       {/* ASCII title — opacity lifts on focus */}
-      <div style={{ position: 'absolute', inset: 0, opacity: anyFocus ? 0.95 : 0.78, transition: 'opacity 0.2s' }}>
+      <div style={{ position: 'absolute', inset: 0, opacity: anyFocus ? 1 : 0.92, transition: 'opacity 0.2s' }}>
         <AsciiTitle />
       </div>
 
