@@ -12,7 +12,8 @@ from typing import Dict, List, Optional, Set
 
 import anthropic
 import httpx
-from fastapi import FastAPI, File, Header, HTTPException, UploadFile
+import jwt as pyjwt
+from fastapi import Depends, FastAPI, File, Header, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from pydantic import BaseModel
@@ -29,6 +30,7 @@ ALLOWED_ORIGINS = os.environ.get(
 
 SUPABASE_URL          = os.environ.get("SUPABASE_URL", "")
 SUPABASE_SERVICE_KEY  = os.environ.get("SUPABASE_SERVICE_KEY", "")
+SUPABASE_JWT_SECRET   = os.environ.get("SUPABASE_JWT_SECRET", "")
 PRICE_REFRESH_INTERVAL = int(os.environ.get("PRICE_REFRESH_INTERVAL_SECONDS", str(6 * 60 * 60)))
 
 
@@ -373,16 +375,32 @@ def _bearer_token(authorization: Optional[str]) -> str:
     raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
 
 
-def _jwt_sub(token: str) -> Optional[str]:
-    """Extract the 'sub' claim (user UUID) without verifying the signature.
-    Supabase PostgREST verifies the JWT; we only read the claim to include user_id in inserts."""
+def _jwt_sub(token: str) -> str:
+    """Verify JWT signature and return the 'sub' claim (user UUID)."""
+    if not SUPABASE_JWT_SECRET:
+        raise HTTPException(status_code=503, detail="JWT secret not configured")
     try:
-        segment = token.split(".")[1]
-        segment += "=" * (4 - len(segment) % 4)
-        payload = json.loads(base64.urlsafe_b64decode(segment))
-        return payload.get("sub")
-    except Exception:
-        return None
+        payload = pyjwt.decode(
+            token,
+            SUPABASE_JWT_SECRET,
+            algorithms=["HS256"],
+            audience="authenticated",
+            issuer=f"{SUPABASE_URL}/auth/v1",
+            options={"require": ["sub", "exp", "aud", "iss", "role"]},
+        )
+    except pyjwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token expired")
+    except pyjwt.InvalidTokenError as exc:
+        raise HTTPException(status_code=401, detail=f"Invalid token: {exc}")
+    if payload.get("role") != "authenticated":
+        raise HTTPException(status_code=401, detail="Invalid role claim")
+    return payload["sub"]
+
+
+async def require_auth(authorization: Optional[str] = Header(None)) -> str:
+    """FastAPI dependency — verifies bearer token and returns user_id."""
+    token = _bearer_token(authorization)
+    return _jwt_sub(token)
 
 
 async def _refresh_sources(item_id: Optional[str] = None) -> dict:
