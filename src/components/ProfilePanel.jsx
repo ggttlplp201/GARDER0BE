@@ -3,11 +3,12 @@ import { sb } from '../lib/supabase';
 import { maybeConvertHeic } from '../lib/imageUtils';
 import { STORAGE } from '../lib/constants';
 import AvatarCropModal from './AvatarCropModal';
+import TwoFactorSetup from './TwoFactorSetup';
 
 const PROFILE_KEYS = ['p-name', 'p-fav-brand', 'p-location', 'p-bio'];
 
 
-export default function ProfilePanel({ open, user, onClose, onSignOut, avatarUrl, onAvatarChange, onExportCSV, onProfileSave }) {
+export default function ProfilePanel({ open, user, onClose, onSignOut, avatarUrl, onAvatarChange, onExportCSV, onProfileSave, mfaEnroll, mfaVerify, mfaUnenroll, mfaListFactors }) {
   const [profile, setProfile]     = useState({});
   const [isPublic, setIsPublic]   = useState(false);
   const [saveError, setSaveError] = useState('');
@@ -125,6 +126,18 @@ export default function ProfilePanel({ open, user, onClose, onSignOut, avatarUrl
         <button className="profile-save-btn" onClick={save}>SAVE CHANGES</button>
         <div className="profile-user-email">{user?.email || ''}</div>
         {onExportCSV && <button className="profile-export-btn" onClick={onExportCSV}>EXPORT COLLECTION AS CSV</button>}
+
+        {user && mfaListFactors && (
+          <div style={{ margin: '1.5rem 0', borderTop: '1px solid #e0ddd5', paddingTop: '1.5rem' }}>
+            <TwoFactorSetup
+              mfaEnroll={mfaEnroll}
+              mfaVerify={mfaVerify}
+              mfaUnenroll={mfaUnenroll}
+              mfaListFactors={mfaListFactors}
+            />
+          </div>
+        )}
+
         <button className="profile-signout-btn" onClick={onSignOut}>SIGN OUT</button>
       </div>
     </>

@@ -41,5 +41,31 @@ export function useAuth() {
     return { error };
   }
 
-  return { user, authMode, setAuthMode, signIn, signUp, signOut, resendVerification };
+  async function mfaEnroll() {
+    return await sb.auth.mfa.enroll({ factorType: 'totp', issuer: 'GARDEROBE' });
+  }
+
+  async function mfaVerify(factorId, code) {
+    const { data: challenge, error: cErr } = await sb.auth.mfa.challenge({ factorId });
+    if (cErr) return { error: cErr };
+    return await sb.auth.mfa.verify({ factorId, challengeId: challenge.id, code });
+  }
+
+  async function mfaUnenroll(factorId) {
+    return await sb.auth.mfa.unenroll({ factorId });
+  }
+
+  async function mfaListFactors() {
+    return await sb.auth.mfa.listFactors();
+  }
+
+  async function mfaGetLevel() {
+    return await sb.auth.mfa.getAuthenticatorAssuranceLevel();
+  }
+
+  return {
+    user, authMode, setAuthMode,
+    signIn, signUp, signOut, resendVerification,
+    mfaEnroll, mfaVerify, mfaUnenroll, mfaListFactors, mfaGetLevel,
+  };
 }

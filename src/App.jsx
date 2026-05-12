@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { useAuth } from './hooks/useAuth';
 import { useTheme } from './hooks/useTheme';
 import { useItems } from './hooks/useItems';
+import TwoFactorChallenge from './components/TwoFactorChallenge';
 import AuthScreen from './components/AuthScreen';
 import EmailVerificationScreen from './components/EmailVerificationScreen';
 import AppHeader from './components/AppHeader';
@@ -46,10 +47,15 @@ function NotifToast({ toasts, onDismiss }) {
 }
 
 export default function App() {
-  const { user, authMode, setAuthMode, signIn, signUp, signOut, resendVerification } = useAuth();
+  const {
+    user, authMode, setAuthMode,
+    signIn, signUp, signOut, resendVerification,
+    mfaEnroll, mfaVerify, mfaUnenroll, mfaListFactors, mfaGetLevel,
+  } = useAuth();
   const { dark, toggle: toggleTheme } = useTheme();
   const { items, loading, loadError, fetchItems, addItem, editItem, removeItem, logWear } = useItems(user);
 
+  const [mfaPending, setMfaPending]   = useState(null); // { factorId } | null
   const [page, setPage]               = useState(() => sessionStorage.getItem('garderobe-page') || 'wardrobe');
   const [detailItem, setDetailItem]   = useState(null);
   const [total, setTotal]             = useState(0);
@@ -97,6 +103,18 @@ export default function App() {
       if (meta.avatarUrl) setAvatarUrl(meta.avatarUrl);
       if (meta['p-location']) setUserLocation(meta['p-location']);
       if (meta['p-name']) setUserName(meta['p-name']);
+    });
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!user) { setMfaPending(null); return; }
+    mfaGetLevel().then(({ data }) => {
+      if (data?.nextLevel === 'aal2' && data?.currentLevel === 'aal1') {
+        mfaListFactors().then(({ data: fd }) => {
+          const verified = fd?.totp?.find(f => f.status === 'verified');
+          if (verified) setMfaPending({ factorId: verified.id });
+        });
+      }
     });
   }, [user?.id]);
 
@@ -206,6 +224,18 @@ export default function App() {
     />
   );
 
+  if (user && mfaPending) return (
+    <TwoFactorChallenge
+      factorId={mfaPending.factorId}
+      onVerify={async (factorId, code) => {
+        const result = await mfaVerify(factorId, code);
+        if (!result.error) setMfaPending(null);
+        return result;
+      }}
+      onSignOut={signOut}
+    />
+  );
+
   const editItemObj = editItemId ? items.find(i => i.id === editItemId) : null;
 
   return (
@@ -298,6 +328,10 @@ export default function App() {
             if (meta.avatarUrl) setAvatarUrl(meta.avatarUrl);
           });
         }}
+        mfaEnroll={mfaEnroll}
+        mfaVerify={mfaVerify}
+        mfaUnenroll={mfaUnenroll}
+        mfaListFactors={mfaListFactors}
       />
 
       {addOpen && (
