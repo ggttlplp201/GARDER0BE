@@ -182,14 +182,11 @@ export default function AuthScreen({ authMode, setAuthMode, onLogin, onSignUp })
         {/* Cloudflare Turnstile */}
         <Turnstile
           siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
-          onSuccess={token => { console.log('[turnstile] token received', token?.slice(0,12)); setCaptchaToken(token); }}
-          onExpire={() => { console.log('[turnstile] expired'); setCaptchaToken(''); }}
-          onError={e => { console.log('[turnstile] error', e); setCaptchaToken(''); }}
+          onSuccess={setCaptchaToken}
+          onExpire={() => setCaptchaToken('')}
+          onError={() => setCaptchaToken('')}
           options={{ theme: 'light' }}
         />
-        <div style={{ fontSize: 8, opacity: 0.4, marginTop: 4 }}>
-          captcha: {captchaToken ? 'ready' : 'waiting…'} | key: {import.meta.env.VITE_TURNSTILE_SITE_KEY ? 'set' : 'MISSING'}
-        </div>
 
         {/* SIGN IN / CREATE — primary */}
         <button
