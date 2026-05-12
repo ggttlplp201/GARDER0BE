@@ -106,7 +106,7 @@ export default function AuthScreen({ authMode, setAuthMode, onLogin, onSignUp })
   });
 
   // Last commit date — update when deploying
-  const lastUpdate = '05.07.26';
+  const lastUpdate = '05.12.26';
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: INK, color: PAPER, fontFamily: MONO, overflow: 'hidden' }}>
@@ -127,7 +127,7 @@ export default function AuthScreen({ authMode, setAuthMode, onLogin, onSignUp })
 
       {/* Top-left brand mark */}
       <div className="auth-top-bar" style={{ position: 'absolute', top: 28, left: 0, right: 0, display: 'flex', justifyContent: 'space-between', padding: '0 36px', fontSize: 10, letterSpacing: '0.15em', opacity: 0.5 }}>
-        <span>/ ɡärd ˌrōb / <span style={{ marginLeft: 14 }}>ISSUE 04 · VOL. XXVI</span></span>
+        <span>/ ɡärd ˌrōb / <span style={{ marginLeft: 14 }}>ISSUE 05 · VOL. I</span></span>
         <span className="auth-clock"><LiveClock /></span>
       </div>
 
