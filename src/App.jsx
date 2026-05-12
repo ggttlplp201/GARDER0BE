@@ -3,6 +3,7 @@ import { useAuth } from './hooks/useAuth';
 import { useTheme } from './hooks/useTheme';
 import { useItems } from './hooks/useItems';
 import AuthScreen from './components/AuthScreen';
+import EmailVerificationScreen from './components/EmailVerificationScreen';
 import AppHeader from './components/AppHeader';
 import AppNav from './components/AppNav';
 import WardrobeView from './components/WardrobeView';
@@ -45,7 +46,7 @@ function NotifToast({ toasts, onDismiss }) {
 }
 
 export default function App() {
-  const { user, authMode, setAuthMode, signIn, signUp, signOut } = useAuth();
+  const { user, authMode, setAuthMode, signIn, signUp, signOut, resendVerification } = useAuth();
   const { dark, toggle: toggleTheme } = useTheme();
   const { items, loading, loadError, fetchItems, addItem, editItem, removeItem, logWear } = useItems(user);
 
@@ -195,6 +196,14 @@ export default function App() {
 
   if (!user) return (
     <AuthScreen authMode={authMode} setAuthMode={setAuthMode} onLogin={signIn} onSignUp={signUp} />
+  );
+
+  if (user && !user.email_confirmed_at) return (
+    <EmailVerificationScreen
+      email={user.email}
+      onResend={resendVerification}
+      onSignOut={signOut}
+    />
   );
 
   const editItemObj = editItemId ? items.find(i => i.id === editItemId) : null;

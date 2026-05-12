@@ -36,5 +36,10 @@ export function useAuth() {
     await sb.auth.signOut();
   }
 
-  return { user, authMode, setAuthMode, signIn, signUp, signOut };
+  async function resendVerification(email) {
+    const { error } = await sb.auth.resend({ type: 'signup', email });
+    return { error };
+  }
+
+  return { user, authMode, setAuthMode, signIn, signUp, signOut, resendVerification };
 }
