@@ -60,6 +60,10 @@ export default function AuthScreen({ authMode, setAuthMode, onLogin, onSignUp })
 
   async function handleSubmit() {
     if (!email || !password) { setError('Email and password are required.'); return; }
+    if (authMode === 'signup' && password.length < 10) {
+      setError('Password must be at least 10 characters.');
+      return;
+    }
     setLoading(true); setError(''); setInfo('');
 
     if (authMode === 'signup') {
