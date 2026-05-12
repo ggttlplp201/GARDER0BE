@@ -11,7 +11,7 @@ export default function EmailVerificationScreen({ email, onResend, onSignOut }) 
   async function handleResend() {
     const { error: err } = await onResend(email);
     if (err) setError(err.message);
-    else setSent(true);
+    else { setError(''); setSent(true); }
   }
 
   return (
