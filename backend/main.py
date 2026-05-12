@@ -264,6 +264,40 @@ async def validate_upload(file: UploadFile, allowed: Set[str]) -> bytes:
     return data
 
 
+def _bearer_token(authorization: Optional[str]) -> str:
+    if authorization and authorization.lower().startswith("bearer "):
+        return authorization[7:]
+    raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
+
+
+def _jwt_sub(token: str) -> str:
+    """Verify JWT signature and return the 'sub' claim (user UUID)."""
+    if not SUPABASE_JWT_SECRET:
+        raise HTTPException(status_code=503, detail="JWT secret not configured")
+    try:
+        payload = pyjwt.decode(
+            token,
+            SUPABASE_JWT_SECRET,
+            algorithms=["HS256"],
+            audience="authenticated",
+            issuer=f"{SUPABASE_URL}/auth/v1",
+            options={"require": ["sub", "exp", "aud", "iss", "role"]},
+        )
+    except pyjwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token expired")
+    except pyjwt.InvalidTokenError as exc:
+        raise HTTPException(status_code=401, detail=f"Invalid token: {exc}")
+    if payload.get("role") != "authenticated":
+        raise HTTPException(status_code=401, detail="Invalid role claim")
+    return payload["sub"]
+
+
+async def require_auth(authorization: Optional[str] = Header(None)) -> str:
+    """FastAPI dependency — verifies bearer token and returns user_id."""
+    token = _bearer_token(authorization)
+    return _jwt_sub(token)
+
+
 @app.get("/health")
 def health():
     return {"status": "ok"}
@@ -271,7 +305,7 @@ def health():
 
 
 @app.post("/tag")
-async def tag_item(file: UploadFile = File(...)):
+async def tag_item(file: UploadFile = File(...), user_id: str = Depends(require_auth)):
     if not ANTHROPIC_API_KEY:
         raise HTTPException(status_code=503, detail="ANTHROPIC_API_KEY not configured")
 
@@ -369,41 +403,7 @@ def _user_sb_headers(token: str) -> dict:
     }
 
 
-def _bearer_token(authorization: Optional[str]) -> str:
-    if authorization and authorization.lower().startswith("bearer "):
-        return authorization[7:]
-    raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
-
-
-def _jwt_sub(token: str) -> str:
-    """Verify JWT signature and return the 'sub' claim (user UUID)."""
-    if not SUPABASE_JWT_SECRET:
-        raise HTTPException(status_code=503, detail="JWT secret not configured")
-    try:
-        payload = pyjwt.decode(
-            token,
-            SUPABASE_JWT_SECRET,
-            algorithms=["HS256"],
-            audience="authenticated",
-            issuer=f"{SUPABASE_URL}/auth/v1",
-            options={"require": ["sub", "exp", "aud", "iss", "role"]},
-        )
-    except pyjwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="Token expired")
-    except pyjwt.InvalidTokenError as exc:
-        raise HTTPException(status_code=401, detail=f"Invalid token: {exc}")
-    if payload.get("role") != "authenticated":
-        raise HTTPException(status_code=401, detail="Invalid role claim")
-    return payload["sub"]
-
-
-async def require_auth(authorization: Optional[str] = Header(None)) -> str:
-    """FastAPI dependency — verifies bearer token and returns user_id."""
-    token = _bearer_token(authorization)
-    return _jwt_sub(token)
-
-
-async def _refresh_sources(item_id: Optional[str] = None) -> dict:
+async def _refresh_sources(item_id: Optional[str] = None, user_id: Optional[str] = None) -> dict:
     if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
         logger.warning("Price refresh skipped: SUPABASE_URL or SUPABASE_SERVICE_KEY not configured")
         return {"refreshed": 0, "errors": 0, "skipped": True}
@@ -412,6 +412,8 @@ async def _refresh_sources(item_id: Optional[str] = None) -> dict:
     qs = "is_active=eq.true&select=id,item_id,source_name,source_url,currency"
     if item_id:
         qs += f"&item_id=eq.{item_id}"
+    if user_id:
+        qs += f"&user_id=eq.{user_id}"
 
     async with httpx.AsyncClient(timeout=15) as db:
         resp = await db.get(f"{sb_rest}/wishlist_price_sources?{qs}", headers=_sb_headers())
@@ -545,7 +547,7 @@ async def delete_price_source(
 
 
 @app.post("/wishlist/sources/{source_id}/refresh")
-async def refresh_one_source(source_id: str):
+async def refresh_one_source(source_id: str, user_id: str = Depends(require_auth)):
     if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
         raise HTTPException(status_code=503, detail="Supabase not configured")
 
@@ -553,13 +555,15 @@ async def refresh_one_source(source_id: str):
     async with httpx.AsyncClient(timeout=10) as db:
         resp = await db.get(
             f"{sb_rest}/wishlist_price_sources"
-            f"?id=eq.{source_id}&select=id,item_id,source_name,source_url,currency,is_active",
+            f"?id=eq.{source_id}&select=id,item_id,user_id,source_name,source_url,currency,is_active",
             headers=_sb_headers(),
         )
     if not resp.is_success or not resp.json():
         raise HTTPException(status_code=404, detail="Source not found")
 
     source = resp.json()[0]
+    if source.get("user_id") != user_id:
+        raise HTTPException(status_code=403, detail="Not authorised to refresh this source")
     if not source.get("is_active"):
         raise HTTPException(status_code=400, detail="Source is inactive")
 
@@ -599,5 +603,5 @@ async def refresh_one_source(source_id: str):
 
 
 @app.post("/wishlist/refresh-all")
-async def refresh_all_prices():
-    return await _refresh_sources()
+async def refresh_all_prices(user_id: str = Depends(require_auth)):
+    return await _refresh_sources(user_id=user_id)

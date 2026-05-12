@@ -82,3 +82,23 @@ def test_crafted_sub_raises():
     with pytest.raises(HTTPException) as exc_info:
         main._jwt_sub(token)
     assert exc_info.value.status_code == 401
+
+
+from fastapi.testclient import TestClient
+
+client = TestClient(main.app)
+
+
+def test_tag_requires_auth():
+    resp = client.post("/tag")
+    assert resp.status_code == 401
+
+
+def test_refresh_one_requires_auth():
+    resp = client.post("/wishlist/sources/some-source-id/refresh")
+    assert resp.status_code == 401
+
+
+def test_refresh_all_requires_auth():
+    resp = client.post("/wishlist/refresh-all")
+    assert resp.status_code == 401
