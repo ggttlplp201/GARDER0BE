@@ -4,6 +4,7 @@ import time
 import jwt
 import pytest
 from fastapi import HTTPException
+from fastapi.testclient import TestClient
 
 os.environ.setdefault("SUPABASE_URL", "https://example.supabase.co")
 os.environ.setdefault("SUPABASE_SERVICE_KEY", "service-key")
@@ -83,8 +84,6 @@ def test_crafted_sub_raises():
         main._jwt_sub(token)
     assert exc_info.value.status_code == 401
 
-
-from fastapi.testclient import TestClient
 
 client = TestClient(main.app)
 
