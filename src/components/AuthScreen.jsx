@@ -73,13 +73,14 @@ export default function AuthScreen({ authMode, setAuthMode, onLogin, onSignUp })
       const { data, error: err } = await onSignUp(email, password, captchaToken);
       if (err) setError(err.message);
       else if (!data.session) setInfo('Check your email to confirm your account, then sign in.');
+      setCaptchaToken('');
       setLoading(false);
       return;
     }
 
     const { data, error: err } = await onLogin(email, password, captchaToken);
-    if (err) { setError(err.message); setLoading(false); return; }
-    if (!data.session) { setLoading(false); return; }
+    if (err) { setError(err.message); setCaptchaToken(''); setLoading(false); return; }
+    if (!data.session) { setCaptchaToken(''); setLoading(false); return; }
 
     const sleep = ms => new Promise(r => setTimeout(r, ms));
     doorLRef.current?.classList.add('open');
