@@ -104,7 +104,7 @@ export default function App() {
       if (meta['p-location']) setUserLocation(meta['p-location']);
       if (meta['p-name']) setUserName(meta['p-name']);
     });
-  }, [user?.id]);
+  }, [user]);
 
   useEffect(() => {
     if (!user) { setMfaPending(null); return; }
@@ -120,7 +120,8 @@ export default function App() {
       // rather than silently granting app access
       signOut();
     });
-  }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   useEffect(() => {
     if (!user) return;

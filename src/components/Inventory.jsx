@@ -68,7 +68,7 @@ export default function Inventory({ user, onSignOut, onTotalChange }) {
         if (url) setAvatarUrl(url);
       });
     }
-  }, [user?.id]);
+  }, [user]);
 
   // Filter
   const filtered = items.filter(item => {

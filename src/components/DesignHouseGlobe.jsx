@@ -826,7 +826,7 @@ export default function DesignHouseGlobe({ mini = false, onViewProfile, myLocati
     }
     dragRef.current = null;
     setDragging(false);
-  }, [hitCluster]);
+  }, [hitCluster, onViewProfile]);
 
   const onMouseLeave = useCallback(() => {
     hovIdxRef.current = null;

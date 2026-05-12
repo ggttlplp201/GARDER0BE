@@ -16,6 +16,7 @@ const FONT_MONO = "'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace";
 // Effect 1 — Plasma field
 // ─────────────────────────────────────────────────────────────
 const PLASMA_CHARS = " .'`,-:;~+=*xX#%@";
+// eslint-disable-next-line react-refresh/only-export-components
 export function bgPlasma(t, cols, rows) {
   const ax = 2.0; // charH/charW compensation
   let s = '';
@@ -40,6 +41,7 @@ export function bgPlasma(t, cols, rows) {
 // ─────────────────────────────────────────────────────────────
 // Effect 2 — Wire sphere (lat/lon grid, two-axis rotation, z-buffer)
 // ─────────────────────────────────────────────────────────────
+// eslint-disable-next-line react-refresh/only-export-components
 export function bgSphere(t, cols, rows) {
   const out = new Array(cols * rows).fill(' ');
   const z = new Array(cols * rows).fill(-Infinity);
@@ -87,6 +89,7 @@ export function bgSphere(t, cols, rows) {
 // Effect 3 — Hypertunnel (polar coords, scrolling sine pattern)
 // ─────────────────────────────────────────────────────────────
 const TUNNEL_CHARS = ' .,:;-=+*#%@';
+// eslint-disable-next-line react-refresh/only-export-components
 export function bgTunnel(t, cols, rows) {
   const ax = 2.0;
   let s = '';
@@ -126,11 +129,11 @@ function pickEffect(mode, persist) {
     try {
       const cached = sessionStorage.getItem(STORAGE_KEY);
       if (cached && EFFECTS[cached]) return cached;
-    } catch (e) { /* ignore */ }
+    } catch { /* ignore */ }
   }
   const pick = EFFECT_KEYS[(Math.random() * EFFECT_KEYS.length) | 0];
   if (persist) {
-    try { sessionStorage.setItem(STORAGE_KEY, pick); } catch (e) { /* ignore */ }
+    try { sessionStorage.setItem(STORAGE_KEY, pick); } catch { /* ignore */ }
   }
   return pick;
 }

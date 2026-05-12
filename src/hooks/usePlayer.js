@@ -33,7 +33,7 @@ export function usePlayer() {
       audio.removeEventListener('timeupdate', onTimeUpdate);
       audio.removeEventListener('ended', onEnded);
     };
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   function loadTrack(idx) {
     const audio = audioRef.current;

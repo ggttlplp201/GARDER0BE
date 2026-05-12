@@ -167,7 +167,7 @@ function NewsFeed({ user }) {
       setWishlist([...wishlist]);
       setProfile(getWardrobeProfile(Object.keys(freq)));
     });
-  }, [user?.id]);
+  }, [user]);
 
   // Fetch articles from backend (with sessionStorage cache)
   useEffect(() => {
@@ -432,7 +432,7 @@ function OutfitsFeed({ user }) {
       setHasMore(rows.length === OUTFITS_PAGE_SIZE);
     }
     setLoading(false);
-  }, [filter, user?.id]);
+  }, [filter, user]);
 
   useEffect(() => { fetchPage(0); }, [fetchPage]);
 
