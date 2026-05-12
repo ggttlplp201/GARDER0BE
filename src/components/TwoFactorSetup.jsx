@@ -12,8 +12,9 @@ export default function TwoFactorSetup({ mfaEnroll, mfaVerify, mfaUnenroll, mfaL
   const [code, setCode]           = useState('');
   const [status, setStatus]       = useState('');
   const [error, setError]         = useState('');
+  const [starting, setStarting]   = useState(false);
 
-  useEffect(() => { loadFactors(); }, []);
+  useEffect(() => { loadFactors(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function loadFactors() {
     const { data } = await mfaListFactors();
@@ -22,7 +23,9 @@ export default function TwoFactorSetup({ mfaEnroll, mfaVerify, mfaUnenroll, mfaL
 
   async function startEnroll() {
     setError(''); setStatus('');
+    setStarting(true);
     const { data, error: err } = await mfaEnroll();
+    setStarting(false);
     if (err) { setError(err.message); return; }
     setQrUri(data.totp.qr_code);
     setFactorId(data.id);
@@ -61,12 +64,13 @@ export default function TwoFactorSetup({ mfaEnroll, mfaVerify, mfaUnenroll, mfaL
           <p style={{ marginBottom: '1rem', opacity: 0.7 }}>
             Not enabled. Add an authenticator app for extra security.
           </p>
-          <button onClick={startEnroll} style={{
+          <button onClick={startEnroll} disabled={starting} style={{
             background: 'none', border: `1px solid ${INK}`, color: INK,
             fontFamily: MONO, fontSize: '0.8rem', letterSpacing: '0.08em',
-            padding: '0.5rem 1.2rem', cursor: 'pointer',
+            padding: '0.5rem 1.2rem', cursor: starting ? 'default' : 'pointer',
+            opacity: starting ? 0.5 : 1,
           }}>
-            ENABLE 2FA
+            {starting ? 'ENABLING...' : 'ENABLE 2FA'}
           </button>
         </>
       )}
@@ -95,7 +99,12 @@ export default function TwoFactorSetup({ mfaEnroll, mfaVerify, mfaUnenroll, mfaL
           }}>
             CONFIRM
           </button>
-          <button onClick={() => { setEnrolling(false); setQrUri(''); }} style={{
+          <button onClick={() => {
+            mfaUnenroll(factorId).catch(() => {});
+            setEnrolling(false);
+            setQrUri('');
+            setFactorId('');
+          }} style={{
             background: 'none', border: `1px solid ${INK}`, color: INK,
             fontFamily: MONO, fontSize: '0.8rem', letterSpacing: '0.08em',
             padding: '0.5rem 1rem', cursor: 'pointer',

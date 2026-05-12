@@ -116,7 +116,7 @@ export default function App() {
         });
       }
     });
-  }, [user?.id]);
+  }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!user) return;
