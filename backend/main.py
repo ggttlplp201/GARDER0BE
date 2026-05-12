@@ -298,6 +298,18 @@ async def require_auth(authorization: Optional[str] = Header(None)) -> str:
     return _jwt_sub(token)
 
 
+_UUID_RE = re.compile(
+    r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
+    re.IGNORECASE,
+)
+
+
+def _validate_uuid(value: str, name: str = "id") -> str:
+    if not _UUID_RE.match(value):
+        raise HTTPException(status_code=400, detail=f"Invalid {name}")
+    return value
+
+
 @app.get("/health")
 def health():
     return {"status": "ok"}
@@ -305,7 +317,7 @@ def health():
 
 
 @app.post("/tag")
-async def tag_item(file: UploadFile = File(...), user_id: str = Depends(require_auth)):
+async def tag_item(file: UploadFile = File(...), _user_id: str = Depends(require_auth)):
     if not ANTHROPIC_API_KEY:
         raise HTTPException(status_code=503, detail="ANTHROPIC_API_KEY not configured")
 
@@ -479,8 +491,10 @@ async def _refresh_sources(item_id: Optional[str] = None, user_id: Optional[str]
 @app.get("/wishlist/{item_id}/prices")
 async def get_item_prices(
     item_id: str,
+    user_id: str = Depends(require_auth),
     authorization: Optional[str] = Header(None),
 ):
+    item_id = _validate_uuid(item_id, "item_id")
     token = _bearer_token(authorization)
     select = (
         "id,source_name,source_url,currency,last_price,last_seen_at,is_active,created_at,"
@@ -507,6 +521,7 @@ async def add_price_source(
     body: SourceCreate,
     authorization: Optional[str] = Header(None),
 ):
+    item_id = _validate_uuid(item_id, "item_id")
     token = _bearer_token(authorization)
     user_id = _jwt_sub(token)
 
@@ -531,8 +546,10 @@ async def add_price_source(
 @app.delete("/wishlist/sources/{source_id}", status_code=204)
 async def delete_price_source(
     source_id: str,
+    user_id: str = Depends(require_auth),
     authorization: Optional[str] = Header(None),
 ):
+    source_id = _validate_uuid(source_id, "source_id")
     token = _bearer_token(authorization)
     now_iso = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     async with httpx.AsyncClient(timeout=10) as client:
@@ -548,6 +565,7 @@ async def delete_price_source(
 
 @app.post("/wishlist/sources/{source_id}/refresh")
 async def refresh_one_source(source_id: str, user_id: str = Depends(require_auth)):
+    source_id = _validate_uuid(source_id, "source_id")
     if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
         raise HTTPException(status_code=503, detail="Supabase not configured")
 

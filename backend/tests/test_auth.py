@@ -1,4 +1,3 @@
-import importlib
 import os
 import time
 import jwt
@@ -101,3 +100,71 @@ def test_refresh_one_requires_auth():
 def test_refresh_all_requires_auth():
     resp = client.post("/wishlist/refresh-all")
     assert resp.status_code == 401
+
+
+def test_wrong_issuer_raises():
+    token = jwt.encode(
+        {"sub": "user-123", "role": "authenticated", "aud": "authenticated",
+         "iss": "https://other.supabase.co/auth/v1", "exp": int(time.time()) + 3600},
+        SECRET,
+        algorithm="HS256",
+    )
+    with pytest.raises(HTTPException) as exc_info:
+        main._jwt_sub(token)
+    assert exc_info.value.status_code == 401
+
+
+def test_missing_required_claim_raises():
+    token = jwt.encode(
+        # missing 'sub'
+        {"role": "authenticated", "aud": "authenticated",
+         "iss": f"{SUPABASE_URL}/auth/v1", "exp": int(time.time()) + 3600},
+        SECRET,
+        algorithm="HS256",
+    )
+    with pytest.raises(HTTPException) as exc_info:
+        main._jwt_sub(token)
+    assert exc_info.value.status_code == 401
+
+
+def test_missing_jwt_secret_returns_503(monkeypatch):
+    monkeypatch.setattr(main, "SUPABASE_JWT_SECRET", "")
+    token = _make_token()
+    with pytest.raises(HTTPException) as exc_info:
+        main._jwt_sub(token)
+    assert exc_info.value.status_code == 503
+
+
+def test_refresh_one_ownership_returns_403():
+    """Endpoint returns 403 when source belongs to a different user."""
+    import unittest.mock as mock
+
+    source_uuid = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
+    valid_token = _make_token(sub="legitimate-user")
+    other_owner_source = [{
+        "id": source_uuid,
+        "item_id": "11111111-2222-3333-4444-555555555555",
+        "user_id": "different-user",
+        "source_name": "Test",
+        "source_url": "https://example.com",
+        "currency": "USD",
+        "is_active": True,
+    }]
+
+    mock_response = mock.MagicMock()
+    mock_response.is_success = True
+    mock_response.json.return_value = other_owner_source
+
+    with mock.patch("httpx.AsyncClient") as mock_client_cls:
+        mock_client = mock.AsyncMock()
+        mock_client.__aenter__ = mock.AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = mock.AsyncMock(return_value=None)
+        mock_client.get = mock.AsyncMock(return_value=mock_response)
+        mock_client_cls.return_value = mock_client
+
+        resp = client.post(
+            f"/wishlist/sources/{source_uuid}/refresh",
+            headers={"Authorization": f"Bearer {valid_token}"},
+        )
+
+    assert resp.status_code == 403
