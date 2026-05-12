@@ -115,6 +115,10 @@ export default function App() {
           if (verified) setMfaPending({ factorId: verified.id });
         });
       }
+    }).catch(() => {
+      // If MFA level check fails, sign the user out for safety
+      // rather than silently granting app access
+      signOut();
     });
   }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 

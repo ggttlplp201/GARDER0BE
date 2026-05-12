@@ -7,6 +7,7 @@ RETURNS boolean
 LANGUAGE sql
 STABLE
 SECURITY DEFINER
+SET search_path = auth, public, pg_catalog
 AS $$
   SELECT EXISTS (
     SELECT 1 FROM auth.mfa_factors
