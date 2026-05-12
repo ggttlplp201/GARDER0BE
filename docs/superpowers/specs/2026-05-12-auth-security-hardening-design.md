@@ -14,58 +14,124 @@ Primary threat: account takeover via brute force, credential stuffing, or sessio
 
 ---
 
+## Priority Tiers
+
+### Must Do
+
+1. JWT signature verification (fixed + stricter)
+2. Auth/ownership checks on unprotected backend endpoints
+3. Supabase Auth rate limits + CAPTCHA/Turnstile
+4. Password policy + leaked-password protection
+
+### Should Do
+
+5. MFA with AAL enforcement (RLS + backend)
+6. Shorter access-token lifetime + session inactivity limits
+7. Security notification emails on password/MFA changes
+
+### Nice to Have
+
+8. Email verification gate screen (UI only; Supabase dashboard is the source of truth)
+9. Refresh token rotation
+10. Client-side password strength indicator
+11. FastAPI rate limiting (for scraping/AI cost control, not auth security)
+
+---
+
 ## Changes
 
-### 1. JWT Signature Verification (Backend)
+### 1. JWT Signature Verification (Backend) — Must Do
 
 **File:** `backend/main.py` — `_jwt_sub()` function
 
 **Problem:** The current implementation decodes the JWT without verifying the signature, meaning a crafted token with a fake `sub` claim would be accepted.
 
-**Fix:** Verify the signature against `SUPABASE_JWT_SECRET` (already in `.env`) using `PyJWT`. If verification fails, raise an HTTP 401 before the claim is used.
+**Fix:** Verify the signature using `PyJWT` with full claim validation. Validate signature, `exp`, `aud`, `iss`, and that `role === authenticated`. Raise HTTP 401 on any failure.
 
 ```python
 import jwt  # PyJWT
 
+SUPABASE_JWT_SECRET = os.environ["SUPABASE_JWT_SECRET"]
+SUPABASE_URL = os.environ["SUPABASE_URL"]
+
 def _jwt_sub(token: str) -> str:
     payload = jwt.decode(
         token,
-        os.environ["SUPABASE_JWT_SECRET"],
+        SUPABASE_JWT_SECRET,
         algorithms=["HS256"],
         audience="authenticated",
+        issuer=f"{SUPABASE_URL}/auth/v1",
+        options={"require": ["sub", "exp", "aud", "iss", "role"]},
     )
+    if payload.get("role") != "authenticated":
+        raise ValueError("Invalid role claim")
     return payload["sub"]
 ```
 
 Add `PyJWT` to `requirements.txt`. No user-facing change.
 
----
-
-### 2. Refresh Token Rotation
-
-**Location:** Supabase dashboard → Auth → Configuration
-
-**Change:** Enable "Refresh Token Rotation" toggle.
-
-**Effect:** Each token refresh invalidates the previous refresh token. If a stolen refresh token is used, Supabase detects reuse and revokes the entire session. The legitimate user is logged out and must re-authenticate.
-
-The frontend already uses `onAuthStateChange`, so it handles forced logout transparently.
+**Note on future-proofing:** Supabase now supports asymmetric JWT signing (RS256/JWKS). HS256 with `SUPABASE_JWT_SECRET` is correct for existing projects, but if Supabase migrates this project to asymmetric keys, verification will need to switch to JWKS endpoint verification.
 
 ---
 
-### 3. Email Verification Gate
+### 2. Authenticate and Ownership-Check Unprotected Endpoints — Must Do
 
-**File:** `src/App.jsx`
+**File:** `backend/main.py`
 
-**Problem:** A user can sign up and access the full app without confirming their email, making throwaway accounts trivial.
+**Problem:** `/tag`, `/wishlist/sources/{source_id}/refresh`, and `/wishlist/refresh-all` are not properly authenticated. CORS headers do not protect against `curl` or scripts — they only affect browser requests. The refresh endpoints also use the service role key, so they can perform work on behalf of any user if called without proper auth.
 
-**Fix:** After `onAuthStateChange` resolves a session, check `user.email_confirmed_at`. If null, render an `EmailVerificationScreen` component (small, informational) instead of the main app. The screen tells the user to check their inbox and offers a "Resend email" button via `supabase.auth.resend()`.
+**Fix:** Add a `require_auth` dependency that extracts and verifies the bearer token for every endpoint. For the refresh endpoints, additionally verify that the resource being operated on belongs to the authenticated user before performing any work.
 
-No database changes needed.
+```python
+async def require_auth(request: Request) -> str:
+    token = _bearer_token(request)
+    if not token:
+        raise HTTPException(status_code=401, detail="Missing token")
+    try:
+        return _jwt_sub(token)
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid token")
+```
+
+Apply as a dependency to all endpoints:
+```python
+@app.post("/tag")
+async def tag_item(body: TagRequest, user_id: str = Depends(require_auth)):
+    ...
+
+@app.post("/wishlist/sources/{source_id}/refresh")
+async def refresh_source(source_id: str, user_id: str = Depends(require_auth)):
+    # verify source_id belongs to user_id before proceeding
+    ...
+```
+
+For ownership checks on refresh endpoints: query Supabase to confirm the resource's `user_id` matches the authenticated user before doing any work. Return 403 if not.
 
 ---
 
-### 4. Optional TOTP MFA
+### 3. Supabase Auth Rate Limits + CAPTCHA — Must Do
+
+**Location:** Supabase dashboard → Auth → Configuration + Rate Limits
+
+**Problem:** Brute force and credential stuffing hit `supabase.auth.signInWithPassword()` directly — they never touch the FastAPI backend. FastAPI rate limiting does not protect against this at all.
+
+**Changes:**
+
+- **Rate limits:** Configure Supabase's built-in auth rate limits for sign-in, sign-up, and password reset. The dashboard exposes per-hour limits per IP.
+- **CAPTCHA (Cloudflare Turnstile):** Enable CAPTCHA protection on sign-in, sign-up, and password reset in the Supabase dashboard. Turnstile is free, invisible by default, and requires passing a site token from the frontend. Add the Turnstile script to the app and pass the token to `supabase.auth.signInWithPassword({ captchaToken })`.
+- **Leaked password protection:** Enable "Check passwords against HaveIBeenPwned" in Supabase Auth settings if available on the current plan. This rejects passwords found in known breach datasets at sign-up and password change.
+
+---
+
+### 4. Password Policy — Must Do
+
+**Supabase dashboard:** Auth → Configuration → set minimum password length to 10 characters.
+
+**File:** `src/components/AuthScreen.jsx` — add client-side length check before submit (UX only, Supabase dashboard setting is the enforcing layer).
+
+---
+
+### 5. MFA with AAL Enforcement — Should Do
 
 **New files:**
 - `src/components/TwoFactorSetup.jsx` — settings panel for enrolling/removing a TOTP factor
@@ -77,64 +143,82 @@ No database changes needed.
 3. Render the returned `totp.qr_code` URI as a QR code via `qrcode.react`
 4. User scans with authenticator app, enters 6-digit code
 5. Call `supabase.auth.mfa.challenge()` then `supabase.auth.mfa.verify()` to confirm
-6. On success, show confirmation; factor is now active
 
 **Login flow:**
-1. After successful password login, call `supabase.auth.mfa.listFactors()`
-2. If an active TOTP factor exists, redirect to `TwoFactorChallenge` screen
+1. After password login, call `supabase.auth.mfa.getAuthenticatorAssuranceLevel()`
+2. If `currentLevel === 'aal1'` and `nextLevel === 'aal2'`, redirect to `TwoFactorChallenge`
 3. User enters code; call `supabase.auth.mfa.challenge()` + `supabase.auth.mfa.verify()`
-4. On success, proceed to main app
 
-**Disable flow (in settings):**
-- "Remove 2FA" button calls `supabase.auth.mfa.unenroll({ factorId })`
+**Enforcement — this is required, UI alone is not sufficient:**
 
-**Dependencies:** `qrcode.react` (small, ~10kb)
+Per Supabase docs, the MFA UI does not enforce anything on its own. For users who have enrolled a verified factor, backend and RLS must reject `aal1` tokens.
 
-Supabase stores all factor metadata — no database changes needed.
-
----
-
-### 5. Rate Limiting on FastAPI
-
-**File:** `backend/main.py`
-
-**Dependency:** `slowapi` (add to `requirements.txt`)
-
-**Setup:**
-```python
-from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
-from slowapi.errors import RateLimitExceeded
-
-def get_user_id(request: Request) -> str:
-    token = _bearer_token(request)
-    if token:
-        try:
-            return _jwt_sub(token)
-        except Exception:
-            pass
-    return get_remote_address(request)  # fallback for unauthenticated
-
-limiter = Limiter(key_func=get_user_id)
-app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+RLS policy (add to all sensitive tables):
+```sql
+CREATE POLICY "require_aal2_if_enrolled"
+ON items
+FOR ALL
+USING (
+  auth.uid() = user_id
+  AND (
+    auth.jwt()->>'aal' = 'aal2'
+    OR NOT EXISTS (
+      SELECT 1 FROM auth.mfa_factors
+      WHERE user_id = auth.uid() AND status = 'verified'
+    )
+  )
+);
 ```
 
-**Limits applied:**
-- Price refresh / scraping endpoints: `@limiter.limit("10/hour")`
-- Write endpoints (add item, delete item, AI tagging): `@limiter.limit("60/minute")`
+Backend enforcement: after verifying the JWT, check the `aal` claim. If the user has a verified MFA factor and `aal !== 'aal2'`, return 403.
 
-Rate limiting is keyed on user ID (from JWT), not IP address, so VPNs and shared IPs don't affect legitimate users. Exceeding a limit returns HTTP 429.
+**Disable flow:** "Remove 2FA" button calls `supabase.auth.mfa.unenroll({ factorId })`.
+
+**Dependencies:** `qrcode.react`
 
 ---
 
-### 6. Password Strength Enforcement
+### 6. Session Lifetime Limits — Should Do
 
-**Supabase dashboard:** Auth → Configuration → set minimum password length to 10 characters.
+**Location:** Supabase dashboard → Auth → Configuration
 
-**File:** `src/components/AuthScreen.jsx`
+- Set **JWT expiry** to 1 hour (default is often longer).
+- Set **refresh token expiry** to 7 days (tighten from default if longer).
+- Enable **refresh token rotation** (each refresh invalidates the previous token; reuse detection revokes the session).
+- Consider enabling **session inactivity timeout** if available on the current plan.
 
-During signup, add client-side validation: check that the password is at least 10 characters before enabling the submit button. Show a short inline message ("Must be at least 10 characters") if the user tries to submit short. No new dependencies needed.
+These settings are dashboard-only — no code changes required.
+
+---
+
+### 7. Security Notification Emails — Should Do
+
+**Location:** Supabase dashboard → Auth → Email Templates
+
+Enable and customize email alerts for:
+- Password changed
+- MFA factor enrolled or removed
+- (If available) new sign-in from unrecognised device
+
+These are template configuration changes in the Supabase dashboard. No code changes required.
+
+---
+
+### 8. Email Verification Gate (UI) — Nice to Have
+
+**File:** `src/App.jsx`
+
+After `onAuthStateChange` resolves, check `user.email_confirmed_at`. If null, render an `EmailVerificationScreen` with a "Resend email" button (`supabase.auth.resend()`).
+
+**Note:** The Supabase dashboard setting "Enable email confirmations" is the enforcing layer. This React gate is UX only and is bypassable on its own. Enable the dashboard setting first; add this screen as a user-friendly complement.
+
+---
+
+### 9–11. Refresh Token Rotation, Password Indicator, FastAPI Rate Limits — Nice to Have
+
+- **Refresh token rotation:** Covered under Section 6 (session limits).
+- **Client-side password indicator:** Small inline check in `AuthScreen.jsx` — see Section 4.
+- **FastAPI rate limiting with `slowapi`:** Useful for scraping/AI cost control, not auth security. If implemented in production with multiple workers, use a Redis backend instead of in-memory — in-memory limits don't hold across processes. Note `slowapi` requires each limited endpoint to accept `request: Request` as a parameter, and decorator order matters (`@limiter.limit` must wrap `@app.route`).
 
 ---
 
@@ -143,14 +227,15 @@ During signup, add client-side validation: check that the password is at least 1
 - Migrating to Clerk or another auth provider
 - SMS-based MFA (TOTP is sufficient and free)
 - Mandatory MFA for all users
-- Cloudflare WAF (useful but orthogonal to auth hardening; can be added independently)
 
 ---
 
 ## Testing
 
-- JWT verification: test with a valid token, an expired token, and a crafted token with a fake sub — only the first should succeed
-- Email gate: create an unverified account and confirm the gate renders; verify a real account and confirm it passes
-- MFA enrollment: enroll a factor, verify the challenge flow works, unenroll and confirm the login flow skips the challenge
-- Rate limiting: send >10 price refresh requests in an hour and confirm 429 is returned
-- Password strength: attempt signup with a 9-character password and confirm it is blocked both client- and server-side
+- **JWT verification:** valid token passes; expired, unsigned, wrong-audience, and crafted-sub tokens all return 401
+- **Endpoint auth:** calling `/tag` and refresh endpoints without a token returns 401; calling with another user's resource ID returns 403
+- **CAPTCHA:** sign-in without a captcha token is rejected; valid token passes
+- **Password policy:** signup with a 9-character password is blocked server-side; 10-character passes
+- **MFA enrollment:** enroll factor, verify challenge flow works, unenroll and confirm login skips challenge
+- **AAL enforcement:** with a verified factor and an `aal1` token, RLS rejects the query and backend returns 403; `aal2` token passes
+- **Session limits:** confirm token expiry is respected; confirm refresh token reuse triggers session revocation
