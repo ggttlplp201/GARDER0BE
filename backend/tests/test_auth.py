@@ -3,6 +3,7 @@ import os
 import time
 import jwt
 import pytest
+from fastapi import HTTPException
 
 os.environ.setdefault("SUPABASE_URL", "https://example.supabase.co")
 os.environ.setdefault("SUPABASE_SERVICE_KEY", "service-key")
@@ -39,20 +40,23 @@ def test_valid_token_returns_sub():
 
 def test_expired_token_raises():
     token = _make_token(exp_offset=-1)
-    with pytest.raises(Exception):
+    with pytest.raises(HTTPException) as exc_info:
         main._jwt_sub(token)
+    assert exc_info.value.status_code == 401
 
 
 def test_wrong_audience_raises():
     token = _make_token(aud="anon")
-    with pytest.raises(Exception):
+    with pytest.raises(HTTPException) as exc_info:
         main._jwt_sub(token)
+    assert exc_info.value.status_code == 401
 
 
 def test_wrong_role_raises():
     token = _make_token(role="anon")
-    with pytest.raises(Exception):
+    with pytest.raises(HTTPException) as exc_info:
         main._jwt_sub(token)
+    assert exc_info.value.status_code == 401
 
 
 def test_unsigned_token_raises():
@@ -62,8 +66,9 @@ def test_unsigned_token_raises():
         json.dumps({"sub": "evil", "role": "authenticated", "aud": "authenticated"}).encode()
     ).rstrip(b"=").decode()
     token = f"{header}.{payload}."
-    with pytest.raises(Exception):
+    with pytest.raises(HTTPException) as exc_info:
         main._jwt_sub(token)
+    assert exc_info.value.status_code == 401
 
 
 def test_crafted_sub_raises():
@@ -74,5 +79,6 @@ def test_crafted_sub_raises():
         "wrong-secret-totally-different-val",
         algorithm="HS256",
     )
-    with pytest.raises(Exception):
+    with pytest.raises(HTTPException) as exc_info:
         main._jwt_sub(token)
+    assert exc_info.value.status_code == 401

@@ -507,8 +507,6 @@ async def add_price_source(
 ):
     token = _bearer_token(authorization)
     user_id = _jwt_sub(token)
-    if not user_id:
-        raise HTTPException(status_code=401, detail="Could not determine user from token")
 
     async with httpx.AsyncClient(timeout=10) as client:
         resp = await client.post(
