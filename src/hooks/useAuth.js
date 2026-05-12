@@ -14,13 +14,21 @@ export function useAuth() {
     return () => subscription.unsubscribe();
   }, []);
 
-  async function signIn(email, password) {
-    const { data, error } = await sb.auth.signInWithPassword({ email, password });
+  async function signIn(email, password, captchaToken) {
+    const { data, error } = await sb.auth.signInWithPassword({
+      email,
+      password,
+      options: { captchaToken },
+    });
     return { data, error };
   }
 
-  async function signUp(email, password) {
-    const { data, error } = await sb.auth.signUp({ email, password });
+  async function signUp(email, password, captchaToken) {
+    const { data, error } = await sb.auth.signUp({
+      email,
+      password,
+      options: { captchaToken },
+    });
     return { data, error };
   }
 

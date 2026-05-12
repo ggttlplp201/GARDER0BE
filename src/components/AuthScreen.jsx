@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { Turnstile } from '@marsidev/react-turnstile';
 import AsciiTitle from './AsciiTitle';
 import AsciiBackground from './AsciiBackground';
 
@@ -28,6 +29,7 @@ export default function AuthScreen({ authMode, setAuthMode, onLogin, onSignUp })
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState('');
   const [info, setInfo]         = useState('');
+  const [captchaToken, setCaptchaToken] = useState('');
   const [focusCount, setFocus]  = useState(0);
   const [emailFocus, setEF]     = useState(false);
   const [pwFocus, setPF]        = useState(false);
@@ -64,17 +66,18 @@ export default function AuthScreen({ authMode, setAuthMode, onLogin, onSignUp })
       setError('Password must be at least 10 characters.');
       return;
     }
+    if (!captchaToken) { setError('Please complete the security check.'); return; }
     setLoading(true); setError(''); setInfo('');
 
     if (authMode === 'signup') {
-      const { data, error: err } = await onSignUp(email, password);
+      const { data, error: err } = await onSignUp(email, password, captchaToken);
       if (err) setError(err.message);
       else if (!data.session) setInfo('Check your email to confirm your account, then sign in.');
       setLoading(false);
       return;
     }
 
-    const { data, error: err } = await onLogin(email, password);
+    const { data, error: err } = await onLogin(email, password, captchaToken);
     if (err) { setError(err.message); setLoading(false); return; }
     if (!data.session) { setLoading(false); return; }
 
@@ -174,6 +177,15 @@ export default function AuthScreen({ authMode, setAuthMode, onLogin, onSignUp })
             {info}
           </div>
         )}
+
+        {/* Cloudflare Turnstile */}
+        <Turnstile
+          siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
+          onSuccess={setCaptchaToken}
+          onExpire={() => setCaptchaToken('')}
+          onError={() => setCaptchaToken('')}
+          options={{ theme: 'light' }}
+        />
 
         {/* SIGN IN / CREATE — primary */}
         <button
