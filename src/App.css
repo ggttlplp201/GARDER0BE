@@ -1235,3 +1235,275 @@ html.dark .outfit-in-fit-badge { background: rgba(0,0,0,0.7); }
   .outfits-feed-grid { grid-template-columns: 1fr; }
 }
 
+/* ── Try-On View ── */
+.tryon-wrap { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
+.tryon-layout { display: flex; flex: 1; min-height: 0; overflow: hidden; }
+
+/* Left panel */
+.tryon-left { width: 280px; flex-shrink: 0; border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow-y: auto; padding: 24px 20px; }
+.tryon-section-label { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase; opacity: 0.6; margin-bottom: 12px; }
+.tryon-slot-list { display: flex; flex-direction: column; gap: 8px; }
+.tryon-slot-row { display: flex; align-items: stretch; border: 1px solid var(--border); cursor: default; height: 68px; }
+.tryon-slot-row.filled { cursor: pointer; }
+.tryon-slot-row.filled:hover { background: var(--bg2); }
+.tryon-slot-thumb { width: 68px; flex-shrink: 0; border-right: 1px solid var(--border); background: var(--bg2); display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.tryon-slot-thumb img { width: 100%; height: 100%; object-fit: contain; }
+.tryon-slot-plus { font-size: 18px; color: var(--text3); line-height: 1; }
+.tryon-slot-label { padding: 0 16px; font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; display: flex; align-items: center; }
+.tryon-divider { border: none; border-top: 1px solid var(--border-light); margin: 20px 0; }
+.tryon-physique-row { display: flex; }
+.tryon-physique-btn { flex: 1; padding: 10px 0; border: 1px solid var(--border); margin-left: -1px; background: transparent; color: var(--text); font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.15em; cursor: pointer; text-transform: uppercase; position: relative; z-index: 0; transition: background 0.1s, color 0.1s; }
+.tryon-physique-btn:first-child { margin-left: 0; }
+.tryon-physique-btn.active { background: var(--text); color: var(--bg); z-index: 1; }
+.tryon-physique-btn:hover:not(.active) { background: var(--bg2); }
+.tryon-saved-btn { width: 100%; padding: 10px; border: 1px solid var(--border-light); background: transparent; color: var(--text2); font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.15em; cursor: pointer; text-transform: uppercase; text-align: center; transition: border-color 0.1s, color 0.1s; }
+.tryon-saved-btn:hover, .tryon-saved-btn.open { border-color: var(--border); color: var(--text); }
+.tryon-saved-list { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+.tryon-saved-card { border: 1px solid var(--border-light); padding: 8px 10px; cursor: pointer; position: relative; transition: border-color 0.1s; }
+.tryon-saved-card:hover { border-color: var(--border); }
+.tryon-saved-card.active { border-color: var(--border); }
+.tryon-saved-card-name { font-size: 12px; font-weight: 500; margin-bottom: 2px; }
+.tryon-saved-card-meta { font-family: var(--font-mono); font-size: 8px; letter-spacing: 0.1em; color: var(--text3); }
+.tryon-saved-del { position: absolute; top: 6px; right: 8px; background: none; border: none; color: var(--text3); font-size: 14px; cursor: pointer; padding: 0; line-height: 1; }
+.tryon-saved-del:hover { color: var(--text); }
+.tryon-clear-btn { width: 100%; padding: 8px; border: 1px solid var(--border-light); background: transparent; color: var(--text3); font-family: var(--font-mono); font-size: 8px; letter-spacing: 0.15em; cursor: pointer; text-transform: uppercase; transition: border-color 0.1s, color 0.1s; }
+.tryon-clear-btn:hover { border-color: var(--border); color: var(--text); }
+
+/* Center panel */
+.tryon-center { flex: 1; min-width: 0; border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+.tryon-center-header { padding: 20px 24px 12px; font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase; opacity: 0.7; border-bottom: 1px solid var(--border-light); flex-shrink: 0; }
+.tryon-result-area { flex: 1; min-height: 0; position: relative; background: var(--bg2); display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.tryon-result-area img { width: 100%; height: 100%; object-fit: contain; }
+.tryon-result-empty { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.15em; color: var(--text3); text-align: center; padding: 0 24px; }
+.tryon-result-mock { width: 100%; height: 100%; background: linear-gradient(135deg, #f0f0f0 0%, #e5e5e5 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; }
+html.dark .tryon-result-mock { background: linear-gradient(135deg, #1a1a1a 0%, #111 100%); }
+.tryon-result-mock-label { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.18em; color: var(--text3); }
+.tryon-result-mock-sub { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.12em; color: var(--text3); opacity: 0.6; }
+@keyframes tryon-shimmer { 0% { background-position: 200% 50%; } 100% { background-position: -200% 50%; } }
+.tryon-result-area.generating { background: linear-gradient(90deg, var(--bg2) 25%, var(--bg3) 50%, var(--bg2) 75%); background-size: 400% 100%; animation: tryon-shimmer 1.8s linear infinite; }
+.tryon-progress-pill { position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%); background: var(--bg); border: 1px solid rgba(0,0,0,0.12); padding: 8px 20px; font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.1em; white-space: nowrap; display: flex; gap: 10px; align-items: center; pointer-events: none; }
+html.dark .tryon-progress-pill { border-color: rgba(255,255,255,0.1); }
+.tryon-progress-step { color: var(--text); }
+.tryon-progress-step.pending { color: var(--text3); }
+.tryon-actions { display: flex; border-top: 1px solid var(--border); flex-shrink: 0; }
+.tryon-action-btn { flex: 1; padding: 16px 0; border: none; border-right: 1px solid var(--border); background: transparent; color: var(--text); font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.18em; cursor: pointer; text-transform: uppercase; transition: background 0.1s, color 0.1s; }
+.tryon-action-btn:last-child { border-right: none; }
+.tryon-action-btn:hover:not(:disabled):not(.primary) { background: var(--bg2); }
+.tryon-action-btn.primary { background: var(--text); color: var(--bg); flex: 1.5; }
+.tryon-action-btn.primary:hover:not(:disabled) { opacity: 0.85; }
+.tryon-action-btn:disabled { opacity: 0.3; cursor: default; }
+
+/* Right panel */
+.tryon-right { width: 300px; flex-shrink: 0; display: flex; flex-direction: column; overflow: hidden; }
+.tryon-right-header { padding: 20px 20px 12px; font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase; opacity: 0.7; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.tryon-search-wrap { padding: 12px 16px 0; flex-shrink: 0; position: relative; }
+.tryon-search-icon { position: absolute; left: 26px; top: 50%; transform: translateY(-50%); margin-top: 6px; color: var(--text3); font-size: 13px; pointer-events: none; }
+.tryon-search-input { width: 100%; padding: 9px 12px 9px 32px; border: 1px solid var(--border); background: var(--input-bg); color: var(--text); font-family: var(--font-display); font-size: 12px; outline: none; box-sizing: border-box; }
+.tryon-search-input:focus { outline: 1px solid var(--border); outline-offset: -1px; }
+.tryon-search-input::placeholder { color: var(--text3); }
+.tryon-cat-tabs { display: flex; padding: 10px 16px 0; overflow-x: auto; flex-shrink: 0; scrollbar-width: none; }
+.tryon-cat-tabs::-webkit-scrollbar { display: none; }
+.tryon-cat-tab { padding: 6px 10px; flex-shrink: 0; border: 1px solid var(--border); margin-left: -1px; background: transparent; color: var(--text); font-family: var(--font-mono); font-size: 8px; letter-spacing: 0.12em; cursor: pointer; text-transform: uppercase; position: relative; z-index: 0; transition: background 0.1s, color 0.1s; }
+.tryon-cat-tab:first-child { margin-left: 0; }
+.tryon-cat-tab.active { background: var(--text); color: var(--bg); z-index: 1; }
+.tryon-cat-tab:hover:not(.active) { background: var(--bg2); }
+.tryon-wardrobe-grid { flex: 1; overflow-y: auto; padding: 12px 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-content: start; }
+.tryon-wardrobe-card { border: 1px solid var(--border-light); cursor: pointer; transition: border-color 0.15s; overflow: hidden; }
+.tryon-wardrobe-card:hover:not(.in-fit) { border-color: var(--border); }
+.tryon-wardrobe-card.in-fit { opacity: 0.35; cursor: default; }
+.tryon-wardrobe-card-img { aspect-ratio: 3/4; background: var(--bg2); overflow: hidden; display: flex; align-items: center; justify-content: center; }
+.tryon-wardrobe-card-img img { width: 100%; height: 100%; object-fit: cover; }
+.tryon-wardrobe-card-info { padding: 8px 10px; }
+.tryon-wardrobe-card-brand { font-family: var(--font-mono); font-size: 8px; letter-spacing: 0.12em; color: var(--text3); text-transform: uppercase; }
+.tryon-wardrobe-card-name { font-size: 11px; font-weight: 500; line-height: 1.3; margin-top: 2px; }
+.tryon-wardrobe-empty { font-family: var(--font-mono); font-size: 9px; color: var(--text3); letter-spacing: 0.12em; grid-column: 1/-1; text-align: center; padding: 24px 0; }
+
+/* Mobile Try-On */
+@media (max-width: 767px) {
+  .tryon-left, .tryon-right { display: none; }
+  .tryon-center { border-right: none; }
+  .tryon-center-header { display: none; }
+  .tryon-result-area { flex: none; aspect-ratio: 3/4; width: 100%; }
+  .tryon-mobile-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+  .tryon-mobile-title { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.18em; font-weight: 600; }
+  .tryon-mobile-physique { display: flex; }
+  .tryon-mobile-physique-btn { padding: 8px 14px; border: 1px solid var(--border); margin-left: -1px; background: transparent; color: var(--text); font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.12em; cursor: pointer; text-transform: uppercase; position: relative; z-index: 0; transition: background 0.1s, color 0.1s; }
+  .tryon-mobile-physique-btn:first-child { margin-left: 0; }
+  .tryon-mobile-physique-btn.active { background: var(--text); color: var(--bg); z-index: 1; }
+  .tryon-mobile-result-label { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.15em; padding: 10px 16px 6px; opacity: 0.6; flex-shrink: 0; }
+  .tryon-mobile-slots { display: flex; overflow-x: auto; flex-shrink: 0; padding: 12px 16px; gap: 10px; border-top: 1px solid var(--border); scrollbar-width: none; }
+  .tryon-mobile-slots::-webkit-scrollbar { display: none; }
+  .tryon-mobile-slot { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; gap: 4px; cursor: default; }
+  .tryon-mobile-slot.filled { cursor: pointer; }
+  .tryon-mobile-slot-thumb { width: 64px; height: 64px; border: 1px solid var(--border); background: var(--bg2); display: flex; align-items: center; justify-content: center; overflow: hidden; }
+  .tryon-mobile-slot-thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .tryon-mobile-slot-plus { font-size: 16px; color: var(--text3); }
+  .tryon-mobile-slot-label { font-family: var(--font-mono); font-size: 7px; letter-spacing: 0.12em; color: var(--text3); text-transform: uppercase; }
+  .tryon-mobile-rack-toggle { display: block; margin: 8px 16px 0; width: calc(100% - 32px); padding: 10px; border: 1px solid var(--border); background: transparent; color: var(--text); font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.15em; cursor: pointer; text-transform: uppercase; text-align: center; }
+  .tryon-mobile-rack { padding: 12px 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-content: start; flex: 1; overflow-y: auto; }
+}
+@media (min-width: 768px) {
+  .tryon-mobile-header, .tryon-mobile-result-label, .tryon-mobile-slots, .tryon-mobile-rack-toggle, .tryon-mobile-rack { display: none !important; }
+}
+
+/* ─── Museum wardrobe view ──────────────────────────────── */
+.museum-wrap {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* Ghost HUD — floats over Museum corridor */
+.museum-hud {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  z-index: 100;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px;
+  background: rgba(10,10,10,0.55);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* Static HUD — used for GRID / LIST modes */
+.museum-hud--static {
+  position: relative;
+  background: var(--bg);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border-bottom: 1px solid var(--border);
+}
+
+/* Mode toggle border in Museum mode */
+.museum-hud:not(.museum-hud--static) .mode-toggle {
+  border: 1px solid rgba(245,242,234,0.25);
+}
+
+/* Mode buttons — light text on dark HUD */
+.museum-hud:not(.museum-hud--static) .mode-btn         { color: rgba(245,242,234,0.7); }
+.museum-hud:not(.museum-hud--static) .mode-btn.active  { background: #f5f2ea; color: #0a0a0a; }
+.museum-hud:not(.museum-hud--static) .mode-btn:hover:not(.active) { background: rgba(245,242,234,0.12); }
+.museum-hud:not(.museum-hud--static) .mode-btn.bd-r    { border-right: 1px solid rgba(245,242,234,0.2); }
+
+/* Search input */
+.museum-hud-search {
+  flex: 1;
+  min-width: 80px;
+  max-width: 200px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid rgba(245,242,234,0.35);
+  color: #f5f2ea;
+  padding: 4px 2px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  outline: none;
+  height: 28px;
+}
+.museum-hud-search::placeholder { color: rgba(245,242,234,0.4); }
+.museum-hud--static .museum-hud-search {
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+}
+.museum-hud--static .museum-hud-search::placeholder { color: var(--text3); }
+
+/* Type filter */
+.museum-hud-select {
+  background: rgba(245,242,234,0.08);
+  border: 1px solid rgba(245,242,234,0.2);
+  color: #f5f2ea;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  padding: 4px 8px;
+  height: 28px;
+  cursor: pointer;
+  outline: none;
+}
+.museum-hud--static .museum-hud-select {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+/* Add button */
+.museum-hud-add {
+  background: transparent;
+  border: 1px solid rgba(245,242,234,0.4);
+  color: #f5f2ea;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.15em;
+  padding: 4px 12px;
+  height: 28px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.museum-hud-add:hover { background: #f5f2ea; color: #0a0a0a; }
+.museum-hud--static .museum-hud-add {
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+.museum-hud--static .museum-hud-add:hover {
+  background: var(--text);
+  color: var(--bg);
+}
+
+/* Bottom status bar */
+.museum-bottom {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 20px;
+  background: rgba(10,10,10,0.4);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  pointer-events: none;
+}
+.museum-stats {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.15em;
+  opacity: 0.7;
+  color: #0a0a0a;
+  white-space: nowrap;
+}
+.museum-item-name {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: #0a0a0a;
+  text-align: center;
+  flex: 1;
+  margin: 0 16px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.museum-progress {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  opacity: 0.7;
+  color: #0a0a0a;
+  white-space: nowrap;
+}
+
+/* Mobile: collapse search on small screens */
+@media (max-width: 479px) {
+  .museum-hud-search {
+    max-width: 100px;
+  }
+  .museum-hud-select { display: none; }
+  .museum-stats { display: none; }
+}
+

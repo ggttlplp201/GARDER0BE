@@ -1,8 +1,8 @@
 import { useState, useRef } from 'react';
 import { parseImageUrls } from '../lib/imageUtils';
-import { isGyroActive } from '../lib/gyro';
 import { ITEM_TYPES } from '../lib/constants';
 import ItemCard from './ItemCard';
+import Museum from './Museum';
 
 function useConfirm() {
   const [pending, setPending] = useState(null);
@@ -16,135 +16,18 @@ function useConfirm() {
   return { pending, arm, disarm };
 }
 
-function Hanger({ size = 34 }) {
-  return (
-    <svg width={size} height={size * 0.64} viewBox="0 0 44 28" style={{ display: 'block' }}>
-      <path d="M22 4 L22 10 M6 22 L22 10 L38 22 L6 22" stroke="currentColor" strokeWidth="1.2" fill="none" strokeLinejoin="round" />
-      <circle cx="22" cy="4" r="2" stroke="currentColor" strokeWidth="1.2" fill="var(--bg)" />
-    </svg>
-  );
-}
-
 function catNum(idx) {
   return String(idx + 1).padStart(3, '0');
 }
 
-function RackCard({ item, globalIdx, onClick, onRemove, confirmPending, onArmConfirm }) {
-  const cardRef  = useRef(null);
-  const shineRef = useRef(null);
-  const reducedMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-  const imgs = parseImageUrls(item.image_url);
-  const stripRef    = useRef(null);
-  const imgIdxRef   = useRef(0);
-  const isDragRef   = useRef(false);
-  const dragStartRef = useRef(0);
-  const didSwipeRef = useRef(false);
-  const [imgIdx, setImgIdx] = useState(0);
-  const multiImg = imgs.length > 1;
-
-  function handleMouseMove(e) {
-    if (reducedMotion || isGyroActive()) return;
-    const card = cardRef.current; if (!card) return;
-    const r = card.getBoundingClientRect();
-    const x = (e.clientX - r.left) / r.width - 0.5;
-    const y = (e.clientY - r.top) / r.height - 0.5;
-    card.style.transform = `perspective(500px) rotateY(${x * 14}deg) rotateX(${-y * 14}deg) scale(1.04) translateZ(8px)`;
-    if (shineRef.current) {
-      const dk = document.documentElement.classList.contains('dark');
-      shineRef.current.style.opacity = dk ? '0.4' : '1';
-      shineRef.current.style.background = `linear-gradient(${115 + x * 30}deg, transparent 30%, rgba(255,255,255,${(0.28 + Math.abs(x) * 0.28) * (dk ? 0.4 : 1)}) 50%, transparent 70%)`;
-    }
-  }
-  function handleMouseLeave() {
-    if (isGyroActive()) return;
-    if (cardRef.current) cardRef.current.style.transform = '';
-    if (shineRef.current) shineRef.current.style.opacity = '0';
-  }
-
-  function onImgPointerDown(e) {
-    if (e.button !== 0) return;
-    if (e.target.closest('.rack-arrow')) return;
-    e.currentTarget.setPointerCapture(e.pointerId);
-    isDragRef.current = true; dragStartRef.current = e.clientX; didSwipeRef.current = false;
-    if (stripRef.current) stripRef.current.style.transition = 'none';
-  }
-  function onImgPointerMove(e) {
-    if (!isDragRef.current || !stripRef.current) return;
-    stripRef.current.style.transform = `translateX(calc(${-imgIdxRef.current * 100}% + ${e.clientX - dragStartRef.current}px))`;
-  }
-  function onImgPointerUp(e) {
-    if (!isDragRef.current) return;
-    isDragRef.current = false;
-    const dx = e.clientX - dragStartRef.current;
-    const w = e.currentTarget.offsetWidth || 200;
-    let ni = imgIdxRef.current;
-    if (Math.abs(dx) > w * 0.25) { ni = (ni + (dx < 0 ? 1 : -1) + imgs.length) % imgs.length; didSwipeRef.current = true; }
-    if (stripRef.current) {
-      stripRef.current.style.transition = 'transform 0.22s ease';
-      stripRef.current.style.transform = `translateX(${-ni * 100}%)`;
-    }
-    setImgIdx(ni); imgIdxRef.current = ni;
-  }
-
-  return (
-    <div
-      ref={cardRef}
-      className="rack-card"
-      onClick={() => { if (!didSwipeRef.current) onClick(item); didSwipeRef.current = false; }}
-      onMouseMove={handleMouseMove}
-      onMouseLeave={handleMouseLeave}
-      style={{ transformStyle: 'preserve-3d', willChange: 'transform' }}
-    >
-      <div className="rack-hanger"><Hanger size={28} /></div>
-      <div className="rack-cat">№ {catNum(globalIdx)}</div>
-      <div
-        className="rack-img"
-        onPointerDown={multiImg ? onImgPointerDown : undefined}
-        onPointerMove={multiImg ? onImgPointerMove : undefined}
-        onPointerUp={multiImg ? onImgPointerUp : undefined}
-        onPointerCancel={multiImg ? onImgPointerUp : undefined}
-      >
-        {imgs.length > 0 ? (
-          multiImg ? (
-            <div ref={stripRef} className="rack-img-strip">
-              {imgs.map((url, i) => (
-                <div key={i} className="rack-img-slot"><img src={url} alt={item.name} draggable="false" /></div>
-              ))}
-            </div>
-          ) : (
-            <img src={imgs[0]} alt={item.name} />
-          )
-        ) : (
-          <div className="rack-img-placeholder">
-            <span>{(item.brand || '').split(' ')[0] || 'IMG'}</span>
-          </div>
-        )}
-        {multiImg && (
-          <div className="rack-img-count">{imgIdx + 1}/{imgs.length}</div>
-        )}
-        <div ref={shineRef} className="card-shine" />
-      </div>
-      <div className="rack-brand">{item.brand || '—'}</div>
-      <div className="rack-name">{item.name || 'Untitled'}</div>
-      <button
-        className={`rack-del${confirmPending ? ' confirming' : ''}`}
-        onClick={e => {
-          e.stopPropagation();
-          if (confirmPending) onRemove(item.id);
-          else onArmConfirm(item.id);
-        }}
-      >{confirmPending ? '?' : '×'}</button>
-    </div>
-  );
-}
-
 const TYPES = ['ALL', ...ITEM_TYPES];
 
-export default function WardrobeView({ items, loading, loadError, onRetry, onItemClick, onAdd, onEdit, onRemove }) {
-  const [mode, setMode]         = useState('RACK');
-  const [search, setSearch]     = useState('');
+export default function WardrobeView({ items = [], loading, loadError, onRetry, onItemClick, onAdd, onEdit, onRemove }) {
+  const [mode, setMode] = useState('MUSEUM');
+  const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState('ALL');
+  const [museumProgress, setMuseumProgress] = useState(0);
+  const [museumNearest, setMuseumNearest] = useState(null);
   const confirm = useConfirm();
 
   const filtered = items.filter(it => {
@@ -156,92 +39,127 @@ export default function WardrobeView({ items, loading, loadError, onRetry, onIte
     return true;
   });
 
-  const totalValue = items.filter(i => i.status !== 'wishlist').reduce((s, i) => s + (parseFloat(i.price) || 0), 0);
+  const totalValue = items
+    .filter(i => i.status !== 'wishlist')
+    .reduce((s, i) => s + (parseFloat(i.price) || 0), 0);
   const brands = new Set(items.map(i => i.brand).filter(Boolean));
   const grails = items.filter(i => i.status === 'grail').length;
-  const thisYear = new Date().getFullYear();
-  const ytd = items
-    .filter(i => i.status !== 'wishlist' && i.created_at && new Date(i.created_at).getFullYear() === thisYear)
-    .reduce((s, i) => s + (parseFloat(i.price) || 0), 0);
 
-  const grouped = {};
-  filtered.forEach(it => {
-    const b = (it.brand || 'Uncategorized').trim();
-    if (!grouped[b]) grouped[b] = [];
-    grouped[b].push(it);
-  });
-  const brandKeys = Object.keys(grouped).sort((a, b) => a.localeCompare(b));
+  const statsStr = [
+    String(items.length),
+    `${brands.size} BRANDS`,
+    `$${Math.round(totalValue).toLocaleString()}`,
+    grails ? `${grails} GRAILS` : null,
+  ].filter(Boolean).join(' · ');
 
+  const idxMap = new Map(items.map((item, i) => [item.id, i]));
+  const museumItems = filtered.map((item) => ({
+    id: item.id,
+    cat: catNum(idxMap.get(item.id) ?? 0),
+    brand: item.brand || '—',
+    name: item.name || 'Untitled',
+    type: item.type || '',
+    color: item.color || '#888888',
+    imageUrl: parseImageUrls(item.image_url)[0] || null,
+  }));
+
+  const hud = (
+    <div className={`museum-hud${mode !== 'MUSEUM' ? ' museum-hud--static' : ''}`}>
+      <div className="mode-toggle">
+        {['MUSEUM', 'GRID', 'LIST'].map((m, i, arr) => (
+          <button
+            key={m}
+            onClick={() => setMode(m)}
+            className={`mode-btn${mode === m ? ' active' : ''}${i < arr.length - 1 ? ' bd-r' : ''}`}
+          >{m}</button>
+        ))}
+      </div>
+      <input
+        value={search}
+        onChange={e => setSearch(e.target.value)}
+        placeholder="SEARCH…"
+        className="museum-hud-search"
+      />
+      <select
+        value={filterType}
+        onChange={e => setFilterType(e.target.value)}
+        className="museum-hud-select"
+      >
+        {TYPES.map(t => <option key={t}>{t}</option>)}
+      </select>
+      <button onClick={onAdd} className="museum-hud-add">+ ADD</button>
+    </div>
+  );
+
+  if (mode === 'MUSEUM') {
+    return (
+      <div className="museum-wrap">
+        {hud}
+        {loading && (
+          <div style={{
+            position: 'absolute', inset: 0, zIndex: 10,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.2em', color: '#0a0a0a',
+          }}>
+            LOADING…
+          </div>
+        )}
+        {!loading && loadError && (
+          <div style={{
+            position: 'absolute', inset: 0, zIndex: 10,
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+            gap: 12, fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.15em',
+          }}>
+            FAILED TO LOAD
+            <button onClick={onRetry} style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.15em', padding: '6px 16px', border: '1px solid #888', background: 'transparent', cursor: 'pointer', color: '#0a0a0a' }}>↻ RETRY</button>
+          </div>
+        )}
+        {!loading && !loadError && museumItems.length === 0 && (
+          <div style={{
+            position: 'absolute', inset: 0, zIndex: 10,
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+            gap: 16, fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '0.15em', color: '#0a0a0a',
+          }}>
+            {items.length === 0 ? 'WARDROBE EMPTY' : 'NO ITEMS MATCH'}
+            {items.length === 0 && (
+              <button onClick={onAdd} className="museum-hud-add">+ ADD FIRST ITEM</button>
+            )}
+          </div>
+        )}
+        {!loading && !loadError && museumItems.length > 0 && (
+          <Museum
+            items={museumItems}
+            onItem={(mi) => onItemClick(items.find(i => i.id === mi.id))}
+            hideOverlays
+            onProgress={({ progress, nearest }) => {
+              setMuseumProgress(progress);
+              setMuseumNearest(nearest);
+            }}
+          />
+        )}
+        <div className="museum-bottom">
+          <span className="museum-stats">{statsStr}</span>
+          <span className="museum-item-name">{museumNearest?.item?.name || ''}</span>
+          <span className="museum-progress">
+            {String(Math.round(museumProgress * 100)).padStart(2, '0')}%
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  // GRID / LIST modes
   const itemGlobalIdx = (id) => items.findIndex(i => i.id === id);
 
   return (
     <div className="v-screen">
-      <div className="stat-bar">
-        {[
-          ['ITEMS', String(items.length).padStart(2, '0')],
-          ['BRANDS', String(brands.size).padStart(2, '0')],
-          ['VALUE', '$' + Math.round(totalValue).toLocaleString()],
-          ['GRAILS', String(grails).padStart(2, '0')],
-          ['YTD +', '$' + Math.round(ytd).toLocaleString()],
-        ].map(([k, v], i, arr) => (
-          <div key={k} className={`stat-cell${i < arr.length - 1 ? ' bd-r' : ''}`}>
-            <div className="stat-key">{k}</div>
-            <div className="stat-val">{v}</div>
-          </div>
-        ))}
-      </div>
-
-      <div className="toolbar">
-        <div className="mode-toggle">
-          {['RACK', 'GRID', 'LIST'].map((m, i, arr) => (
-            <button key={m} onClick={() => setMode(m)}
-              className={`mode-btn${mode === m ? ' active' : ''}${i < arr.length - 1 ? ' bd-r' : ''}`}>
-              {m}
-            </button>
-          ))}
-        </div>
-        <input value={search} onChange={e => setSearch(e.target.value)}
-          placeholder="SEARCH NAME, BRAND…" className="toolbar-search" />
-        <select value={filterType} onChange={e => setFilterType(e.target.value)} className="toolbar-select">
-          {TYPES.map(t => <option key={t}>{t}</option>)}
-        </select>
-        <button onClick={onAdd} className="toolbar-add">+ NEW ENTRY</button>
-      </div>
-
+      {hud}
       <div className="v-body">
         {loading && <div className="v-empty">LOADING…</div>}
         {!loading && loadError && (
           <div className="v-empty" style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center' }}>
             <span>Failed to load items.</span>
             <button onClick={onRetry} style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.15em', padding: '8px 20px', border: '1px solid var(--border)', background: 'transparent', cursor: 'pointer', color: 'var(--text)' }}>↻ RETRY</button>
-          </div>
-        )}
-
-        {!loading && mode === 'RACK' && (
-          <div className="mob-pad" style={{ padding: '0 36px 24px' }}>
-            {brandKeys.length === 0 && <div className="v-empty">No items match your filters.</div>}
-            {brandKeys.map((brand, bi) => (
-              <div key={brand} style={{ marginTop: bi === 0 ? 0 : 32 }}>
-                <div className="rack-section-header">
-                  <div className="rack-brand-title">
-                    {brand} <span className="rack-brand-count">({grouped[brand].length})</span>
-                  </div>
-                  <div className="rack-rail-num">RAIL {String(bi + 1).padStart(2, '0')}</div>
-                </div>
-                <div className="rack-rule" />
-                <div className="rack-rail-wrap">
-                  <div className="rack-rail-line" />
-                  <div className="rack-cards">
-                    {grouped[brand].map(it => (
-                      <RackCard key={it.id} item={it} globalIdx={itemGlobalIdx(it.id)} onClick={onItemClick}
-                        onRemove={id => { onRemove(id); confirm.disarm(); }}
-                        confirmPending={confirm.pending === it.id}
-                        onArmConfirm={confirm.arm} />
-                    ))}
-                  </div>
-                </div>
-              </div>
-            ))}
           </div>
         )}
 
