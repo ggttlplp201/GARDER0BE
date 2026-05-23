@@ -1350,7 +1350,7 @@ html.dark .tryon-progress-pill { border-color: rgba(255,255,255,0.1); }
 .museum-wrap {
   position: relative;
   width: 100%;
-  height: 100vh;
+  height: 100dvh;
   overflow: hidden;
 }
 
@@ -1497,6 +1497,9 @@ html.dark .tryon-progress-pill { border-color: rgba(255,255,255,0.1); }
   color: #0a0a0a;
   white-space: nowrap;
 }
+html.dark .museum-stats,
+html.dark .museum-item-name,
+html.dark .museum-progress { color: #f5f2ea; }
 
 /* Mobile: collapse search on small screens */
 @media (max-width: 479px) {

@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { parseImageUrls } from '../lib/imageUtils';
 import { ITEM_TYPES } from '../lib/constants';
 import ItemCard from './ItemCard';
@@ -62,6 +62,11 @@ export default function WardrobeView({ items = [], loading, loadError, onRetry, 
     color: item.color || '#888888',
     imageUrl: parseImageUrls(item.image_url)[0] || null,
   }));
+
+  const handleProgress = useCallback(({ progress, nearest }) => {
+    setMuseumProgress(progress);
+    setMuseumNearest(nearest);
+  }, []);
 
   const hud = (
     <div className={`museum-hud${mode !== 'MUSEUM' ? ' museum-hud--static' : ''}`}>
@@ -131,10 +136,7 @@ export default function WardrobeView({ items = [], loading, loadError, onRetry, 
             items={museumItems}
             onItem={(mi) => onItemClick(items.find(i => i.id === mi.id))}
             hideOverlays
-            onProgress={({ progress, nearest }) => {
-              setMuseumProgress(progress);
-              setMuseumNearest(nearest);
-            }}
+            onProgress={handleProgress}
           />
         )}
         <div className="museum-bottom">

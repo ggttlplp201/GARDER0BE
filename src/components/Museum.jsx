@@ -148,13 +148,13 @@ export default function Museum({ items = [], onItem, hideOverlays = false, onPro
 
   useEffect(() => {
     onProgress?.({ progress, nearest });
-  }, [cameraZ, progress, nearest, onProgress]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [cameraZ, onProgress]); // nearest and progress derived from cameraZ; object identity not stable
 
   return (
     <div style={{
       flex: 1, display: 'flex', flexDirection: 'column',
       position: 'relative', overflow: 'hidden',
-      width: '100%', height: '100vh',
+      width: '100%', height: '100dvh',
       background: COLOR_FLOOR,
     }}>
       {!hideOverlays && (
@@ -186,7 +186,7 @@ export default function Museum({ items = [], onItem, hideOverlays = false, onPro
         <div style={{ height: scrollLen, position: 'relative' }}>
           <div style={{
             position: 'sticky', top: 0,
-            width: '100%', height: '100vh',
+            width: '100%', height: '100dvh',
             perspective: `${PERSPECTIVE}px`,
             perspectiveOrigin: '50% 42%',
             overflow: 'hidden',
