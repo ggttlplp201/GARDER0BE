@@ -1350,7 +1350,8 @@ html.dark .tryon-progress-pill { border-color: rgba(255,255,255,0.1); }
 .museum-wrap {
   position: relative;
   width: 100%;
-  height: 100dvh;
+  height: 100%;
+  flex: 1;
   overflow: hidden;
 }
 

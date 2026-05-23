@@ -104,7 +104,7 @@ export default function WardrobeView({ items = [], loading, loadError, onRetry, 
           <div style={{
             position: 'absolute', inset: 0, zIndex: 10,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.2em', color: '#0a0a0a',
+            fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.2em', color: 'var(--text)',
           }}>
             LOADING…
           </div>
@@ -116,14 +116,14 @@ export default function WardrobeView({ items = [], loading, loadError, onRetry, 
             gap: 12, fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.15em',
           }}>
             FAILED TO LOAD
-            <button onClick={onRetry} style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.15em', padding: '6px 16px', border: '1px solid #888', background: 'transparent', cursor: 'pointer', color: '#0a0a0a' }}>↻ RETRY</button>
+            <button onClick={onRetry} style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.15em', padding: '6px 16px', border: '1px solid #888', background: 'transparent', cursor: 'pointer', color: 'var(--text)' }}>↻ RETRY</button>
           </div>
         )}
         {!loading && !loadError && museumItems.length === 0 && (
           <div style={{
             position: 'absolute', inset: 0, zIndex: 10,
             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-            gap: 16, fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '0.15em', color: '#0a0a0a',
+            gap: 16, fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '0.15em', color: 'var(--text)',
           }}>
             {items.length === 0 ? 'WARDROBE EMPTY' : 'NO ITEMS MATCH'}
             {items.length === 0 && (
@@ -134,7 +134,7 @@ export default function WardrobeView({ items = [], loading, loadError, onRetry, 
         {!loading && !loadError && museumItems.length > 0 && (
           <Museum
             items={museumItems}
-            onItem={(mi) => onItemClick(items.find(i => i.id === mi.id))}
+            onItem={(mi) => { const it = items.find(i => i.id === mi.id); if (it) onItemClick(it); }}
             hideOverlays
             onProgress={handleProgress}
           />

@@ -154,7 +154,7 @@ export default function Museum({ items = [], onItem, hideOverlays = false, onPro
     <div style={{
       flex: 1, display: 'flex', flexDirection: 'column',
       position: 'relative', overflow: 'hidden',
-      width: '100%', height: '100dvh',
+      width: '100%', height: '100%',
       background: COLOR_FLOOR,
     }}>
       {!hideOverlays && (
@@ -186,7 +186,7 @@ export default function Museum({ items = [], onItem, hideOverlays = false, onPro
         <div style={{ height: scrollLen, position: 'relative' }}>
           <div style={{
             position: 'sticky', top: 0,
-            width: '100%', height: '100dvh',
+            width: '100%', height: '100%',
             perspective: `${PERSPECTIVE}px`,
             perspectiveOrigin: '50% 42%',
             overflow: 'hidden',
