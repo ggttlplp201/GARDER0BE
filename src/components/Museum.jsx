@@ -17,11 +17,25 @@ const FRONT_GAP = 380;
 const BACK_PAD = 700;
 const WALL_THICKNESS = 4;
 const PERSPECTIVE = 900;
+const SCROLL_PER_DEPTH = 1.4;
+const CAMERA_START = 430;
+const MIN_SCROLL = Math.round(CAMERA_START / SCROLL_PER_DEPTH);
 
 const COLOR_WALL = '#ebe6d7';
 const COLOR_FLOOR = '#d8d3c5';
 const COLOR_CEILING = '#fbfaf5';
 const COLOR_DOORWAY = '#0a0a0a';
+const WALL_BG = `url('/concrete-wall.jpg') repeat 0 0 / 600px 600px, ${COLOR_WALL}`;
+// Ceiling: white panel with 3 warm fluorescent strip lights running corridor length
+const CEIL_BG = `linear-gradient(90deg,
+  #e4e4e4 0px,   #e4e4e4 172px,
+  #fffbe8 177px, #ffffff 189px, #fffbe8 201px,
+  #e4e4e4 206px, #e4e4e4 366px,
+  #fffbe8 371px, #ffffff 383px, #fffbe8 395px,
+  #e4e4e4 400px, #e4e4e4 558px,
+  #fffbe8 563px, #ffffff 575px, #fffbe8 587px,
+  #e4e4e4 592px, #e4e4e4 760px
+)`;
 
 const MuseumFrame = ({ item, side, depth, onClick, imageUrl }) => {
   const [hover, setHover] = useState(false);
@@ -112,20 +126,23 @@ const MuseumFrame = ({ item, side, depth, onClick, imageUrl }) => {
 
 export default function Museum({ items = [], onItem, hideOverlays = false, onProgress }) {
   const scrollRef = useRef(null);
-  const [cameraZ, setCameraZ] = useState(0);
+  const [cameraZ, setCameraZ] = useState(CAMERA_START);
 
   const pairCount = Math.max(1, Math.ceil(items.length / 2));
   const lastFrameDepth = FRONT_GAP + (pairCount - 1) * ROW_SPACING + STAGGER;
   const ROOM_DEPTH = lastFrameDepth + BACK_PAD;
 
-  const SCROLL_PER_DEPTH = 1.4;
   const scrollLen = Math.round(ROOM_DEPTH / SCROLL_PER_DEPTH) + 700;
 
   useLayoutEffect(() => {
-    if (scrollRef.current) scrollRef.current.scrollTop = 0;
+    if (scrollRef.current) scrollRef.current.scrollTop = Math.round(CAMERA_START / SCROLL_PER_DEPTH);
   }, []);
 
   const onScroll = (e) => {
+    if (e.target.scrollTop < MIN_SCROLL) {
+      e.target.scrollTop = MIN_SCROLL;
+      return;
+    }
     const t = e.target.scrollTop;
     const z = Math.min(ROOM_DEPTH - 200, t * SCROLL_PER_DEPTH);
     setCameraZ(z);
@@ -155,7 +172,10 @@ export default function Museum({ items = [], onItem, hideOverlays = false, onPro
       flex: 1, display: 'flex', flexDirection: 'column',
       position: 'relative', overflow: 'hidden',
       width: '100%', height: '100%',
-      background: COLOR_FLOOR,
+      backgroundImage: `url('/concrete-wall.jpg')`,
+      backgroundRepeat: 'repeat',
+      backgroundSize: '600px 600px',
+      backgroundColor: COLOR_WALL,
     }}>
       {!hideOverlays && (
         <div style={{
@@ -186,10 +206,14 @@ export default function Museum({ items = [], onItem, hideOverlays = false, onPro
         <div style={{ height: scrollLen, position: 'relative' }}>
           <div style={{
             position: 'sticky', top: 0,
-            width: '100%', height: '100%',
+            width: '100%', height: '100vh',
             perspective: `${PERSPECTIVE}px`,
             perspectiveOrigin: '50% 42%',
             overflow: 'hidden',
+            backgroundImage: `url('/concrete-wall.jpg')`,
+            backgroundRepeat: 'repeat',
+            backgroundSize: '600px 600px',
+            backgroundColor: COLOR_WALL,
           }}>
             <div style={{
               position: 'absolute', left: '50%', top: '50%',
@@ -202,8 +226,12 @@ export default function Museum({ items = [], onItem, hideOverlays = false, onPro
                 left: -WALL_X, top: 0,
                 width: WALL_X * 2, height: ROOM_DEPTH,
                 transformOrigin: '0 0',
-                transform: `translate3d(0, ${FLOOR_Y}px, 0) rotateX(90deg)`,
-                background: COLOR_FLOOR,
+                transform: `translate3d(0, ${FLOOR_Y}px, 0) rotateX(-90deg)`,
+                backgroundImage: `url('/concrete-floor.jpg')`,
+                backgroundRepeat: 'repeat',
+                backgroundPosition: '0 0',
+                backgroundSize: '500px 500px',
+                backgroundColor: COLOR_FLOOR,
               }} />
               <div style={{
                 position: 'absolute',
@@ -211,7 +239,10 @@ export default function Museum({ items = [], onItem, hideOverlays = false, onPro
                 width: WALL_X * 2, height: ROOM_DEPTH,
                 transformOrigin: '0 0',
                 transform: `translate3d(0, ${CEIL_Y}px, 0) rotateX(-90deg)`,
-                background: COLOR_CEILING,
+                backgroundImage: `url('/ceiling.jpg')`,
+                backgroundRepeat: 'repeat',
+                backgroundSize: '600px 600px',
+                backgroundColor: COLOR_CEILING,
               }} />
               <div style={{
                 position: 'absolute',
@@ -219,7 +250,7 @@ export default function Museum({ items = [], onItem, hideOverlays = false, onPro
                 width: ROOM_DEPTH, height: FLOOR_Y - CEIL_Y,
                 transformOrigin: '0 0',
                 transform: `translate3d(${-WALL_X}px, 0, 0) rotateY(90deg)`,
-                background: COLOR_WALL,
+                background: WALL_BG,
               }} />
               <div style={{
                 position: 'absolute',
@@ -227,27 +258,15 @@ export default function Museum({ items = [], onItem, hideOverlays = false, onPro
                 width: ROOM_DEPTH, height: FLOOR_Y - CEIL_Y,
                 transformOrigin: '0 0',
                 transform: `translate3d(${WALL_X}px, 0, ${-ROOM_DEPTH}px) rotateY(-90deg)`,
-                background: COLOR_WALL,
+                background: WALL_BG,
               }} />
               <div style={{
                 position: 'absolute',
                 left: -WALL_X, top: CEIL_Y,
                 width: WALL_X * 2, height: FLOOR_Y - CEIL_Y,
                 transform: `translate3d(0, 0, ${-ROOM_DEPTH}px)`,
-                background: COLOR_WALL,
-              }}>
-                <div style={{
-                  position: 'absolute',
-                  left: '50%', bottom: 0, transform: 'translateX(-50%)',
-                  width: 160, height: 240,
-                  background: COLOR_DOORWAY,
-                }}>
-                  <div style={{
-                    position: 'absolute', top: 18, left: 0, right: 0, textAlign: 'center',
-                    color: '#f5f2ea', fontFamily: FONT_MONO, fontSize: 9, letterSpacing: '0.2em', opacity: 0.7,
-                  }}>ROOM 02 →</div>
-                </div>
-              </div>
+                background: WALL_BG,
+              }} />
               {placements.map((f) => (
                 <MuseumFrame
                   key={f.item.id}

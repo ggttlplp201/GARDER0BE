@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { parseImageUrls } from '../lib/imageUtils';
 import { ITEM_TYPES } from '../lib/constants';
 import ItemCard from './ItemCard';
@@ -23,11 +23,12 @@ function catNum(idx) {
 const TYPES = ['ALL', ...ITEM_TYPES];
 
 export default function WardrobeView({ items = [], loading, loadError, onRetry, onItemClick, onAdd, onEdit, onRemove }) {
-  const [mode, setMode] = useState('MUSEUM');
+  const [mode, setMode] = useState(() => sessionStorage.getItem('wardrobe-mode') || 'MUSEUM');
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState('ALL');
   const [museumProgress, setMuseumProgress] = useState(0);
   const [museumNearest, setMuseumNearest] = useState(null);
+  const [museumReady, setMuseumReady] = useState(false);
   const confirm = useConfirm();
 
   const filtered = items.filter(it => {
@@ -68,13 +69,29 @@ export default function WardrobeView({ items = [], loading, loadError, onRetry, 
     setMuseumNearest(nearest);
   }, []);
 
+  useEffect(() => {
+    if (mode !== 'MUSEUM') { setMuseumReady(false); return; }
+    if (loading || loadError || museumItems.length === 0) return;
+    const t = setTimeout(() => setMuseumReady(true), 120);
+    return () => clearTimeout(t);
+  }, [mode, loading, loadError, museumItems.length]);
+
+  useEffect(() => {
+    if (mode === 'MUSEUM') {
+      document.body.classList.add('museum-mode');
+    } else {
+      document.body.classList.remove('museum-mode');
+    }
+    return () => document.body.classList.remove('museum-mode');
+  }, [mode]);
+
   const hud = (
     <div className={`museum-hud${mode !== 'MUSEUM' ? ' museum-hud--static' : ''}`}>
       <div className="mode-toggle">
         {['MUSEUM', 'GRID', 'LIST'].map((m, i, arr) => (
           <button
             key={m}
-            onClick={() => setMode(m)}
+            onClick={() => { setMode(m); sessionStorage.setItem('wardrobe-mode', m); }}
             className={`mode-btn${mode === m ? ' active' : ''}${i < arr.length - 1 ? ' bd-r' : ''}`}
           >{m}</button>
         ))}
@@ -85,14 +102,18 @@ export default function WardrobeView({ items = [], loading, loadError, onRetry, 
         placeholder="SEARCH…"
         className="museum-hud-search"
       />
-      <select
-        value={filterType}
-        onChange={e => setFilterType(e.target.value)}
-        className="museum-hud-select"
-      >
-        {TYPES.map(t => <option key={t}>{t}</option>)}
-      </select>
-      <button onClick={onAdd} className="museum-hud-add">+ ADD</button>
+      {mode !== 'MUSEUM' && (
+        <select
+          value={filterType}
+          onChange={e => setFilterType(e.target.value)}
+          className="museum-hud-select"
+        >
+          {TYPES.map(t => <option key={t}>{t}</option>)}
+        </select>
+      )}
+      {mode !== 'MUSEUM' && (
+        <button onClick={onAdd} className="museum-hud-add">+ ADD</button>
+      )}
     </div>
   );
 
@@ -100,37 +121,24 @@ export default function WardrobeView({ items = [], loading, loadError, onRetry, 
     return (
       <div className="museum-wrap">
         {hud}
-        {loading && (
-          <div style={{
-            position: 'absolute', inset: 0, zIndex: 10,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.2em', color: 'var(--text)',
-          }}>
-            LOADING…
-          </div>
-        )}
-        {!loading && loadError && (
-          <div style={{
-            position: 'absolute', inset: 0, zIndex: 10,
-            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-            gap: 12, fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.15em',
-          }}>
-            FAILED TO LOAD
-            <button onClick={onRetry} style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.15em', padding: '6px 16px', border: '1px solid #888', background: 'transparent', cursor: 'pointer', color: 'var(--text)' }}>↻ RETRY</button>
-          </div>
-        )}
-        {!loading && !loadError && museumItems.length === 0 && (
-          <div style={{
-            position: 'absolute', inset: 0, zIndex: 10,
-            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-            gap: 16, fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '0.15em', color: 'var(--text)',
-          }}>
-            {items.length === 0 ? 'WARDROBE EMPTY' : 'NO ITEMS MATCH'}
-            {items.length === 0 && (
+        {/* Full-screen cover — hides app chrome and unrendered corridor until ready */}
+        <div className={`museum-cover${museumReady ? ' museum-cover--revealed' : ''}`}>
+          {loadError ? (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+              <span>FAILED TO LOAD</span>
+              <button onClick={onRetry} className="museum-cover-retry">↻ RETRY</button>
+            </div>
+          ) : !loading && items.length === 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+              <span>WARDROBE EMPTY</span>
               <button onClick={onAdd} className="museum-hud-add">+ ADD FIRST ITEM</button>
-            )}
-          </div>
-        )}
+            </div>
+          ) : !loading && museumItems.length === 0 ? (
+            <span>NO ITEMS MATCH</span>
+          ) : (
+            <span className="museum-cover-loading">LOADING</span>
+          )}
+        </div>
         {!loading && !loadError && museumItems.length > 0 && (
           <Museum
             items={museumItems}
@@ -139,12 +147,11 @@ export default function WardrobeView({ items = [], loading, loadError, onRetry, 
             onProgress={handleProgress}
           />
         )}
+        <div className="museum-progress-top">
+          {String(Math.round(museumProgress * 100)).padStart(2, '0')}%
+        </div>
         <div className="museum-bottom">
-          <span className="museum-stats">{statsStr}</span>
           <span className="museum-item-name">{museumNearest?.item?.name || ''}</span>
-          <span className="museum-progress">
-            {String(Math.round(museumProgress * 100)).padStart(2, '0')}%
-          </span>
         </div>
       </div>
     );

@@ -30,9 +30,12 @@ export async function autoTagWithClaude(blob) {
   // Try Railway backend first if configured; fall back to Vercel /api/tag
   if (API_URL) {
     try {
+      const { data: { session } } = await sb.auth.getSession();
+      const token = session?.access_token;
       const fd = new FormData();
       fd.append('file', blob, 'item.jpg');
-      const resp = await fetch(`${API_URL}/tag`, { method: 'POST', body: fd });
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      const resp = await fetch(`${API_URL}/tag`, { method: 'POST', body: fd, headers });
       if (resp.ok) return await resp.json();
       // Non-ok (e.g. 503 ANTHROPIC_API_KEY not set) → fall through to Vercel
     } catch {
