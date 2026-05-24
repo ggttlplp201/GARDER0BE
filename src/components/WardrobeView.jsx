@@ -27,7 +27,6 @@ export default function WardrobeView({ items = [], loading, loadError, onRetry, 
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState('ALL');
   const [museumProgress, setMuseumProgress] = useState(0);
-  const [museumNearest, setMuseumNearest] = useState(null);
   const [museumReady, setMuseumReady] = useState(false);
   const confirm = useConfirm();
 
@@ -64,9 +63,8 @@ export default function WardrobeView({ items = [], loading, loadError, onRetry, 
     imageUrl: parseImageUrls(item.image_url)[0] || null,
   }));
 
-  const handleProgress = useCallback(({ progress, nearest }) => {
+  const handleProgress = useCallback(({ progress }) => {
     setMuseumProgress(progress);
-    setMuseumNearest(nearest);
   }, []);
 
   useEffect(() => {
@@ -155,9 +153,6 @@ export default function WardrobeView({ items = [], loading, loadError, onRetry, 
         )}
         <div className="museum-progress-top">
           {String(Math.round(museumProgress * 100)).padStart(2, '0')}%
-        </div>
-        <div className="museum-bottom">
-          <span className="museum-item-name">{museumNearest?.item?.name || ''}</span>
         </div>
       </div>
     );

@@ -19,8 +19,7 @@ const BACK_PAD = 700;
 const WALL_THICKNESS = 4;
 const PERSPECTIVE = 900;
 const SCROLL_PER_DEPTH = 1.4;
-const CAMERA_START = 430;
-const MIN_SCROLL = Math.round(CAMERA_START / SCROLL_PER_DEPTH);
+const CAMERA_START_MIN = 430; // minimum — used on narrow screens
 
 const COLOR_WALL = '#ebe6d7';
 const COLOR_FLOOR = '#d8d3c5';
@@ -124,9 +123,19 @@ const MuseumFrame = ({ item, side, depth, onClick, imageUrl }) => {
   );
 };
 
+function computeCameraStart() {
+  const W = window.innerWidth || 1440;
+  // Ensure projected wall edge (WALL_X * P / (P - z)) fills half-viewport with 30px buffer
+  const needed = Math.ceil(PERSPECTIVE * (1 - (WALL_X * 2 - 30) / W));
+  return Math.max(CAMERA_START_MIN, needed);
+}
+
 export default function Museum({ items = [], onItem, hideOverlays = false, onProgress }) {
   const scrollRef = useRef(null);
-  const [cameraZ, setCameraZ] = useState(CAMERA_START);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const cameraStart = useMemo(computeCameraStart, []);
+  const minScroll = Math.round(cameraStart / SCROLL_PER_DEPTH);
+  const [cameraZ, setCameraZ] = useState(cameraStart);
 
   const pairCount = Math.max(1, Math.ceil(items.length / 2));
   const lastFrameDepth = FRONT_GAP + (pairCount - 1) * ROW_SPACING + STAGGER;
@@ -135,12 +144,12 @@ export default function Museum({ items = [], onItem, hideOverlays = false, onPro
   const scrollLen = Math.round(ROOM_DEPTH / SCROLL_PER_DEPTH) + 700;
 
   useLayoutEffect(() => {
-    if (scrollRef.current) scrollRef.current.scrollTop = Math.round(CAMERA_START / SCROLL_PER_DEPTH);
-  }, []);
+    if (scrollRef.current) scrollRef.current.scrollTop = minScroll;
+  }, [minScroll]);
 
   const onScroll = (e) => {
-    if (e.target.scrollTop < MIN_SCROLL) {
-      e.target.scrollTop = MIN_SCROLL;
+    if (e.target.scrollTop < minScroll) {
+      e.target.scrollTop = minScroll;
       return;
     }
     const t = e.target.scrollTop;
@@ -159,7 +168,7 @@ export default function Museum({ items = [], onItem, hideOverlays = false, onPro
 
   const progress = Math.min(1, cameraZ / Math.max(1, ROOM_DEPTH - 200));
   const nearest = placements.reduce((best, f) => {
-    const d = Math.abs(f.depth - cameraZ - 200);
+    const d = Math.abs(f.depth - cameraZ);
     return (!best || d < best.dist) ? { ...f, dist: d } : best;
   }, null);
 
