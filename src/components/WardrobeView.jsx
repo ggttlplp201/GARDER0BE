@@ -71,10 +71,10 @@ export default function WardrobeView({ items = [], loading, loadError, onRetry, 
 
   useEffect(() => {
     if (mode !== 'MUSEUM') { setMuseumReady(false); return; }
-    if (loading || loadError || museumItems.length === 0) return;
+    if (loading || loadError || items.length === 0) return;
     const t = setTimeout(() => setMuseumReady(true), 120);
     return () => clearTimeout(t);
-  }, [mode, loading, loadError, museumItems.length]);
+  }, [mode, loading, loadError, items.length]);
 
   useEffect(() => {
     if (mode === 'MUSEUM') {
@@ -133,19 +133,25 @@ export default function WardrobeView({ items = [], loading, loadError, onRetry, 
               <span>WARDROBE EMPTY</span>
               <button onClick={onAdd} className="museum-hud-add">+ ADD FIRST ITEM</button>
             </div>
-          ) : !loading && museumItems.length === 0 ? (
-            <span>NO ITEMS MATCH</span>
           ) : (
             <span className="museum-cover-loading">LOADING</span>
           )}
         </div>
-        {!loading && !loadError && museumItems.length > 0 && (
+        {!loading && !loadError && items.length > 0 && (
           <Museum
             items={museumItems}
             onItem={(mi) => { const it = items.find(i => i.id === mi.id); if (it) onItemClick(it); }}
             hideOverlays
             onProgress={handleProgress}
           />
+        )}
+        {!loading && museumReady && museumItems.length === 0 && items.length > 0 && (
+          <div style={{
+            position: 'absolute', bottom: 60, left: 0, right: 0, zIndex: 50,
+            textAlign: 'center', pointerEvents: 'none',
+            fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.22em',
+            color: 'rgba(245,242,234,0.5)',
+          }}>NO ITEMS MATCH</div>
         )}
         <div className="museum-progress-top">
           {String(Math.round(museumProgress * 100)).padStart(2, '0')}%

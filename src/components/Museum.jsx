@@ -11,6 +11,7 @@ const CEIL_Y = -360;
 const FRAME_CY = -40;
 const FRAME_W = 200;
 const FRAME_H = 290;
+const RENDER_SCALE = 2;
 const ROW_SPACING = 460;
 const STAGGER = 230;
 const FRONT_GAP = 380;
@@ -59,34 +60,33 @@ const MuseumFrame = ({ item, side, depth, onClick, imageUrl }) => {
       onMouseLeave={() => setHover(false)}
       style={{
         position: 'absolute',
-        left: -FRAME_W / 2,
-        top: -FRAME_H / 2,
-        width: FRAME_W,
-        height: FRAME_H,
+        left: -(FRAME_W * RENDER_SCALE) / 2,
+        top: -(FRAME_H * RENDER_SCALE) / 2,
+        width: FRAME_W * RENDER_SCALE,
+        height: FRAME_H * RENDER_SCALE,
         transform:
           `translate3d(${x - side * wallOff}px, ${y}px, ${z + liftZ}px) ` +
-          `rotateY(${rotY}deg) scale(${scale})`,
+          `rotateY(${rotY}deg) scale(${scale / RENDER_SCALE})`,
         transformStyle: 'preserve-3d',
         transition:
           'transform 520ms cubic-bezier(0.22, 1, 0.36, 1), ' +
           'filter 380ms ease-out',
         cursor: 'pointer',
         background: '#1a1a1a',
-        padding: 12,
-        border: '5px solid #0e0e0e',
+        padding: 24,
+        border: '10px solid #0e0e0e',
         boxSizing: 'border-box',
         boxShadow:
-          '0 0 0 1px rgba(0,0,0,0.45) inset, ' +
+          '0 0 0 2px rgba(0,0,0,0.45) inset, ' +
           '0 0 22px rgba(0,0,0,0.35), ' +
           '0 16px 30px rgba(0,0,0,0.22)',
         filter: hover
           ? 'brightness(1.15) drop-shadow(0 0 26px rgba(255,250,235,0.4))'
           : 'brightness(1)',
-        willChange: 'transform',
       }}
     >
       <div style={{ width: '100%', height: '100%', background: '#f5f2ea', position: 'relative', display: 'flex', flexDirection: 'column' }}>
-        <div style={{ flex: 1, margin: 10, overflow: 'hidden', position: 'relative' }}>
+        <div style={{ flex: 1, margin: 20, overflow: 'hidden', position: 'relative' }}>
           {imageUrl ? (
             <img
               src={imageUrl}
@@ -99,27 +99,27 @@ const MuseumFrame = ({ item, side, depth, onClick, imageUrl }) => {
               background: (item.color || '#888888') + '18',
               color: item.color || '#888888',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontFamily: FONT_MONO, fontSize: 10, letterSpacing: '0.18em',
+              fontFamily: FONT_MONO, fontSize: 20, letterSpacing: '0.18em',
               textTransform: 'uppercase',
               position: 'relative', overflow: 'hidden',
             }}>
-              <span style={{ position: 'relative', zIndex: 2, padding: '0 12px', textAlign: 'center' }}>
+              <span style={{ position: 'relative', zIndex: 2, padding: '0 24px', textAlign: 'center' }}>
                 {(item.brand || '—').split(' ')[0]}
               </span>
             </div>
           )}
         </div>
-        <div style={{ padding: '6px 10px 8px', borderTop: '1px solid rgba(10,10,10,0.12)' }}>
-          <div style={{ fontFamily: FONT_MONO, fontSize: 8, letterSpacing: '0.18em', opacity: 0.55 }}>
+        <div style={{ padding: '12px 20px 16px', borderTop: '2px solid rgba(10,10,10,0.12)' }}>
+          <div style={{ fontFamily: FONT_MONO, fontSize: 16, letterSpacing: '0.18em', opacity: 0.55 }}>
             № {item.cat} · {item.brand}
           </div>
-          <div style={{ fontFamily: FONT_DISPLAY, fontSize: 12, fontWeight: 500, lineHeight: 1.15, marginTop: 2, color: INK }}>
+          <div style={{ fontFamily: FONT_DISPLAY, fontSize: 24, fontWeight: 500, lineHeight: 1.15, marginTop: 4, color: INK }}>
             {item.name}
           </div>
         </div>
       </div>
-      <div style={{ position: 'absolute', top: -22, left: '50%', width: 2, height: 22, background: 'rgba(0,0,0,0.4)', transform: 'translateX(-50%)' }} />
-      <div style={{ position: 'absolute', top: -26, left: '50%', width: 6, height: 6, borderRadius: '50%', background: '#0e0e0e', transform: 'translateX(-50%)', boxShadow: '0 2px 3px rgba(0,0,0,0.3)' }} />
+      <div style={{ position: 'absolute', top: -44, left: '50%', width: 4, height: 44, background: 'rgba(0,0,0,0.4)', transform: 'translateX(-50%)' }} />
+      <div style={{ position: 'absolute', top: -52, left: '50%', width: 12, height: 12, borderRadius: '50%', background: '#0e0e0e', transform: 'translateX(-50%)', boxShadow: '0 4px 6px rgba(0,0,0,0.3)' }} />
     </div>
   );
 };
