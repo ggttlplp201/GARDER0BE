@@ -132,10 +132,13 @@ function computeCameraStart() {
 
 export default function Museum({ items = [], onItem, hideOverlays = false, onProgress }) {
   const scrollRef = useRef(null);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const cameraStart = useMemo(computeCameraStart, []);
+  // Compute once on mount via lazy ref — more reliable than useMemo for one-time side-effecty reads
+  const cameraStartRef = useRef(null);
+  if (cameraStartRef.current === null) cameraStartRef.current = computeCameraStart();
+  const cameraStart = cameraStartRef.current;
   const minScroll = Math.round(cameraStart / SCROLL_PER_DEPTH);
-  const [cameraZ, setCameraZ] = useState(cameraStart);
+
+  const [cameraZ, setCameraZ] = useState(() => computeCameraStart());
 
   const pairCount = Math.max(1, Math.ceil(items.length / 2));
   const lastFrameDepth = FRONT_GAP + (pairCount - 1) * ROW_SPACING + STAGGER;
@@ -143,16 +146,29 @@ export default function Museum({ items = [], onItem, hideOverlays = false, onPro
 
   const scrollLen = Math.round(ROOM_DEPTH / SCROLL_PER_DEPTH) + 700;
 
+  // Primary: set synchronously in layout phase
   useLayoutEffect(() => {
-    if (scrollRef.current) scrollRef.current.scrollTop = minScroll;
-  }, [minScroll]);
+    const el = scrollRef.current;
+    if (el) el.scrollTop = minScroll;
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Fallback: if content height wasn't ready in layout phase, retry on next frame
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const id = requestAnimationFrame(() => {
+      if (el.scrollTop < minScroll) el.scrollTop = minScroll;
+    });
+    return () => cancelAnimationFrame(id);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const onScroll = (e) => {
-    if (e.target.scrollTop < minScroll) {
+    const t = e.target.scrollTop;
+    if (t < minScroll) {
       e.target.scrollTop = minScroll;
+      setCameraZ(cameraStart); // keep state in sync when snapping
       return;
     }
-    const t = e.target.scrollTop;
     const z = Math.min(ROOM_DEPTH - 200, t * SCROLL_PER_DEPTH);
     setCameraZ(z);
   };
