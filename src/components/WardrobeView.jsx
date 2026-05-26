@@ -60,7 +60,7 @@ export default function WardrobeView({ items = [], loading, loadError, onRetry, 
     name: item.name || 'Untitled',
     type: item.type || '',
     color: item.color || '#888888',
-    imageUrl: parseImageUrls(item.image_url)[0] || null,
+    imageUrls: parseImageUrls(item.image_url),
   }));
 
   const handleProgress = useCallback(({ progress }) => {

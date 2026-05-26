@@ -1,5 +1,5 @@
 // Museum.jsx — Garderobe museum room view
-import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useMemo, useEffect, useCallback, memo } from 'react';
 
 const FONT_DISPLAY = "'Inter Tight', -apple-system, sans-serif";
 const FONT_MONO = "'JetBrains Mono', ui-monospace, monospace";
@@ -37,9 +37,32 @@ function getLayout() {
   return { wallX, floorY, ceilY, frameCY, frameW, frameH, frontGap, rowSpacing, stagger, cameraStart, mobile };
 }
 
-const MuseumFrame = ({ item, side, depth, onClick, imageUrl, layout }) => {
+const MuseumFrame = memo(({ item, side, depth, onClick, imageUrls = [], layout, cameraZ }) => {
   const [hover, setHover] = useState(false);
-  const { wallX, frameCY, frameW, frameH } = layout;
+  const [imgIdx, setImgIdx] = useState(0);
+  const offsetRef = useRef(Math.floor(Math.random() * 2000));
+  const { wallX, frameCY, frameW, frameH, mobile } = layout;
+
+  // Auto-cycle images when there are multiple
+  useEffect(() => {
+    if (imageUrls.length <= 1) return;
+    let intervalId;
+    const timeoutId = setTimeout(() => {
+      intervalId = setInterval(() => setImgIdx(i => (i + 1) % imageUrls.length), 2500);
+    }, offsetRef.current);
+    return () => { clearTimeout(timeoutId); clearInterval(intervalId); };
+  }, [imageUrls.length]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const imageUrl = imageUrls[imgIdx] || null;
+
+  // On mobile: tilt toward viewer when camera is near
+  const tiltAngle = mobile ? (() => {
+    const dist = Math.abs(depth - cameraZ);
+    const maxTilt = 25;
+    const tiltRange = 200;
+    if (dist > tiltRange) return 0;
+    return maxTilt * (1 - dist / tiltRange) * (depth > cameraZ ? 1 : -1);
+  })() : 0;
 
   const x = side * (wallX - WALL_THICKNESS);
   const y = frameCY;
@@ -77,7 +100,7 @@ const MuseumFrame = ({ item, side, depth, onClick, imageUrl, layout }) => {
         height: frameH * RENDER_SCALE,
         transform:
           `translate3d(${x - side * wallOff}px, ${y}px, ${z + liftZ}px) ` +
-          `rotateY(${rotY}deg) scale(${scale / RENDER_SCALE})`,
+          `rotateY(${rotY + tiltAngle}deg) scale(${scale / RENDER_SCALE})`,
         transition: 'transform 520ms cubic-bezier(0.22, 1, 0.36, 1), filter 380ms ease-out',
         cursor: 'pointer',
         background: '#1a1a1a',
@@ -97,9 +120,13 @@ const MuseumFrame = ({ item, side, depth, onClick, imageUrl, layout }) => {
         <div style={{ flex: 1, margin, overflow: 'hidden', position: 'relative' }}>
           {imageUrl ? (
             <img
+              key={imgIdx}
               src={imageUrl}
               alt={item.name}
-              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+              style={{
+                width: '100%', height: '100%', objectFit: 'cover', display: 'block',
+                animation: imageUrls.length > 1 ? 'museum-img-fade 0.7s ease-out' : 'none',
+              }}
             />
           ) : (
             <div style={{
@@ -130,7 +157,7 @@ const MuseumFrame = ({ item, side, depth, onClick, imageUrl, layout }) => {
       <div style={{ position: 'absolute', top: -(hangH + knobS / 2 + 2), left: '50%', width: knobS, height: knobS, borderRadius: '50%', background: '#0e0e0e', transform: 'translateX(-50%)', boxShadow: '0 4px 6px rgba(0,0,0,0.3)' }} />
     </div>
   );
-};
+});
 
 export default function Museum({ items = [], onItem, hideOverlays = false, onProgress }) {
   const containerRef = useRef(null);
@@ -334,8 +361,9 @@ export default function Museum({ items = [], onItem, hideOverlays = false, onPro
               side={f.side}
               depth={f.depth}
               layout={layout}
+              cameraZ={cameraZ}
               onClick={() => onItem && onItem(f.item)}
-              imageUrl={f.item.imageUrl}
+              imageUrls={f.item.imageUrls || []}
             />
           ))}
         </div>

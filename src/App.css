@@ -1380,6 +1380,10 @@ html.dark .tryon-progress-pill { border-color: rgba(255,255,255,0.1); }
   width: 1ch;
   animation: museum-dots 1.2s steps(4, end) infinite;
 }
+@keyframes museum-img-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
 @keyframes museum-dots {
   0%   { content: ''; }
   25%  { content: '.'; }
