@@ -548,6 +548,10 @@ input[type=range].vol-slider::-webkit-slider-thumb { -webkit-appearance: none; a
 .app-shell { height: 100dvh; display: flex; flex-direction: column; overflow: hidden; background: var(--bg); color: var(--text); font-family: var(--font-display); }
 .app-main  { flex: 1; overflow: hidden; display: flex; flex-direction: column; min-height: 0; }
 
+/* Outfits page — hide app header and OOTD title so the builder fills the full viewport */
+.page-outfits .app-header { display: none !important; }
+.page-outfits .v-screen-header { display: none !important; }
+
 /* ── Header ── */
 .app-header {
   padding: 18px 36px 0;
