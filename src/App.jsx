@@ -11,7 +11,9 @@ import WardrobeView from './components/WardrobeView';
 import ItemDetailView from './components/ItemDetailView';
 import TimelineView from './components/TimelineView';
 import WishlistView from './components/WishlistView';
-import OutfitsView from './components/OutfitsView';
+// Switch outfit view: swap the active import (one line change)
+import OutfitsView from './components/OutfitsViewFlatLay';   // flat-lay drag-and-drop
+// import OutfitsView from './components/OutfitsViewTryOn';  // mannequin try-on (AI generate)
 import ExplorePage from './components/ExplorePage';
 import FriendsPage from './components/FriendsPage';
 import ProfilePanel from './components/ProfilePanel';
