@@ -1,56 +1,68 @@
 // Museum.jsx — Garderobe museum room view
-import React, { useState, useRef, useMemo, useLayoutEffect, useEffect } from 'react';
+import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react';
 
 const FONT_DISPLAY = "'Inter Tight', -apple-system, sans-serif";
 const FONT_MONO = "'JetBrains Mono', ui-monospace, monospace";
 const INK = '#0a0a0a';
 
-const WALL_X = 380;
-const FLOOR_Y = 280;
-const CEIL_Y = -360;
-const FRAME_CY = -40;
-const FRAME_W = 200;
-const FRAME_H = 290;
 const RENDER_SCALE = 2;
-const ROW_SPACING = 460;
-const STAGGER = 230;
-const FRONT_GAP = 380;
-const BACK_PAD = 700;
 const WALL_THICKNESS = 4;
 const PERSPECTIVE = 900;
-const SCROLL_PER_DEPTH = 1.4;
-const CAMERA_START_MIN = 430; // minimum — used on narrow screens
+const BACK_PAD = 700;
 
 const COLOR_WALL = '#ebe6d7';
 const COLOR_FLOOR = '#d8d3c5';
 const COLOR_CEILING = '#fbfaf5';
-const COLOR_DOORWAY = '#0a0a0a';
 const WALL_BG = `url('/concrete-wall.jpg') repeat 0 0 / 600px 600px, ${COLOR_WALL}`;
-// Ceiling: white panel with 3 warm fluorescent strip lights running corridor length
-const CEIL_BG = `linear-gradient(90deg,
-  #e4e4e4 0px,   #e4e4e4 172px,
-  #fffbe8 177px, #ffffff 189px, #fffbe8 201px,
-  #e4e4e4 206px, #e4e4e4 366px,
-  #fffbe8 371px, #ffffff 383px, #fffbe8 395px,
-  #e4e4e4 400px, #e4e4e4 558px,
-  #fffbe8 563px, #ffffff 575px, #fffbe8 587px,
-  #e4e4e4 592px, #e4e4e4 760px
-)`;
 
-const MuseumFrame = ({ item, side, depth, onClick, imageUrl }) => {
+// Responsive geometry — computed once per mount
+function getLayout() {
+  const W = typeof window !== 'undefined' ? window.innerWidth : 1440;
+  const mobile = W < 640;
+
+  const wallX      = mobile ? Math.max(110, Math.floor(W * 0.37)) : 380;
+  const floorY     = mobile ? 160  : 280;
+  const ceilY      = mobile ? -200 : -360;
+  const frameCY    = mobile ? -20  : -40;
+  const frameW     = mobile ? 110  : 200;
+  const frameH     = mobile ? 160  : 290;
+  const frontGap   = mobile ? 360  : 380;
+  const rowSpacing = mobile ? 300  : 460;
+  const stagger    = mobile ? 150  : 230;
+
+  // Camera deep enough that projected wall edge fills half-viewport
+  const needed = Math.ceil(PERSPECTIVE * (1 - (wallX * 2 - 30) / W));
+  const cameraStart = Math.max(mobile ? 200 : 430, needed);
+
+  return { wallX, floorY, ceilY, frameCY, frameW, frameH, frontGap, rowSpacing, stagger, cameraStart, mobile };
+}
+
+const MuseumFrame = ({ item, side, depth, onClick, imageUrl, layout }) => {
   const [hover, setHover] = useState(false);
+  const { wallX, frameCY, frameW, frameH } = layout;
 
-  const x = side * (WALL_X - WALL_THICKNESS);
-  const y = FRAME_CY;
+  const x = side * (wallX - WALL_THICKNESS);
+  const y = frameCY;
   const z = -depth;
   const baseRotY = side * -90;
   const HOVER_ANGLE = 30;
   const hoverRotY = side * -HOVER_ANGLE;
   const rotY = hover ? hoverRotY : baseRotY;
   const cosTilt = Math.cos(HOVER_ANGLE * Math.PI / 180);
-  const wallOff = hover ? (FRAME_W / 2) * cosTilt + 30 : 0;
+  const wallOff = hover ? (frameW / 2) * cosTilt + 30 : 0;
   const liftZ = hover ? 120 : 0;
   const scale = hover ? 1.08 : 1;
+
+  // Internal sizes are 2× visual (RENDER_SCALE trick)
+  const r = frameW / 200;
+  const pad       = Math.round(24 * r);
+  const borderW   = Math.max(4, Math.round(10 * r));
+  const margin    = Math.round(20 * r);
+  const fontMono  = Math.max(12, Math.round(16 * r));
+  const fontDisp  = Math.max(18, Math.round(24 * r));
+  const capPad    = `${Math.round(12 * r)}px ${Math.round(20 * r)}px ${Math.round(16 * r)}px`;
+  const hangH     = Math.round(44 * r);
+  const knobS     = Math.max(6, Math.round(12 * r));
 
   return (
     <div
@@ -59,21 +71,18 @@ const MuseumFrame = ({ item, side, depth, onClick, imageUrl }) => {
       onMouseLeave={() => setHover(false)}
       style={{
         position: 'absolute',
-        left: -(FRAME_W * RENDER_SCALE) / 2,
-        top: -(FRAME_H * RENDER_SCALE) / 2,
-        width: FRAME_W * RENDER_SCALE,
-        height: FRAME_H * RENDER_SCALE,
+        left: -(frameW * RENDER_SCALE) / 2,
+        top: -(frameH * RENDER_SCALE) / 2,
+        width: frameW * RENDER_SCALE,
+        height: frameH * RENDER_SCALE,
         transform:
           `translate3d(${x - side * wallOff}px, ${y}px, ${z + liftZ}px) ` +
           `rotateY(${rotY}deg) scale(${scale / RENDER_SCALE})`,
-        transformStyle: 'preserve-3d',
-        transition:
-          'transform 520ms cubic-bezier(0.22, 1, 0.36, 1), ' +
-          'filter 380ms ease-out',
+        transition: 'transform 520ms cubic-bezier(0.22, 1, 0.36, 1), filter 380ms ease-out',
         cursor: 'pointer',
         background: '#1a1a1a',
-        padding: 24,
-        border: '10px solid #0e0e0e',
+        padding: pad,
+        border: `${borderW}px solid #0e0e0e`,
         boxSizing: 'border-box',
         boxShadow:
           '0 0 0 2px rgba(0,0,0,0.45) inset, ' +
@@ -85,7 +94,7 @@ const MuseumFrame = ({ item, side, depth, onClick, imageUrl }) => {
       }}
     >
       <div style={{ width: '100%', height: '100%', background: '#f5f2ea', position: 'relative', display: 'flex', flexDirection: 'column' }}>
-        <div style={{ flex: 1, margin: 20, overflow: 'hidden', position: 'relative' }}>
+        <div style={{ flex: 1, margin, overflow: 'hidden', position: 'relative' }}>
           {imageUrl ? (
             <img
               src={imageUrl}
@@ -98,89 +107,113 @@ const MuseumFrame = ({ item, side, depth, onClick, imageUrl }) => {
               background: (item.color || '#888888') + '18',
               color: item.color || '#888888',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontFamily: FONT_MONO, fontSize: 20, letterSpacing: '0.18em',
+              fontFamily: FONT_MONO, fontSize: fontMono * 1.25, letterSpacing: '0.18em',
               textTransform: 'uppercase',
-              position: 'relative', overflow: 'hidden',
+              overflow: 'hidden',
             }}>
-              <span style={{ position: 'relative', zIndex: 2, padding: '0 24px', textAlign: 'center' }}>
+              <span style={{ padding: `0 ${Math.round(24 * r)}px`, textAlign: 'center' }}>
                 {(item.brand || '—').split(' ')[0]}
               </span>
             </div>
           )}
         </div>
-        <div style={{ padding: '12px 20px 16px', borderTop: '2px solid rgba(10,10,10,0.12)' }}>
-          <div style={{ fontFamily: FONT_MONO, fontSize: 16, letterSpacing: '0.18em', opacity: 0.55 }}>
+        <div style={{ padding: capPad, borderTop: `${Math.max(1, Math.round(2 * r))}px solid rgba(10,10,10,0.12)` }}>
+          <div style={{ fontFamily: FONT_MONO, fontSize: fontMono, letterSpacing: '0.18em', opacity: 0.55 }}>
             № {item.cat} · {item.brand}
           </div>
-          <div style={{ fontFamily: FONT_DISPLAY, fontSize: 24, fontWeight: 500, lineHeight: 1.15, marginTop: 4, color: INK }}>
+          <div style={{ fontFamily: FONT_DISPLAY, fontSize: fontDisp, fontWeight: 500, lineHeight: 1.15, marginTop: Math.round(4 * r), color: INK }}>
             {item.name}
           </div>
         </div>
       </div>
-      <div style={{ position: 'absolute', top: -44, left: '50%', width: 4, height: 44, background: 'rgba(0,0,0,0.4)', transform: 'translateX(-50%)' }} />
-      <div style={{ position: 'absolute', top: -52, left: '50%', width: 12, height: 12, borderRadius: '50%', background: '#0e0e0e', transform: 'translateX(-50%)', boxShadow: '0 4px 6px rgba(0,0,0,0.3)' }} />
+      <div style={{ position: 'absolute', top: -hangH, left: '50%', width: Math.max(2, Math.round(4 * r)), height: hangH, background: 'rgba(0,0,0,0.4)', transform: 'translateX(-50%)' }} />
+      <div style={{ position: 'absolute', top: -(hangH + knobS / 2 + 2), left: '50%', width: knobS, height: knobS, borderRadius: '50%', background: '#0e0e0e', transform: 'translateX(-50%)', boxShadow: '0 4px 6px rgba(0,0,0,0.3)' }} />
     </div>
   );
 };
 
-function computeCameraStart() {
-  const W = window.innerWidth || 1440;
-  // Ensure projected wall edge (WALL_X * P / (P - z)) fills half-viewport with 30px buffer
-  const needed = Math.ceil(PERSPECTIVE * (1 - (WALL_X * 2 - 30) / W));
-  return Math.max(CAMERA_START_MIN, needed);
-}
-
 export default function Museum({ items = [], onItem, hideOverlays = false, onProgress }) {
-  const scrollRef = useRef(null);
-  // Compute once on mount via lazy ref — more reliable than useMemo for one-time side-effecty reads
-  const cameraStartRef = useRef(null);
-  if (cameraStartRef.current === null) cameraStartRef.current = computeCameraStart();
-  const cameraStart = cameraStartRef.current;
-  const minScroll = Math.round(cameraStart / SCROLL_PER_DEPTH);
+  const containerRef = useRef(null);
 
-  const [cameraZ, setCameraZ] = useState(() => computeCameraStart());
+  // Compute layout once per mount via lazy ref
+  const layoutRef = useRef(null);
+  if (layoutRef.current === null) layoutRef.current = getLayout();
+  const layout = layoutRef.current;
+  const { wallX, floorY, ceilY, frameCY, frontGap, rowSpacing, stagger, cameraStart } = layout;
+
+  const [cameraZ, setCameraZ] = useState(cameraStart);
 
   const pairCount = Math.max(1, Math.ceil(items.length / 2));
-  const lastFrameDepth = FRONT_GAP + (pairCount - 1) * ROW_SPACING + STAGGER;
+  const lastFrameDepth = frontGap + (pairCount - 1) * rowSpacing + stagger;
   const ROOM_DEPTH = lastFrameDepth + BACK_PAD;
+  const roomDepthRef = useRef(ROOM_DEPTH);
+  roomDepthRef.current = ROOM_DEPTH;
 
-  const scrollLen = Math.round(ROOM_DEPTH / SCROLL_PER_DEPTH) + 700;
+  const clampZ = useCallback((z) =>
+    Math.min(roomDepthRef.current - 200, Math.max(cameraStart, z)),
+  [cameraStart]);
 
-  // Primary: set synchronously in layout phase
-  useLayoutEffect(() => {
-    const el = scrollRef.current;
-    if (el) el.scrollTop = minScroll;
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Fallback: if content height wasn't ready in layout phase, retry on next frame
+  // Wheel (desktop / trackpad)
   useEffect(() => {
-    const el = scrollRef.current;
+    const el = containerRef.current;
     if (!el) return;
-    const id = requestAnimationFrame(() => {
-      if (el.scrollTop < minScroll) el.scrollTop = minScroll;
-    });
-    return () => cancelAnimationFrame(id);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    const onWheel = (e) => {
+      e.preventDefault();
+      setCameraZ(z => clampZ(z + e.deltaY * 0.8));
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, [clampZ]);
 
-  const onScroll = (e) => {
-    const t = e.target.scrollTop;
-    if (t < minScroll) {
-      e.target.scrollTop = minScroll;
-      setCameraZ(cameraStart); // keep state in sync when snapping
-      return;
-    }
-    const z = Math.min(ROOM_DEPTH - 200, t * SCROLL_PER_DEPTH);
-    setCameraZ(z);
-  };
+  // Touch (mobile) with momentum
+  const touchRef = useRef({ y: 0, vel: 0, raf: 0 });
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const onTouchStart = (e) => {
+      cancelAnimationFrame(touchRef.current.raf);
+      touchRef.current.y = e.touches[0].clientY;
+      touchRef.current.vel = 0;
+    };
+
+    const onTouchMove = (e) => {
+      e.preventDefault();
+      const dy = touchRef.current.y - e.touches[0].clientY;
+      touchRef.current.y = e.touches[0].clientY;
+      touchRef.current.vel = dy;
+      setCameraZ(z => clampZ(z + dy * 1.5));
+    };
+
+    const onTouchEnd = () => {
+      const decay = () => {
+        touchRef.current.vel *= 0.92;
+        if (Math.abs(touchRef.current.vel) < 0.4) return;
+        setCameraZ(z => clampZ(z + touchRef.current.vel * 1.5));
+        touchRef.current.raf = requestAnimationFrame(decay);
+      };
+      touchRef.current.raf = requestAnimationFrame(decay);
+    };
+
+    el.addEventListener('touchstart', onTouchStart, { passive: true });
+    el.addEventListener('touchmove',  onTouchMove,  { passive: false });
+    el.addEventListener('touchend',   onTouchEnd,   { passive: true });
+    return () => {
+      el.removeEventListener('touchstart', onTouchStart);
+      el.removeEventListener('touchmove',  onTouchMove);
+      el.removeEventListener('touchend',   onTouchEnd);
+      cancelAnimationFrame(touchRef.current.raf);
+    };
+  }, [clampZ]);
 
   const placements = useMemo(() => (
     items.map((item, i) => {
       const side = i % 2 === 0 ? -1 : 1;
       const row = Math.floor(i / 2);
-      const depth = FRONT_GAP + row * ROW_SPACING + (side === 1 ? STAGGER : 0);
+      const depth = frontGap + row * rowSpacing + (side === 1 ? stagger : 0);
       return { item, side, depth, idx: i };
     })
-  ), [items]);
+  ), [items, frontGap, rowSpacing, stagger]);
 
   const progress = Math.min(1, cameraZ / Math.max(1, ROOM_DEPTH - 200));
   const nearest = placements.reduce((best, f) => {
@@ -190,18 +223,23 @@ export default function Museum({ items = [], onItem, hideOverlays = false, onPro
 
   useEffect(() => {
     onProgress?.({ progress, nearest });
-  }, [cameraZ, onProgress]); // nearest and progress derived from cameraZ; object identity not stable
+  }, [cameraZ, onProgress]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <div style={{
-      flex: 1, display: 'flex', flexDirection: 'column',
-      position: 'relative', overflow: 'hidden',
-      width: '100%', height: '100%',
-      backgroundImage: `url('/concrete-wall.jpg')`,
-      backgroundRepeat: 'repeat',
-      backgroundSize: '600px 600px',
-      backgroundColor: COLOR_WALL,
-    }}>
+    <div
+      ref={containerRef}
+      style={{
+        flex: 1,
+        position: 'relative',
+        width: '100%', height: '100%',
+        touchAction: 'none',
+        userSelect: 'none',
+        backgroundImage: `url('/concrete-wall.jpg')`,
+        backgroundRepeat: 'repeat',
+        backgroundSize: '600px 600px',
+        backgroundColor: COLOR_WALL,
+      }}
+    >
       {!hideOverlays && (
         <div style={{
           position: 'absolute', top: 14, left: 0, right: 0, zIndex: 50,
@@ -223,87 +261,83 @@ export default function Museum({ items = [], onItem, hideOverlays = false, onPro
         </div>
       )}
 
-      <div
-        ref={scrollRef}
-        onScroll={onScroll}
-        style={{ flex: 1, overflow: 'auto', overflowX: 'hidden', position: 'relative' }}
-      >
-        <div style={{ height: scrollLen, position: 'relative' }}>
+      {/*
+        The perspective div is the ONLY overflow:hidden ancestor of preserve-3d.
+        No overflow:auto above it — this is what makes iOS Safari render the 3D scene.
+      */}
+      <div style={{
+        position: 'absolute', inset: 0,
+        perspective: `${PERSPECTIVE}px`,
+        perspectiveOrigin: '50% 42%',
+        overflow: 'hidden',
+      }}>
+        <div style={{
+          position: 'absolute', left: '50%', top: '50%',
+          width: 0, height: 0,
+          transformStyle: 'preserve-3d',
+          transform: `translate3d(0, 0, ${cameraZ}px)`,
+        }}>
+          {/* Floor */}
           <div style={{
-            position: 'sticky', top: 0,
-            width: '100%', height: '100vh',
-            perspective: `${PERSPECTIVE}px`,
-            perspectiveOrigin: '50% 42%',
-            overflow: 'hidden',
-            backgroundImage: `url('/concrete-wall.jpg')`,
+            position: 'absolute',
+            left: -wallX, top: 0,
+            width: wallX * 2, height: ROOM_DEPTH,
+            transformOrigin: '0 0',
+            transform: `translate3d(0, ${floorY}px, 0) rotateX(-90deg)`,
+            backgroundImage: `url('/concrete-floor.jpg')`,
+            backgroundRepeat: 'repeat',
+            backgroundSize: '500px 500px',
+            backgroundColor: COLOR_FLOOR,
+          }} />
+          {/* Ceiling */}
+          <div style={{
+            position: 'absolute',
+            left: -wallX, top: 0,
+            width: wallX * 2, height: ROOM_DEPTH,
+            transformOrigin: '0 0',
+            transform: `translate3d(0, ${ceilY}px, 0) rotateX(-90deg)`,
+            backgroundImage: `url('/ceiling.jpg')`,
             backgroundRepeat: 'repeat',
             backgroundSize: '600px 600px',
-            backgroundColor: COLOR_WALL,
-          }}>
-            <div style={{
-              position: 'absolute', left: '50%', top: '50%',
-              width: 0, height: 0,
-              transformStyle: 'preserve-3d',
-              transform: `translate3d(0, 0, ${cameraZ}px)`,
-            }}>
-              <div style={{
-                position: 'absolute',
-                left: -WALL_X, top: 0,
-                width: WALL_X * 2, height: ROOM_DEPTH,
-                transformOrigin: '0 0',
-                transform: `translate3d(0, ${FLOOR_Y}px, 0) rotateX(-90deg)`,
-                backgroundImage: `url('/concrete-floor.jpg')`,
-                backgroundRepeat: 'repeat',
-                backgroundPosition: '0 0',
-                backgroundSize: '500px 500px',
-                backgroundColor: COLOR_FLOOR,
-              }} />
-              <div style={{
-                position: 'absolute',
-                left: -WALL_X, top: 0,
-                width: WALL_X * 2, height: ROOM_DEPTH,
-                transformOrigin: '0 0',
-                transform: `translate3d(0, ${CEIL_Y}px, 0) rotateX(-90deg)`,
-                backgroundImage: `url('/ceiling.jpg')`,
-                backgroundRepeat: 'repeat',
-                backgroundSize: '600px 600px',
-                backgroundColor: COLOR_CEILING,
-              }} />
-              <div style={{
-                position: 'absolute',
-                left: 0, top: CEIL_Y,
-                width: ROOM_DEPTH, height: FLOOR_Y - CEIL_Y,
-                transformOrigin: '0 0',
-                transform: `translate3d(${-WALL_X}px, 0, 0) rotateY(90deg)`,
-                background: WALL_BG,
-              }} />
-              <div style={{
-                position: 'absolute',
-                left: 0, top: CEIL_Y,
-                width: ROOM_DEPTH, height: FLOOR_Y - CEIL_Y,
-                transformOrigin: '0 0',
-                transform: `translate3d(${WALL_X}px, 0, ${-ROOM_DEPTH}px) rotateY(-90deg)`,
-                background: WALL_BG,
-              }} />
-              <div style={{
-                position: 'absolute',
-                left: -WALL_X, top: CEIL_Y,
-                width: WALL_X * 2, height: FLOOR_Y - CEIL_Y,
-                transform: `translate3d(0, 0, ${-ROOM_DEPTH}px)`,
-                background: WALL_BG,
-              }} />
-              {placements.map((f) => (
-                <MuseumFrame
-                  key={f.item.id}
-                  item={f.item}
-                  side={f.side}
-                  depth={f.depth}
-                  onClick={() => onItem && onItem(f.item)}
-                  imageUrl={f.item.imageUrl}
-                />
-              ))}
-            </div>
-          </div>
+            backgroundColor: COLOR_CEILING,
+          }} />
+          {/* Left wall */}
+          <div style={{
+            position: 'absolute',
+            left: 0, top: ceilY,
+            width: ROOM_DEPTH, height: floorY - ceilY,
+            transformOrigin: '0 0',
+            transform: `translate3d(${-wallX}px, 0, 0) rotateY(90deg)`,
+            background: WALL_BG,
+          }} />
+          {/* Right wall */}
+          <div style={{
+            position: 'absolute',
+            left: 0, top: ceilY,
+            width: ROOM_DEPTH, height: floorY - ceilY,
+            transformOrigin: '0 0',
+            transform: `translate3d(${wallX}px, 0, ${-ROOM_DEPTH}px) rotateY(-90deg)`,
+            background: WALL_BG,
+          }} />
+          {/* Back wall */}
+          <div style={{
+            position: 'absolute',
+            left: -wallX, top: ceilY,
+            width: wallX * 2, height: floorY - ceilY,
+            transform: `translate3d(0, 0, ${-ROOM_DEPTH}px)`,
+            background: WALL_BG,
+          }} />
+          {placements.map((f) => (
+            <MuseumFrame
+              key={f.item.id}
+              item={f.item}
+              side={f.side}
+              depth={f.depth}
+              layout={layout}
+              onClick={() => onItem && onItem(f.item)}
+              imageUrl={f.item.imageUrl}
+            />
+          ))}
         </div>
       </div>
     </div>

@@ -1351,7 +1351,6 @@ html.dark .tryon-progress-pill { border-color: rgba(255,255,255,0.1); }
   position: fixed;
   inset: 0;
   z-index: 200;
-  overflow: hidden;
 }
 
 /* Loading cover — sits above everything until museum is ready */
