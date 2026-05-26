@@ -1,12 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <!-- Background -->
-  <rect width="100" height="100" rx="20" fill="#c8c4ba"/>
-
-  <!-- Left door -->
-  <rect x="13" y="14" width="32" height="70" rx="1.5" fill="#ebe6d7" stroke="#9e9890" stroke-width="5"/>
-  <rect x="40" y="46" width="4" height="9" rx="2" fill="#9e9890"/>
-
-  <!-- Right door -->
-  <rect x="52" y="22" width="26" height="58" rx="1.5" fill="#ebe6d7" stroke="#9e9890" stroke-width="3.5"/>
-  <rect x="54.5" y="49" width="3.5" height="8" rx="1.75" fill="#9e9890"/>
+  <rect width="100" height="100" fill="#5c5c5c"/>
+  <rect x="30" y="12" width="42" height="16" fill="#d6d2ca"/>
+  <rect x="12" y="12" width="16" height="76" fill="#d6d2ca"/>
+  <rect x="30" y="72" width="42" height="16" fill="#d6d2ca"/>
+  <rect x="58" y="44" width="16" height="44" fill="#d6d2ca"/>
+  <rect x="42" y="44" width="32" height="16" fill="#d6d2ca"/>
 </svg>
