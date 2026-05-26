@@ -58,7 +58,7 @@ const MuseumFrame = memo(({ item, side, depth, onClick, imageUrls = [], layout, 
   // Mobile: tilt frame toward viewer symmetrically as camera approaches
   const tiltAngle = mobile ? (() => {
     const dist = Math.abs(depth - cameraZ);
-    const maxTilt = 50;
+    const maxTilt = 62;
     const tiltRange = 320;
     if (dist > tiltRange) return 0;
     return maxTilt * (1 - dist / tiltRange);
