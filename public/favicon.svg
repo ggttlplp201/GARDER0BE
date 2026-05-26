@@ -1,29 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <style>
-    .door-l { animation: bobUp 2.6s ease-in-out infinite; transform-origin: 29px 50px; }
-    .door-r { animation: bobDown 2.6s ease-in-out infinite; transform-origin: 63px 52px; }
-    @keyframes bobUp {
-      0%, 100% { transform: translateY(0); }
-      50%       { transform: translateY(-4px); }
-    }
-    @keyframes bobDown {
-      0%, 100% { transform: translateY(0); }
-      50%       { transform: translateY(4px); }
-    }
-  </style>
-
   <!-- Background -->
-  <rect width="100" height="100" rx="20" fill="#f0f0f0"/>
+  <rect width="100" height="100" rx="20" fill="#c8c4ba"/>
 
-  <!-- Left door (taller, thicker border) -->
-  <g class="door-l">
-    <rect x="13" y="14" width="32" height="70" rx="1.5" fill="white" stroke="black" stroke-width="5"/>
-    <rect x="40" y="46" width="4" height="9" rx="2" fill="black"/>
-  </g>
+  <!-- Left door -->
+  <rect x="13" y="14" width="32" height="70" rx="1.5" fill="#ebe6d7" stroke="#9e9890" stroke-width="5"/>
+  <rect x="40" y="46" width="4" height="9" rx="2" fill="#9e9890"/>
 
-  <!-- Right door (shorter, thinner border) -->
-  <g class="door-r">
-    <rect x="52" y="22" width="26" height="58" rx="1.5" fill="white" stroke="black" stroke-width="3.5"/>
-    <rect x="54.5" y="49" width="3.5" height="8" rx="1.75" fill="black"/>
-  </g>
+  <!-- Right door -->
+  <rect x="52" y="22" width="26" height="58" rx="1.5" fill="#ebe6d7" stroke="#9e9890" stroke-width="3.5"/>
+  <rect x="54.5" y="49" width="3.5" height="8" rx="1.75" fill="#9e9890"/>
 </svg>

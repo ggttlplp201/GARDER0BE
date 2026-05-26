@@ -120,13 +120,9 @@ const MuseumFrame = memo(({ item, side, depth, onClick, imageUrls = [], layout, 
         <div style={{ flex: 1, margin, overflow: 'hidden', position: 'relative' }}>
           {imageUrl ? (
             <img
-              key={imgIdx}
               src={imageUrl}
               alt={item.name}
-              style={{
-                width: '100%', height: '100%', objectFit: 'cover', display: 'block',
-                animation: imageUrls.length > 1 ? 'museum-img-fade 0.7s ease-out' : 'none',
-              }}
+              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
             />
           ) : (
             <div style={{
