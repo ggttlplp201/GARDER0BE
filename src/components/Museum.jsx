@@ -55,14 +55,18 @@ const MuseumFrame = memo(({ item, side, depth, onClick, imageUrls = [], layout, 
 
   const imageUrl = imageUrls[imgIdx] || null;
 
-  // On mobile: tilt toward viewer when camera is near
+  // Mobile: tilt frame toward viewer symmetrically as camera approaches
   const tiltAngle = mobile ? (() => {
     const dist = Math.abs(depth - cameraZ);
-    const maxTilt = 25;
-    const tiltRange = 200;
+    const maxTilt = 50;
+    const tiltRange = 320;
     if (dist > tiltRange) return 0;
-    return maxTilt * (1 - dist / tiltRange) * (depth > cameraZ ? 1 : -1);
+    return maxTilt * (1 - dist / tiltRange);
   })() : 0;
+
+  // Push frame away from wall to prevent clipping when tilted
+  // side * tiltAngle is the corrected rotation: left wall (side=-1) subtracts, right wall (side=1) adds
+  const tiltWallOff = mobile ? (frameW / 2) * Math.sin(tiltAngle * Math.PI / 180) : 0;
 
   const x = side * (wallX - WALL_THICKNESS);
   const y = frameCY;
@@ -99,9 +103,11 @@ const MuseumFrame = memo(({ item, side, depth, onClick, imageUrls = [], layout, 
         width: frameW * RENDER_SCALE,
         height: frameH * RENDER_SCALE,
         transform:
-          `translate3d(${x - side * wallOff}px, ${y}px, ${z + liftZ}px) ` +
-          `rotateY(${rotY + tiltAngle}deg) scale(${scale / RENDER_SCALE})`,
-        transition: 'transform 520ms cubic-bezier(0.22, 1, 0.36, 1), filter 380ms ease-out',
+          `translate3d(${x - side * wallOff - side * tiltWallOff}px, ${y}px, ${z + liftZ}px) ` +
+          `rotateY(${rotY + side * tiltAngle}deg) scale(${scale / RENDER_SCALE})`,
+        transition: mobile
+          ? 'none'
+          : 'transform 520ms cubic-bezier(0.22, 1, 0.36, 1), filter 380ms ease-out',
         cursor: 'pointer',
         background: '#1a1a1a',
         padding: pad,
