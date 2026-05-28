@@ -37,7 +37,7 @@ export default function WardrobeView({ items = [], loading, loadError, onRetry, 
     if (mode !== 'GRID' || loading || !gridRef.current) return;
     const cards = gridRef.current.querySelectorAll('.item-card');
     if (!cards.length) return;
-    gsap.from(cards, { opacity: 0, y: 18, duration: 0.28, stagger: 0.035, ease: 'power2.out', overwrite: true });
+    gsap.from(cards, { opacity: 0, y: 18, duration: 0.28, stagger: 0.035, ease: 'power2.out', overwrite: true, clearProps: 'all' });
   }, [mode, loading]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const filtered = items.filter(it => {
