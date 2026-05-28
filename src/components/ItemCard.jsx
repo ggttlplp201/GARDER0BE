@@ -1,6 +1,7 @@
 import { useRef, useState, useEffect } from 'react';
 import { parseImageUrls } from '../lib/imageUtils';
 import { gyroState, gyroCallbacks, isGyroActive } from '../lib/gyro';
+import { detailOrigin } from '../lib/detailOrigin';
 
 export default function ItemCard({ item, onRemove, onEdit, onClick }) {
   const cardRef         = useRef(null);
@@ -79,6 +80,7 @@ export default function ItemCard({ item, onRemove, onEdit, onClick }) {
   function handleCardClick(e) {
     if (didSwipeRef.current) { didSwipeRef.current = false; return; }
     if (e.target.closest('.card-remove-x') || e.target.closest('.edit-btn') || e.target.closest('.card-img-arrow')) return;
+    detailOrigin.rect = cardRef.current?.getBoundingClientRect() ?? null;
     onClick(item.id);
   }
 

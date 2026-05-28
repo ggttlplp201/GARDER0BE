@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
+import { gsap } from 'gsap';
 import { useAuth } from './hooks/useAuth';
 import { useTheme } from './hooks/useTheme';
 import { useItems } from './hooks/useItems';
@@ -171,10 +172,25 @@ export default function App() {
   const dismissToast = useCallback(id => setToasts(t => t.filter(x => x.id !== id)), []);
 
   const prevPageRef = useRef(sessionStorage.getItem('garderobe-prev-page') || 'wardrobe');
+  const mainRef     = useRef(null);
 
   const navigate = useCallback((p) => {
     sessionStorage.setItem('garderobe-page', p);
-    setPage(prev => { prevPageRef.current = prev; sessionStorage.setItem('garderobe-prev-page', prev); return p; });
+    const el = mainRef.current;
+    const swap = () => setPage(prev => {
+      prevPageRef.current = prev;
+      sessionStorage.setItem('garderobe-prev-page', prev);
+      return p;
+    });
+    // Detail page uses its own card-expand entrance; skip fade for it
+    if (!el || p === 'detail') { swap(); return; }
+    gsap.to(el, {
+      opacity: 0, y: -6, duration: 0.12, ease: 'power2.in',
+      onComplete: () => {
+        swap();
+        gsap.fromTo(el, { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.2, ease: 'power2.out' });
+      },
+    });
   }, []);
 
   // Restore detail item after refresh if items have loaded
@@ -256,7 +272,7 @@ export default function App() {
         onViewProfile={handleViewFriendProfile}
       />
 
-      <div className="app-main">
+      <div className="app-main" ref={mainRef}>
         {page === 'wardrobe' && (
           <WardrobeView
             items={items}

@@ -1,7 +1,9 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react';
+import { gsap } from 'gsap';
 import { parseImageUrls } from '../lib/imageUtils';
 import { sb } from '../lib/supabase';
 import { API_URL } from '../lib/constants';
+import { detailOrigin } from '../lib/detailOrigin';
 
 function catNum(idx) {
   return String(idx + 1).padStart(3, '0');
@@ -254,10 +256,27 @@ function PriceSources({ item }) {
 }
 
 export default function ItemDetailView({ item, items, onBack, onEdit, onNavigate, onRemove, onLogWear }) {
-  const [imgIdx, setImgIdx]       = useState(0);
-  const [wearLogged, setWear]     = useState(false);
+  const [imgIdx, setImgIdx]         = useState(0);
+  const [wearLogged, setWear]       = useState(false);
   const [delConfirm, setDelConfirm] = useState(false);
-  const delTimer = useRef(null);
+  const delTimer      = useRef(null);
+  const containerRef  = useRef(null);
+
+  useLayoutEffect(() => {
+    const origin = detailOrigin.rect;
+    detailOrigin.rect = null;
+    if (!origin || !containerRef.current) return;
+    const el     = containerRef.current;
+    const bounds = el.getBoundingClientRect();
+    const scaleX = origin.width  / bounds.width;
+    const scaleY = origin.height / bounds.height;
+    const xOff   = (origin.left + origin.width  / 2) - (bounds.left + bounds.width  / 2);
+    const yOff   = (origin.top  + origin.height / 2) - (bounds.top  + bounds.height / 2);
+    gsap.fromTo(el,
+      { x: xOff, y: yOff, scaleX, scaleY, opacity: 0 },
+      { x: 0, y: 0, scaleX: 1, scaleY: 1, opacity: 1, duration: 0.48, ease: 'expo.out', clearProps: 'all' }
+    );
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!item) return null;
 
@@ -289,7 +308,7 @@ export default function ItemDetailView({ item, items, onBack, onEdit, onNavigate
   }
 
   return (
-    <div className="v-screen">
+    <div className="v-screen" ref={containerRef}>
       <div className="detail-nav">
         <button className="detail-back" onClick={onBack}>← WARDROBE / ACQUISITIONS / № {cat}</button>
         <div className="detail-nav-arrows">
