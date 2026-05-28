@@ -63,8 +63,23 @@ const NAV_ITEMS = [
   },
 ];
 
+import { useRef, useEffect, useState } from 'react';
+import { gsap } from 'gsap';
+
 export default function AppNav({ page, setPage, total, requestCount, likeCount }) {
   const activePage = page === 'detail' ? 'wardrobe' : page;
+  const [displayTotal, setDisplayTotal] = useState(0);
+  const counterObj = useRef({ val: 0 });
+
+  useEffect(() => {
+    gsap.to(counterObj.current, {
+      val: total,
+      duration: 1.4,
+      ease: 'power2.out',
+      onUpdate: () => setDisplayTotal(Math.round(counterObj.current.val)),
+    });
+  }, [total]);
+
   return (
     <div className="app-nav">
       <div className="app-nav-tabs">
@@ -84,7 +99,7 @@ export default function AppNav({ page, setPage, total, requestCount, likeCount }
         })}
       </div>
       <div className="app-nav-value">
-        COLLECTION VALUE — <strong>${total.toLocaleString()}.00</strong>
+        COLLECTION VALUE — <strong>${displayTotal.toLocaleString()}.00</strong>
       </div>
     </div>
   );

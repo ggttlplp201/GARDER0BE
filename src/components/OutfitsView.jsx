@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import { gsap } from 'gsap';
 import { parseImageUrls } from '../lib/imageUtils';
 import { sb } from '../lib/supabase';
 
@@ -366,6 +367,15 @@ function FlatSlot({ label, item, onRemove, draggingItem, onDragOver, onDrop, h =
   const accepts = draggingItem ? slotAccepts(label, draggingItem) : null;
   const compatible = draggingItem && accepts;
   const incompatible = draggingItem && !accepts;
+  const imgRef = useRef(null);
+  const prevItemRef = useRef(item);
+
+  useEffect(() => {
+    if (item && !prevItemRef.current && imgRef.current) {
+      gsap.from(imgRef.current, { scale: 0.55, opacity: 0, duration: 0.38, ease: 'back.out(2.2)', clearProps: 'all' });
+    }
+    prevItemRef.current = item;
+  }, [item]);
 
   return (
     <div
@@ -384,7 +394,7 @@ function FlatSlot({ label, item, onRemove, draggingItem, onDragOver, onDrop, h =
     >
       {item ? (
         <>
-          <div className="flat-img"><ItemThumb item={item} /></div>
+          <div className="flat-img" ref={imgRef}><ItemThumb item={item} /></div>
           <div className="flat-caption">
             <button className="flat-x" onClick={e => { e.stopPropagation(); onRemove(); }}>×</button>
           </div>

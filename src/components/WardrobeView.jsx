@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
+import { gsap } from 'gsap';
 import { parseImageUrls } from '../lib/imageUtils';
 import { ITEM_TYPES } from '../lib/constants';
 import ItemCard from './ItemCard';
@@ -29,6 +30,15 @@ export default function WardrobeView({ items = [], loading, loadError, onRetry, 
   const [museumProgress, setMuseumProgress] = useState(0);
   const [museumReady, setMuseumReady] = useState(false);
   const confirm = useConfirm();
+  const gridRef = useRef(null);
+
+  // Stagger cards in when grid first renders or mode switches to GRID
+  useEffect(() => {
+    if (mode !== 'GRID' || loading || !gridRef.current) return;
+    const cards = gridRef.current.querySelectorAll('.item-card');
+    if (!cards.length) return;
+    gsap.from(cards, { opacity: 0, y: 18, duration: 0.28, stagger: 0.035, ease: 'power2.out', overwrite: true });
+  }, [mode, loading]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const filtered = items.filter(it => {
     if (search) {
@@ -174,7 +184,7 @@ export default function WardrobeView({ items = [], loading, loadError, onRetry, 
         )}
 
         {!loading && mode === 'GRID' && (
-          <div className="cards-grid" style={{ padding: '16px 36px 24px' }}>
+          <div className="cards-grid" ref={gridRef} style={{ padding: '16px 36px 24px' }}>
             {filtered.map(it => (
               <ItemCard key={it.id} item={it} onRemove={onRemove} onEdit={onEdit}
                 onClick={id => onItemClick(items.find(i => i.id === id))} />
