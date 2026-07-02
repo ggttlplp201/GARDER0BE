@@ -20,6 +20,7 @@ import AddItemModal from './components/AddItemModal';
 import EditItemModal from './components/EditItemModal';
 import Lightbox from './components/Lightbox';
 import { requestGyroPermission } from './lib/gyro';
+import { detectGeo } from './lib/geo';
 import { sb } from './lib/supabase';
 import './App.css';
 
@@ -87,6 +88,8 @@ export default function App() {
     setTotal(Math.round(t));
   }, [items]);
 
+  const detectedCityRef = useRef(null);
+
   useEffect(() => {
     setAvatarUrl('');
     setUserLocation('');
@@ -102,9 +105,38 @@ export default function App() {
     sb.auth.getUser().then(({ data: { user: u } }) => {
       const meta = u?.user_metadata?.profile || {};
       if (meta.avatarUrl) setAvatarUrl(meta.avatarUrl);
-      if (meta['p-location']) setUserLocation(meta['p-location']);
+      if (meta['p-location'] && !detectedCityRef.current) setUserLocation(meta['p-location']);
       if (meta['p-name']) setUserName(meta['p-name']);
     });
+  }, [user]);
+
+  // Auto-detect location + timezone and keep the profile in sync, so globe
+  // pins and local-time labels reflect where each user actually is.
+  useEffect(() => {
+    if (!user) { detectedCityRef.current = null; return; }
+    let cancelled = false;
+    detectGeo().then(async geo => {
+      if (cancelled || !geo?.city) return;
+      detectedCityRef.current = geo.city;
+      setUserLocation(geo.city);
+      const updated_at = new Date().toISOString();
+      const { error } = await sb.from('profiles').upsert({
+        id: user.id,
+        location: geo.city,
+        timezone: geo.timezone,
+        latitude: geo.latitude,
+        longitude: geo.longitude,
+        updated_at,
+      }, { onConflict: 'id' });
+      if (error) {
+        // Geo migration not applied yet — sync the location column only
+        await sb.from('profiles').upsert(
+          { id: user.id, location: geo.city, updated_at },
+          { onConflict: 'id' },
+        );
+      }
+    });
+    return () => { cancelled = true; };
   }, [user]);
 
   useEffect(() => {

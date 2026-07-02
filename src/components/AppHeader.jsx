@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import DesignHouseGlobe from './DesignHouseGlobe';
+import { tzAbbrev } from '../lib/geo';
 
 export default function AppHeader({ onDark, avatarUrl, location, userName, onProfileOpen, onViewProfile }) {
   const [now, setNow] = useState(new Date());
@@ -10,6 +11,7 @@ export default function AppHeader({ onDark, avatarUrl, location, userName, onPro
 
   const dateStr = now.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }).replace(/\//g, '.');
   const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+  const zoneStr = tzAbbrev(null, now);
   const displayLocation = location?.toUpperCase() || Intl.DateTimeFormat().resolvedOptions().timeZone?.split('/').pop()?.replace(/_/g, ' ').toUpperCase() || 'LOCAL';
 
   return (
@@ -23,7 +25,7 @@ export default function AppHeader({ onDark, avatarUrl, location, userName, onPro
         <div className="app-header-meta">
           <div>ISSUE 04 · VOL. XXVI</div>
           <div>{(userName || 'DEMO').toUpperCase()} · {displayLocation}</div>
-          <div>{dateStr} · {timeStr}</div>
+          <div>{dateStr} · {timeStr}{zoneStr ? ` ${zoneStr}` : ''}</div>
         </div>
         <div className="app-globe-slot">
           <DesignHouseGlobe mini onViewProfile={onViewProfile} myLocation={location} />

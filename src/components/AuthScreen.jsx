@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { Turnstile } from '@marsidev/react-turnstile';
 import AsciiTitle from './AsciiTitle';
 import AsciiBackground from './AsciiBackground';
+import { tzAbbrev } from '../lib/geo';
 
 const PAPER = '#f5f2ea';
 const INK   = '#0a0a0a';
@@ -14,7 +15,8 @@ function LiveClock() {
       const now = new Date();
       const d = now.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }).replace(/\//g, '.');
       const t = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
-      setTs(`${d} · ${t} PST`);
+      const zone = tzAbbrev(null, now);
+      setTs(`${d} · ${t}${zone ? ` ${zone}` : ''}`);
     }
     tick();
     const id = setInterval(tick, 1000);

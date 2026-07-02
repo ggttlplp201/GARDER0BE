@@ -3,6 +3,7 @@ import { geoOrthographic, geoPath, geoGraticule } from 'd3-geo';
 import { feature } from 'topojson-client';
 import worldData from 'world-atlas/countries-110m.json';
 import { sb } from '../lib/supabase';
+import { cachedGeo, detectTimezone } from '../lib/geo';
 
 const INIT_ROTY  = -0.18;
 const INIT_ROTX  =  0.50;
@@ -221,27 +222,36 @@ export default function DesignHouseGlobe({ mini = false, onViewProfile, myLocati
       );
       friendIdsRef.current = friendIds;
 
-      // Load all profiles that have a location set (future: filter is_public=true)
-      const { data: profiles } = await sb.from('profiles')
-        .select('id, username, location, avatar_url')
+      // Load all profiles that have a location set (future: filter is_public=true).
+      // Prefer live-detected coordinates/timezone; fall back to the base columns
+      // if the geo migration hasn't been applied yet.
+      let { data: profiles, error } = await sb.from('profiles')
+        .select('id, username, location, avatar_url, timezone, latitude, longitude')
         .neq('id', uid)
         .not('location', 'is', null);
+      if (error) {
+        ({ data: profiles } = await sb.from('profiles')
+          .select('id, username, location, avatar_url')
+          .neq('id', uid)
+          .not('location', 'is', null));
+      }
       if (!profiles?.length) return;
 
       const pins = [];
       profiles.forEach(p => {
         if (!p.location?.trim()) return;
         const geo = geocodeLocation(p.location);
-        if (!geo) return;
+        const hasCoords = Number.isFinite(p.latitude) && Number.isFinite(p.longitude);
+        if (!geo && !hasCoords) return;
         const jitter = () => (Math.random() - 0.5) * 0.008;
         pins.push({
           id:        p.id,
           name:      p.username || 'Member',
-          city:      geo.city,
-          country:   geo.country,
-          lat:       geo.lat + jitter(),
-          lng:       geo.lng + jitter(),
-          tz:        geo.tz,
+          city:      hasCoords ? p.location : geo.city,
+          country:   hasCoords ? (geo?.country ?? '') : geo.country,
+          lat:       (hasCoords ? p.latitude  : geo.lat) + jitter(),
+          lng:       (hasCoords ? p.longitude : geo.lng) + jitter(),
+          tz:        p.timezone || geo?.tz,
           isFriend:  friendIds.has(p.id),
           profile:   p,
         });
@@ -252,8 +262,19 @@ export default function DesignHouseGlobe({ mini = false, onViewProfile, myLocati
     loadProfiles();
   }, []);
 
-  // Geocode current user's own location
+  // Current user's own pin — prefer the live-detected geo from this session,
+  // fall back to geocoding the profile location string
   useEffect(() => {
+    const geo = cachedGeo();
+    if (geo && Number.isFinite(geo.latitude) && Number.isFinite(geo.longitude)) {
+      myPinRef.current = {
+        city: geo.city,
+        lat:  geo.latitude,
+        lng:  geo.longitude,
+        tz:   geo.timezone || detectTimezone(),
+      };
+      return;
+    }
     myPinRef.current = myLocation ? geocodeLocation(myLocation) : null;
   }, [myLocation]);
 

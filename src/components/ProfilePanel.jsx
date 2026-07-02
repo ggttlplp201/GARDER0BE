@@ -44,7 +44,7 @@ export default function ProfilePanel({ open, user, onClose, onSignOut, avatarUrl
     if (user) {
       const { error } = await sb.auth.updateUser({ data: { profile: cleaned } });
       if (error) { setSaveError('Failed to save profile.'); return; }
-      await sb.from('profiles').upsert({
+      const row = {
         id:         user.id,
         username:   cleaned['p-name']     || null,
         bio:        cleaned['p-bio']      || null,
@@ -52,7 +52,15 @@ export default function ProfilePanel({ open, user, onClose, onSignOut, avatarUrl
         avatar_url: avatarUrl             || null,
         is_public:  isPublic,
         updated_at: new Date().toISOString(),
-      }, { onConflict: 'id' });
+      };
+      // Clear auto-detected geo so the globe doesn't pin the edited city at
+      // stale coordinates (re-detected on next app load; columns may not
+      // exist if the geo migration hasn't been run)
+      const { error: upsertError } = await sb.from('profiles').upsert(
+        { ...row, timezone: null, latitude: null, longitude: null },
+        { onConflict: 'id' },
+      );
+      if (upsertError) await sb.from('profiles').upsert(row, { onConflict: 'id' });
     } else {
       localStorage.setItem(storageKey, JSON.stringify(cleaned));
     }
