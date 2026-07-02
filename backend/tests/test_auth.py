@@ -60,7 +60,8 @@ def test_wrong_role_raises():
 
 
 def test_unsigned_token_raises():
-    import base64, json
+    import base64
+    import json
     header = base64.urlsafe_b64encode(b'{"alg":"none","typ":"JWT"}').rstrip(b"=").decode()
     payload = base64.urlsafe_b64encode(
         json.dumps({"sub": "evil", "role": "authenticated", "aud": "authenticated"}).encode()

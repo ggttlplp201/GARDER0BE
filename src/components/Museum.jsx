@@ -66,14 +66,22 @@ function getLayout() {
 const MuseumFrame = memo(({ item, side, depth, onClick, imageUrls = [], layout, cameraZ }) => {
   const [hover, setHover] = useState(false);
   const [imgIdx, setImgIdx] = useState(0);
-  const offsetRef = useRef(Math.floor(Math.random() * 2000));
+  const offsetRef = useRef(0);
   const { wallX, frameCY, frameW, frameH, cullBehind, mobile } = layout;
+
+  // Random per-frame stagger for the image cycle — assigned in an effect
+  // (before the cycle effect below) so render stays pure
+  useEffect(() => {
+    offsetRef.current = Math.floor(Math.random() * 2000);
+  }, []);
 
   // Fully behind the camera — keep mounted (img stays decoded) but invisible,
   // so the layer never sits near the perspective singularity.
   const culled = cameraZ - depth > cullBehind;
   const culledRef = useRef(false);
-  culledRef.current = culled;
+  useEffect(() => {
+    culledRef.current = culled;
+  }, [culled]);
 
   // Pre-decode every cycle image so src swaps and re-entry after culling
   // never paint an undecoded (blank) frame
@@ -96,7 +104,7 @@ const MuseumFrame = memo(({ item, side, depth, onClick, imageUrls = [], layout, 
       }, 2500);
     }, offsetRef.current);
     return () => { clearTimeout(timeoutId); clearInterval(intervalId); };
-  }, [imageUrls.length]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [imageUrls.length]);  
 
   const imageUrl = imageUrls[imgIdx] || null;
 
@@ -211,22 +219,18 @@ export default function Museum({ items = [], onItem, hideOverlays = false, onPro
   const containerRef = useRef(null);
 
   // Compute layout once per mount via lazy ref
-  const layoutRef = useRef(null);
-  if (layoutRef.current === null) layoutRef.current = getLayout();
-  const layout = layoutRef.current;
-  const { wallX, floorY, ceilY, frameCY, frontGap, rowSpacing, stagger, cameraStart } = layout;
+  const [layout] = useState(getLayout);
+  const { wallX, floorY, ceilY, frontGap, rowSpacing, stagger, cameraStart } = layout;
 
   const [cameraZ, setCameraZ] = useState(cameraStart);
 
   const pairCount = Math.max(1, Math.ceil(items.length / 2));
   const lastFrameDepth = frontGap + (pairCount - 1) * rowSpacing + stagger;
   const ROOM_DEPTH = lastFrameDepth + BACK_PAD;
-  const roomDepthRef = useRef(ROOM_DEPTH);
-  roomDepthRef.current = ROOM_DEPTH;
 
   const clampZ = useCallback((z) =>
-    Math.min(roomDepthRef.current - 200, Math.max(cameraStart, z)),
-  [cameraStart]);
+    Math.min(ROOM_DEPTH - 200, Math.max(cameraStart, z)),
+  [cameraStart, ROOM_DEPTH]);
 
   // Wheel (desktop / trackpad)
   useEffect(() => {
@@ -245,6 +249,7 @@ export default function Museum({ items = [], onItem, hideOverlays = false, onPro
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
+    const touch = touchRef.current;
 
     const onTouchStart = (e) => {
       cancelAnimationFrame(touchRef.current.raf);
@@ -277,7 +282,7 @@ export default function Museum({ items = [], onItem, hideOverlays = false, onPro
       el.removeEventListener('touchstart', onTouchStart);
       el.removeEventListener('touchmove',  onTouchMove);
       el.removeEventListener('touchend',   onTouchEnd);
-      cancelAnimationFrame(touchRef.current.raf);
+      cancelAnimationFrame(touch.raf);
     };
   }, [clampZ]);
 

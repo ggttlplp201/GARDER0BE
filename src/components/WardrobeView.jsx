@@ -38,7 +38,7 @@ export default function WardrobeView({ items = [], loading, loadError, onRetry, 
     const cards = gridRef.current.querySelectorAll('.item-card');
     if (!cards.length) return;
     gsap.from(cards, { opacity: 0, y: 18, duration: 0.28, stagger: 0.035, ease: 'power2.out', overwrite: true, clearProps: 'all' });
-  }, [mode, loading]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [mode, loading]);  
 
   const filtered = items.filter(it => {
     if (search) {
@@ -48,19 +48,6 @@ export default function WardrobeView({ items = [], loading, loadError, onRetry, 
     if (filterType !== 'ALL' && it.type !== filterType) return false;
     return true;
   });
-
-  const totalValue = items
-    .filter(i => i.status !== 'wishlist')
-    .reduce((s, i) => s + (parseFloat(i.price) || 0), 0);
-  const brands = new Set(items.map(i => i.brand).filter(Boolean));
-  const grails = items.filter(i => i.status === 'grail').length;
-
-  const statsStr = [
-    String(items.length),
-    `${brands.size} BRANDS`,
-    `$${Math.round(totalValue).toLocaleString()}`,
-    grails ? `${grails} GRAILS` : null,
-  ].filter(Boolean).join(' · ');
 
   const idxMap = new Map(items.map((item, i) => [item.id, i]));
   const museumItems = filtered.map((item) => ({
