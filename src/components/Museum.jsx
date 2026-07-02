@@ -10,9 +10,12 @@ const WALL_THICKNESS = 4;
 const PERSPECTIVE = 900;
 const BACK_PAD = 700;
 
-const COLOR_WALL = '#ebe6d7';
-const COLOR_FLOOR = '#d8d3c5';
-const COLOR_CEILING = '#fbfaf5';
+// Fallback colors match each texture's average, so a segment whose texture
+// tiles haven't rasterized yet (fast back-scroll) is indistinguishable
+// instead of flashing a contrasting patch
+const COLOR_WALL = '#5f6366';
+const COLOR_FLOOR = '#676c6f';
+const COLOR_CEILING = '#f5f5f5';
 const WALL_BG = `url('/concrete-wall.jpg') repeat 0 0 / 600px 600px, ${COLOR_WALL}`;
 
 // Plane segment lengths — must be multiples of the texture tile size
@@ -71,6 +74,16 @@ const MuseumFrame = memo(({ item, side, depth, onClick, imageUrls = [], layout, 
   const culled = cameraZ - depth > cullBehind;
   const culledRef = useRef(false);
   culledRef.current = culled;
+
+  // Pre-decode every cycle image so src swaps and re-entry after culling
+  // never paint an undecoded (blank) frame
+  useEffect(() => {
+    imageUrls.forEach(url => {
+      const im = new Image();
+      im.src = url;
+      im.decode?.().catch(() => {});
+    });
+  }, [imageUrls]);
 
   // Auto-cycle images when there are multiple (paused while culled so we
   // never swap to a not-yet-decoded image right before re-entry)
