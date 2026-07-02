@@ -15,6 +15,20 @@ const COLOR_FLOOR = '#d8d3c5';
 const COLOR_CEILING = '#fbfaf5';
 const WALL_BG = `url('/concrete-wall.jpg') repeat 0 0 / 600px 600px, ${COLOR_WALL}`;
 
+// Plane segment lengths — must be multiples of the texture tile size
+// (floor tiles at 500px, wall/ceiling at 600px) so segment seams land
+// exactly on tile boundaries and the repeat stays continuous.
+const FLOOR_SEG = 1000;
+const WALL_SEG = 1200;
+
+function planeSegments(total, seg) {
+  const out = [];
+  for (let off = 0; off < total; off += seg) {
+    out.push({ off, len: Math.min(seg, total - off) });
+  }
+  return out;
+}
+
 // Responsive geometry — computed once per mount
 function getLayout() {
   const W = typeof window !== 'undefined' ? window.innerWidth : 1440;
@@ -34,21 +48,39 @@ function getLayout() {
   const needed = Math.ceil(PERSPECTIVE * (1 - (wallX * 2 - 30) / W));
   const cameraStart = Math.max(mobile ? 200 : 430, needed);
 
-  return { wallX, floorY, ceilY, frameCY, frameW, frameH, frontGap, rowSpacing, stagger, cameraStart, mobile };
+  // Hide frames this far behind the camera: past the point where they have
+  // fully exited the viewport (+150 slack for hover/tilt offsets), but always
+  // before the perspective singularity at z = PERSPECTIVE where the projected
+  // layer size explodes and Chrome thrashes re-rasterizing on back-scroll.
+  const cullBehind = Math.min(
+    PERSPECTIVE + frameW / 2 - (2 * wallX * PERSPECTIVE) / W + 150,
+    PERSPECTIVE - 80,
+  );
+
+  return { wallX, floorY, ceilY, frameCY, frameW, frameH, frontGap, rowSpacing, stagger, cameraStart, cullBehind, mobile };
 }
 
 const MuseumFrame = memo(({ item, side, depth, onClick, imageUrls = [], layout, cameraZ }) => {
   const [hover, setHover] = useState(false);
   const [imgIdx, setImgIdx] = useState(0);
   const offsetRef = useRef(Math.floor(Math.random() * 2000));
-  const { wallX, frameCY, frameW, frameH, mobile } = layout;
+  const { wallX, frameCY, frameW, frameH, cullBehind, mobile } = layout;
 
-  // Auto-cycle images when there are multiple
+  // Fully behind the camera — keep mounted (img stays decoded) but invisible,
+  // so the layer never sits near the perspective singularity.
+  const culled = cameraZ - depth > cullBehind;
+  const culledRef = useRef(false);
+  culledRef.current = culled;
+
+  // Auto-cycle images when there are multiple (paused while culled so we
+  // never swap to a not-yet-decoded image right before re-entry)
   useEffect(() => {
     if (imageUrls.length <= 1) return;
     let intervalId;
     const timeoutId = setTimeout(() => {
-      intervalId = setInterval(() => setImgIdx(i => (i + 1) % imageUrls.length), 2500);
+      intervalId = setInterval(() => {
+        if (!culledRef.current) setImgIdx(i => (i + 1) % imageUrls.length);
+      }, 2500);
     }, offsetRef.current);
     return () => { clearTimeout(timeoutId); clearInterval(intervalId); };
   }, [imageUrls.length]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -98,6 +130,7 @@ const MuseumFrame = memo(({ item, side, depth, onClick, imageUrls = [], layout, 
       onMouseLeave={() => setHover(false)}
       style={{
         position: 'absolute',
+        visibility: culled ? 'hidden' : 'visible',
         left: -(frameW * RENDER_SCALE) / 2,
         top: -(frameH * RENDER_SCALE) / 2,
         width: frameW * RENDER_SCALE,
@@ -306,48 +339,64 @@ export default function Museum({ items = [], onItem, hideOverlays = false, onPro
           transformStyle: 'preserve-3d',
           transform: `translate3d(0, 0, ${cameraZ}px)`,
         }}>
+          {/*
+            Room planes are split into segments (multiples of the texture tile
+            size, so the repeat stays seamless). One room-length layer forces
+            Chrome to re-rasterize giant near-camera tiles on back-scroll,
+            which flashes the background color; small layers keep raster work
+            bounded and let fully-passed segments drop out entirely.
+          */}
           {/* Floor */}
-          <div style={{
-            position: 'absolute',
-            left: -wallX, top: 0,
-            width: wallX * 2, height: ROOM_DEPTH,
-            transformOrigin: '0 0',
-            transform: `translate3d(0, ${floorY}px, 0) rotateX(-90deg)`,
-            backgroundImage: `url('/concrete-floor.jpg')`,
-            backgroundRepeat: 'repeat',
-            backgroundSize: '500px 500px',
-            backgroundColor: COLOR_FLOOR,
-          }} />
+          {planeSegments(ROOM_DEPTH, FLOOR_SEG).map(({ off, len }) => (
+            <div key={`floor-${off}`} style={{
+              position: 'absolute',
+              left: -wallX, top: 0,
+              width: wallX * 2, height: len,
+              transformOrigin: '0 0',
+              transform: `translate3d(0, ${floorY}px, ${-off}px) rotateX(-90deg)`,
+              backgroundImage: `url('/concrete-floor.jpg')`,
+              backgroundRepeat: 'repeat',
+              backgroundSize: '500px 500px',
+              backgroundColor: COLOR_FLOOR,
+            }} />
+          ))}
           {/* Ceiling */}
-          <div style={{
-            position: 'absolute',
-            left: -wallX, top: 0,
-            width: wallX * 2, height: ROOM_DEPTH,
-            transformOrigin: '0 0',
-            transform: `translate3d(0, ${ceilY}px, 0) rotateX(-90deg)`,
-            backgroundImage: `url('/ceiling.jpg')`,
-            backgroundRepeat: 'repeat',
-            backgroundSize: '600px 600px',
-            backgroundColor: COLOR_CEILING,
-          }} />
-          {/* Left wall */}
-          <div style={{
-            position: 'absolute',
-            left: 0, top: ceilY,
-            width: ROOM_DEPTH, height: floorY - ceilY,
-            transformOrigin: '0 0',
-            transform: `translate3d(${-wallX}px, 0, 0) rotateY(90deg)`,
-            background: WALL_BG,
-          }} />
-          {/* Right wall */}
-          <div style={{
-            position: 'absolute',
-            left: 0, top: ceilY,
-            width: ROOM_DEPTH, height: floorY - ceilY,
-            transformOrigin: '0 0',
-            transform: `translate3d(${wallX}px, 0, ${-ROOM_DEPTH}px) rotateY(-90deg)`,
-            background: WALL_BG,
-          }} />
+          {planeSegments(ROOM_DEPTH, WALL_SEG).map(({ off, len }) => (
+            <div key={`ceil-${off}`} style={{
+              position: 'absolute',
+              left: -wallX, top: 0,
+              width: wallX * 2, height: len,
+              transformOrigin: '0 0',
+              transform: `translate3d(0, ${ceilY}px, ${-off}px) rotateX(-90deg)`,
+              backgroundImage: `url('/ceiling.jpg')`,
+              backgroundRepeat: 'repeat',
+              backgroundSize: '600px 600px',
+              backgroundColor: COLOR_CEILING,
+            }} />
+          ))}
+          {/* Left wall — segments run front-to-back (+x maps to −z) */}
+          {planeSegments(ROOM_DEPTH, WALL_SEG).map(({ off, len }) => (
+            <div key={`lwall-${off}`} style={{
+              position: 'absolute',
+              left: 0, top: ceilY,
+              width: len, height: floorY - ceilY,
+              transformOrigin: '0 0',
+              transform: `translate3d(${-wallX}px, 0, ${-off}px) rotateY(90deg)`,
+              background: WALL_BG,
+            }} />
+          ))}
+          {/* Right wall — segments run back-to-front (+x maps to +z), matching
+              the original texture phase which starts at the back of the room */}
+          {planeSegments(ROOM_DEPTH, WALL_SEG).map(({ off, len }) => (
+            <div key={`rwall-${off}`} style={{
+              position: 'absolute',
+              left: 0, top: ceilY,
+              width: len, height: floorY - ceilY,
+              transformOrigin: '0 0',
+              transform: `translate3d(${wallX}px, 0, ${-ROOM_DEPTH + off}px) rotateY(-90deg)`,
+              background: WALL_BG,
+            }} />
+          ))}
           {/* Back wall */}
           <div style={{
             position: 'absolute',
