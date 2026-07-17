@@ -259,3 +259,126 @@ revoke execute on function compute_metric(uuid,text)              from public, a
 revoke execute on function check_achievements(uuid,text)          from public, anon, authenticated;
 revoke execute on function unlock_achievement(uuid,text)          from public, anon, authenticated;
 revoke execute on function advance_quest(uuid,text)               from public, anon, authenticated;
+
+-- ── §3 XP TRIGGERS ──────────────────────────────────────────────────────────
+
+-- +25 for adding an owned item (or converting wishlist→owned). Deduped per item
+-- via xp_events so toggling status can't be farmed.
+create or replace function trg_items_xp() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if (tg_op = 'INSERT' and coalesce(new.status,'owned') <> 'wishlist')
+     or (tg_op = 'UPDATE' and coalesce(old.status,'owned') = 'wishlist'
+         and coalesce(new.status,'owned') <> 'wishlist') then
+    if not exists (select 1 from xp_events
+                   where user_id = new.user_id and reason = 'item_added' and ref_id = new.id) then
+      perform award_xp(new.user_id, 25, 'item_added', new.id);
+      perform advance_quest(new.user_id, 'add_item');
+    end if;
+    perform check_achievements(new.user_id, 'items');
+  end if;
+  return new;
+end $$;
+drop trigger if exists items_xp on items;
+create trigger items_xp after insert or update of status on items
+  for each row execute function trg_items_xp();
+
+-- +12 per wear (unique per item/day via table constraint); maintains items.wear_count.
+create or replace function trg_wear_events_xp() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  update items set wear_count = coalesce(wear_count,0) + 1 where id = new.item_id;
+  perform award_xp(new.user_id, 12, 'wear_logged', new.item_id);
+  perform advance_quest(new.user_id, 'log_wear');
+  perform check_achievements(new.user_id, 'wears');
+  perform check_achievements(new.user_id, 'wear_streak');
+  return new;
+end $$;
+drop trigger if exists wear_events_xp on wear_events;
+create trigger wear_events_xp after insert on wear_events
+  for each row execute function trg_wear_events_xp();
+
+-- +20 per saved outfit.
+create or replace function trg_saved_fits_xp() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  perform award_xp(new.user_id, 20, 'outfit_saved', new.id);
+  perform advance_quest(new.user_id, 'save_outfit');
+  perform check_achievements(new.user_id, 'outfits');
+  return new;
+end $$;
+drop trigger if exists saved_fits_xp on saved_fits;
+create trigger saved_fits_xp after insert on saved_fits
+  for each row execute function trg_saved_fits_xp();
+
+-- +15 to BOTH users on acceptance; deduped per pair so unfriend/re-friend can't farm.
+create or replace function trg_friend_accept_xp() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if coalesce(old.status,'') <> 'accepted' and new.status = 'accepted' then
+    if not exists (select 1 from xp_events where user_id = new.from_user_id
+                   and reason = 'friend_accepted' and ref_id = new.to_user_id) then
+      perform award_xp(new.from_user_id, 15, 'friend_accepted', new.to_user_id);
+    end if;
+    if not exists (select 1 from xp_events where user_id = new.to_user_id
+                   and reason = 'friend_accepted' and ref_id = new.from_user_id) then
+      perform award_xp(new.to_user_id, 15, 'friend_accepted', new.from_user_id);
+    end if;
+    perform check_achievements(new.from_user_id, 'friends');
+    perform check_achievements(new.to_user_id, 'friends');
+  end if;
+  return new;
+end $$;
+drop trigger if exists friend_accept_xp on friend_requests;
+create trigger friend_accept_xp after update on friend_requests
+  for each row execute function trg_friend_accept_xp();
+
+-- +5 to the liked user (deduped per liker/liked pair so unlike/re-like can't farm);
+-- the liker's quest + achievement also advance.
+create or replace function trg_profile_likes_xp() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if not exists (select 1 from xp_events where user_id = new.liked_user_id
+                 and reason = 'like_received' and ref_id = new.user_id) then
+    perform award_xp(new.liked_user_id, 5, 'like_received', new.user_id);
+  end if;
+  perform check_achievements(new.liked_user_id, 'likes_received');
+  perform advance_quest(new.user_id, 'like_profile');
+  perform check_achievements(new.user_id, 'likes_given');
+  return new;
+end $$;
+drop trigger if exists profile_likes_xp on profile_likes;
+create trigger profile_likes_xp after insert on profile_likes
+  for each row execute function trg_profile_likes_xp();
+
+-- Trendsetter progress on public fit posts (no XP here — share rewards are sub-project 4).
+create or replace function trg_outfit_posts_ach() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  perform check_achievements(new.user_id, 'public_fits');
+  return new;
+end $$;
+drop trigger if exists outfit_posts_ach on outfit_posts;
+create trigger outfit_posts_ach after insert on outfit_posts
+  for each row execute function trg_outfit_posts_ach();
+
+-- Bargain Hunter: a new price observation undercutting the source's previous one.
+create or replace function trg_price_drop_ach() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare v_prev numeric; v_user uuid;
+begin
+  select observed_price into v_prev
+    from wishlist_price_history
+   where source_id = new.source_id and id <> new.id
+   order by observed_at desc limit 1;
+  if v_prev is not null and new.observed_price < v_prev then
+    select user_id into v_user from wishlist_price_sources where id = new.source_id;
+    if v_user is not null then
+      perform unlock_achievement(v_user, 'bargain_hunter');
+    end if;
+  end if;
+  return new;
+end $$;
+drop trigger if exists price_drop_ach on wishlist_price_history;
+create trigger price_drop_ach after insert on wishlist_price_history
+  for each row execute function trg_price_drop_ach();
