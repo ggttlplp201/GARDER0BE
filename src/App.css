@@ -1569,3 +1569,13 @@ body.museum-mode .app-nav .app-nav-value      { color: rgba(245,242,234,0.35); }
   .museum-hud-select { display: none; }
 }
 
+
+/* ── Gamification toasts & level-up modal ─────────────────────────────── */
+.game-toast { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+.game-toast-xp { font-weight: bold; font-size: 12px; letter-spacing: 0.04em; flex-shrink: 0; }
+.game-toast-label { font-size: 11px; letter-spacing: 0.06em; color: var(--text2); }
+.game-toast-label.achievement { color: var(--text); font-weight: bold; }
+.levelup-modal { text-align: center; }
+.levelup-kicker { font-size: 10px; letter-spacing: 0.2em; color: var(--text3); }
+.levelup-level { font-size: 2.4rem; font-weight: bold; margin: 10px 0 4px; }
+.levelup-coins { font-size: 13px; letter-spacing: 0.08em; color: var(--text2); margin-bottom: 8px; }

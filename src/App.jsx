@@ -3,6 +3,7 @@ import { gsap } from 'gsap';
 import { useAuth } from './hooks/useAuth';
 import { useTheme } from './hooks/useTheme';
 import { useItems } from './hooks/useItems';
+import { useGame } from './hooks/useGame';
 import TwoFactorChallenge from './components/TwoFactorChallenge';
 import AuthScreen from './components/AuthScreen';
 import EmailVerificationScreen from './components/EmailVerificationScreen';
@@ -16,6 +17,8 @@ import OutfitsView from './components/OutfitsView';
 import ExplorePage from './components/ExplorePage';
 import FriendsPage from './components/FriendsPage';
 import ProfilePanel from './components/ProfilePanel';
+import GameToasts from './components/GameToasts';
+import LevelUpModal from './components/LevelUpModal';
 import AddItemModal from './components/AddItemModal';
 import EditItemModal from './components/EditItemModal';
 import Lightbox from './components/Lightbox';
@@ -56,6 +59,7 @@ export default function App() {
   } = useAuth();
   const { dark, toggle: toggleTheme } = useTheme();
   const { items, loading, loadError, fetchItems, addItem, editItem, removeItem, logWear } = useItems(user);
+  const game = useGame(user);
 
   const [mfaPending, setMfaPending]   = useState(null); // { factorId } | null
   const [page, setPage]               = useState(() => sessionStorage.getItem('garderobe-page') || 'wardrobe');
@@ -410,6 +414,8 @@ export default function App() {
       )}
 
       <NotifToast toasts={toasts} onDismiss={dismissToast} />
+      <GameToasts queue={game.notifications} shift={game.shiftNotification} defs={game.defs} />
+      <LevelUpModal event={game.levelUp} onClose={game.clearLevelUp} />
     </div>
   );
 }
