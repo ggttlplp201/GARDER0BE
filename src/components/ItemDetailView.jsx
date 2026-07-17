@@ -255,12 +255,38 @@ function PriceSources({ item }) {
   );
 }
 
-export default function ItemDetailView({ item, items, onBack, onEdit, onNavigate, onRemove, onLogWear }) {
+export default function ItemDetailView({ item, items, user, onBack, onEdit, onNavigate, onRemove, onLogWear }) {
   const [imgIdx, setImgIdx]         = useState(0);
   const [wearLogged, setWear]       = useState(false);
   const [delConfirm, setDelConfirm] = useState(false);
+  const [pinned, setPinned]         = useState(null); // Set<itemId> | null while loading
+  const [pinMsg, setPinMsg]         = useState('');
   const delTimer      = useRef(null);
   const containerRef  = useRef(null);
+
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    sb.from('profiles').select('pinned_item_ids').eq('id', user.id).maybeSingle()
+      .then(({ data }) => { if (!cancelled) setPinned(new Set(data?.pinned_item_ids || [])); });
+    return () => { cancelled = true; };
+  }, [user]);
+
+  const isPinned = !!pinned && !!item && pinned.has(item.id);
+
+  async function togglePin() {
+    if (!user || pinned === null || !item) return;
+    const next = new Set(pinned);
+    if (next.has(item.id)) next.delete(item.id);
+    else {
+      if (next.size >= 3) { setPinMsg('Showcase is full (3 max).'); setTimeout(() => setPinMsg(''), 2500); return; }
+      next.add(item.id);
+    }
+    setPinned(next);
+    const { error } = await sb.from('profiles').upsert(
+      { id: user.id, pinned_item_ids: [...next], updated_at: new Date().toISOString() }, { onConflict: 'id' });
+    if (error) { setPinned(pinned); setPinMsg('Could not update showcase.'); setTimeout(() => setPinMsg(''), 2500); }
+  }
 
   useLayoutEffect(() => {
     const origin = detailOrigin.rect;
@@ -374,6 +400,11 @@ export default function ItemDetailView({ item, items, onBack, onEdit, onNavigate
                   {wearLogged ? '✓ LOGGED' : '+ LOG WEAR'}
                 </button>
               )}
+              {item.status !== 'wishlist' && user && (
+                <button className={`det-btn${isPinned ? ' logged' : ''}`} onClick={togglePin} disabled={pinned === null}>
+                  {isPinned ? '★ PINNED' : '☆ PIN'}
+                </button>
+              )}
               <button className="det-btn" onClick={() => onEdit(item.id)}>EDIT</button>
 {onRemove && (
                 <button
@@ -391,6 +422,7 @@ export default function ItemDetailView({ item, items, onBack, onEdit, onNavigate
                 >{delConfirm ? 'CONFIRM?' : 'DELETE'}</button>
               )}
             </div>
+            {pinMsg && <div className="detail-pin-msg">{pinMsg}</div>}
 
             {item.status === 'wishlist' && <PriceSources item={item} />}
           </div>

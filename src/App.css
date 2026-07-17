@@ -1675,3 +1675,5 @@ body.museum-mode .app-nav .app-nav-value      { color: rgba(245,242,234,0.35); }
 .showcase-ach { border: 1px solid var(--border); padding: 10px; }
 .showcase-ach-name { font-size: 11px; font-weight: bold; letter-spacing: 0.06em; }
 .showcase-ach-xp { font-size: 10px; color: var(--text3); margin-top: 3px; }
+
+.detail-pin-msg { font-size: 11px; color: var(--text3); letter-spacing: 0.04em; margin-top: 8px; }

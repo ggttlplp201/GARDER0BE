@@ -329,6 +329,7 @@ export default function App() {
           <ItemDetailView
             item={items.find(i => i.id === detailItem?.id) ?? detailItem}
             items={items}
+            user={user}
             onBack={handleBack}
             onEdit={id => setEditItemId(id)}
             onNavigate={handleNavigateDetail}
