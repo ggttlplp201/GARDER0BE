@@ -30,6 +30,10 @@ create table if not exists xp_events (
   created_at    timestamptz not null default now()
 );
 create index if not exists idx_xp_events_user on xp_events(user_id, created_at desc);
+-- Unique backstop for the per-pair/per-item XP dedupe guards in the triggers
+create unique index if not exists uniq_xp_events_dedupe
+  on xp_events (user_id, reason, ref_id)
+  where reason in ('item_added', 'friend_accepted', 'like_received');
 
 create table if not exists wear_events (
   id         uuid primary key default gen_random_uuid(),
@@ -93,7 +97,13 @@ create policy "xp_events_select"    on xp_events         for select using (auth.
 create policy "wear_events_select"  on wear_events       for select using (auth.uid() = user_id);
 create policy "wear_events_insert"  on wear_events       for insert with check (
   auth.uid() = user_id
-  and exists (select 1 from items i where i.id = wear_events.item_id and i.user_id = auth.uid())
+  and worn_on = current_date
+  and exists (
+    select 1 from items i
+    where i.id = wear_events.item_id
+      and i.user_id = auth.uid()
+      and coalesce(i.status, 'owned') <> 'wishlist'
+  )
 );
 create policy "achievement_defs_select"  on achievement_defs  for select using (true);
 create policy "user_achievements_select" on user_achievements for select using (auth.uid() = user_id);

@@ -276,7 +276,7 @@ export default function ItemDetailView({ item, items, onBack, onEdit, onNavigate
       { x: xOff, y: yOff, scaleX, scaleY, opacity: 0 },
       { x: 0, y: 0, scaleX: 1, scaleY: 1, opacity: 1, duration: 0.48, ease: 'expo.out', clearProps: 'all' }
     );
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);  
 
   if (!item) return null;
 
@@ -369,9 +369,11 @@ export default function ItemDetailView({ item, items, onBack, onEdit, onNavigate
             </div>
 
             <div className="detail-actions">
-              <button className={`det-btn det-btn-primary${wearLogged ? ' logged' : ''}`} onClick={logWear}>
-                {wearLogged ? '✓ LOGGED' : '+ LOG WEAR'}
-              </button>
+              {item.status !== 'wishlist' && (
+                <button className={`det-btn det-btn-primary${wearLogged ? ' logged' : ''}`} onClick={logWear}>
+                  {wearLogged ? '✓ LOGGED' : '+ LOG WEAR'}
+                </button>
+              )}
               <button className="det-btn" onClick={() => onEdit(item.id)}>EDIT</button>
 {onRemove && (
                 <button

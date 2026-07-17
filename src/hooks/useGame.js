@@ -10,65 +10,89 @@ export function useGame(user) {
   const [notifications, setNotifications] = useState([]);
   const [levelUp, setLevelUp]             = useState(null);
 
-  const loadAchievements = useCallback(async () => {
-    if (!user) return;
+  const fetchAchievements = useCallback(async () => {
     const [{ data: ad }, { data: ua }] = await Promise.all([
       sb.from('achievement_defs').select('*').order('sort'),
       sb.from('user_achievements').select('*').eq('user_id', user.id),
     ]);
-    setDefs(ad || []);
     const map = {};
     (ua || []).forEach(r => { map[r.achievement_id] = r; });
-    setAchievements(map);
+    return { defs: ad || [], map };
   }, [user]);
 
-  // Light refresh: state + wallet + today's quests (no daily-open side effects)
-  const refresh = useCallback(async () => {
-    if (!user) return;
+  // Light fetch: state + wallet + today's quests (no daily-open side effects)
+  const fetchGameData = useCallback(async () => {
     const today = new Date().toISOString().slice(0, 10);
     const [{ data: gs }, { data: w }, { data: q }] = await Promise.all([
       sb.from('game_state').select('*').eq('user_id', user.id).maybeSingle(),
       sb.from('wallets').select('*').eq('user_id', user.id).maybeSingle(),
       sb.from('daily_quests').select('*').eq('user_id', user.id).eq('quest_date', today).order('quest_type'),
     ]);
-    if (gs) setGameState(gs);
-    if (w) setWallet(w);
-    setQuests(q || []);
+    return { gs, w, q: q || [] };
   }, [user]);
 
-  // Session start: daily open (idempotent) returns full state in one round trip
+  const refresh = useCallback(async () => {
+    if (!user) return;
+    const { gs, w, q } = await fetchGameData();
+    if (gs) setGameState(gs);
+    if (w) setWallet(w);
+    setQuests(q);
+  }, [user, fetchGameData]);
+
   useEffect(() => {
     if (!user) {
       setGameState(null); setWallet(null); setQuests([]);
+      setDefs([]); setAchievements({});
       setNotifications([]); setLevelUp(null);
       return;
     }
-    sb.rpc('record_daily_open').then(({ data, error }) => {
-      if (error) { console.error(error); refresh(); return; }
-      setGameState(data.game_state);
-      setWallet(data.wallet);
-      setQuests(data.quests || []);
-    });
-    loadAchievements();
-  }, [user, refresh, loadAchievements]);
+    let cancelled = false;
+    let opened = false;
 
-  // Realtime: every XP event drives toasts, level-up modal, and a state refresh
-  useEffect(() => {
-    if (!user) return;
+    fetchAchievements().then(({ defs: ad, map }) => {
+      if (cancelled) return;
+      setDefs(ad); setAchievements(map);
+    });
+
     const ch = sb.channel('xp-events-' + user.id)
       .on('postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'xp_events', filter: `user_id=eq.${user.id}` },
         payload => {
+          if (cancelled) return;
           const ev = payload.new;
           if (ev.reason === 'backfill') return;
           setNotifications(q => [...q, ev]);
           if (ev.leveled_to) setLevelUp(ev);
-          refresh();
-          if (ev.reason.startsWith('achievement:')) loadAchievements();
+          fetchGameData().then(({ gs, w, q }) => {
+            if (cancelled) return;
+            if (gs) setGameState(gs);
+            if (w) setWallet(w);
+            setQuests(q);
+          });
+          if (ev.reason.startsWith('achievement:')) {
+            fetchAchievements().then(({ defs: ad, map }) => {
+              if (cancelled) return;
+              setDefs(ad); setAchievements(map);
+            });
+          }
         })
-      .subscribe();
-    return () => sb.removeChannel(ch);
-  }, [user, refresh, loadAchievements]);
+      .subscribe(status => {
+        // Daily open runs only once the channel is live, so its XP events reach
+        // the toast queue; on subscribe failure fall back so XP is never skipped.
+        const ready = status === 'SUBSCRIBED' || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT';
+        if (!ready || opened || cancelled) return;
+        opened = true;
+        sb.rpc('record_daily_open').then(({ data, error }) => {
+          if (cancelled) return;
+          if (error) { console.error(error); refresh(); return; }
+          setGameState(data.game_state);
+          setWallet(data.wallet);
+          setQuests(data.quests || []);
+        });
+      });
+
+    return () => { cancelled = true; sb.removeChannel(ch); };
+  }, [user, fetchAchievements, fetchGameData, refresh]);
 
   const shiftNotification = useCallback(() => setNotifications(q => q.slice(1)), []);
   const clearLevelUp = useCallback(() => setLevelUp(null), []);
