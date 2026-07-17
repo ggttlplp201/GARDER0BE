@@ -5,6 +5,9 @@ import { API_URL } from '../lib/constants';
 import Avatar from './Avatar';
 import Username from './Username';
 import FitLikeButton from './FitLikeButton';
+import CoinIcon from './CoinIcon';
+import { getLevelState } from '../lib/levels';
+import { COSMETICS } from '../lib/cosmetics';
 
 // ── Feed cache ────────────────────────────────────────────────────────────────
 const FEED_CACHE_KEY    = 'garderobe-feed-v1';
@@ -354,31 +357,128 @@ function SocialButtons({ user, profileId, onRequestSent }) {
 function ProfileView({ profile, user, onBack }) {
   const [items, setItems]     = useState([]);
   const [loading, setLoading] = useState(true);
+  const [show, setShow]       = useState(null); // showcase view-model
+  const isSelf = profile.id === user?.id;
 
   useEffect(() => {
-    sb.from('items').select('*').eq('user_id', profile.id).order('created_at', { ascending: false })
-      .then(({ data }) => { setItems(data || []); setLoading(false); });
-  }, [profile.id]);
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      const [{ data: itemRows }, { data: gs }, { count: fitCount }, { data: uaRows },
+              { data: adefs }, { count: profLikes }, { data: prof }] = await Promise.all([
+        sb.from('items').select('*').eq('user_id', profile.id).order('created_at', { ascending: false }),
+        sb.from('game_state').select('total_xp').eq('user_id', profile.id).maybeSingle(),
+        sb.from('outfit_posts').select('id', { count: 'exact', head: true }).eq('user_id', profile.id),
+        sb.from('user_achievements').select('achievement_id, unlocked_at').eq('user_id', profile.id).not('unlocked_at', 'is', null),
+        sb.from('achievement_defs').select('id, name, xp, sort'),
+        sb.from('profile_likes').select('id', { count: 'exact', head: true }).eq('liked_user_id', profile.id),
+        sb.from('profiles').select('pinned_item_ids, equipped_frame, equipped_name_effect').eq('id', profile.id).maybeSingle(),
+      ]);
+      if (cancelled) return;
+      const its = itemRows || [];
+      // fit likes received: count fit_likes on this user's posts
+      const { count: fitLikes } = await sb.from('fit_likes')
+        .select('post_id, outfit_posts!inner(user_id)', { count: 'exact', head: true })
+        .eq('outfit_posts.user_id', profile.id);
+      let coins = null;
+      if (isSelf) {
+        const { data: w } = await sb.from('wallets').select('coins').eq('user_id', profile.id).maybeSingle();
+        coins = w?.coins ?? 0;
+      }
+      const defMap = Object.fromEntries((adefs || []).map(d => [d.id, d]));
+      const unlocked = (uaRows || [])
+        .map(r => ({ ...defMap[r.achievement_id], unlocked_at: r.unlocked_at }))
+        .filter(a => a.name).sort((a, b) => a.sort - b.sort);
+      const owned = its.filter(i => (i.status || 'owned') === 'owned');
+      const pins = (prof?.pinned_item_ids || [])
+        .map(id => its.find(i => i.id === id)).filter(Boolean);
+      setItems(its);
+      setShow({
+        level: getLevelState(gs?.total_xp || 0).level,
+        collectionValue: Math.round(owned.reduce((s, i) => s + (parseFloat(i.price) || 0), 0)),
+        coins,
+        stats: {
+          items: owned.length,
+          fits: fitCount || 0,
+          wears: owned.reduce((s, i) => s + (i.wear_count || 0), 0),
+          likes: (profLikes || 0) + (fitLikes || 0),
+        },
+        achievements: unlocked,
+        pins,
+        frame: prof?.equipped_frame ?? profile.equipped_frame,
+        nameEffect: prof?.equipped_name_effect ?? profile.equipped_name_effect,
+      });
+      setLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, [profile.id, isSelf]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const owned    = items.filter(i => (i.status || 'owned') === 'owned');
-  const wishlist = items.filter(i => i.status === 'wishlist');
+  const frameName = show?.frame && COSMETICS[show.frame]?.name;
+  const fxName    = show?.nameEffect && COSMETICS[show.nameEffect]?.name;
 
   return (
     <div className="explore-profile-view">
       <button className="explore-back" onClick={onBack}>← BACK</button>
       <div className="explore-profile-header">
-        <Avatar url={profile.avatar_url} size={64} frame={profile.equipped_frame} />
+        <Avatar url={profile.avatar_url} size={64} frame={show?.frame ?? profile.equipped_frame} />
         <div style={{ flex: 1 }}>
-          <div className="explore-profile-name"><Username name={profile.username || 'Anonymous'} effect={profile.equipped_name_effect} /></div>
-          {profile.location  && <div className="explore-profile-meta">{profile.location}</div>}
-          {profile.bio       && <div className="explore-profile-bio">{profile.bio}</div>}
+          <div className="explore-profile-name">
+            <Username name={profile.username || 'Anonymous'} effect={show?.nameEffect ?? profile.equipped_name_effect} />
+            {show && <span className="showcase-lvl">LVL {show.level}</span>}
+          </div>
+          {profile.location && <div className="explore-profile-meta">{profile.location}</div>}
+          {profile.bio && <div className="explore-profile-bio">{profile.bio}</div>}
+          {show && (
+            <div className="showcase-value">
+              ${show.collectionValue.toLocaleString()}
+              {isSelf && show.coins != null && <> · {show.coins.toLocaleString()} <CoinIcon size={10} /></>}
+            </div>
+          )}
         </div>
-        <SocialButtons user={user} profileId={profile.id} />
+        {!isSelf && <SocialButtons user={user} profileId={profile.id} />}
       </div>
-      <div className="explore-profile-stats">
-        <span>{owned.length} owned</span>
-        {wishlist.length > 0 && <span>{wishlist.length} wishlist</span>}
-      </div>
+
+      {show && (
+        <div className="showcase-statrow">
+          <span><b>{show.stats.items}</b> ITEMS</span>
+          <span><b>{show.stats.fits}</b> FITS</span>
+          <span><b>{show.stats.wears}</b> WEARS</span>
+          <span><b>{show.stats.likes}</b> LIKES</span>
+        </div>
+      )}
+
+      {show && (frameName || fxName) && (
+        <div className="showcase-loadout">
+          <span className="showcase-label">LOADOUT</span>
+          {frameName && <span className="showcase-chip">{frameName.toUpperCase()}</span>}
+          {fxName && <span className="showcase-chip">{fxName.toUpperCase()}</span>}
+        </div>
+      )}
+
+      {show && show.pins.length > 0 && (
+        <>
+          <div className="showcase-label showcase-section">SHOWCASE</div>
+          <div className="showcase-pins">
+            {show.pins.map(item => <PublicItemCard key={item.id} item={item} />)}
+          </div>
+        </>
+      )}
+
+      {show && show.achievements.length > 0 && (
+        <>
+          <div className="showcase-label showcase-section">ACHIEVEMENTS</div>
+          <div className="showcase-ach-grid">
+            {show.achievements.map(a => (
+              <div key={a.id} className="showcase-ach">
+                <div className="showcase-ach-name">{a.name.toUpperCase()}</div>
+                <div className="showcase-ach-xp">+{a.xp} XP</div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      <div className="showcase-label showcase-section">COLLECTION</div>
       {loading && <p className="empty">Loading...</p>}
       {!loading && items.length === 0 && <p className="empty">No items in this collection.</p>}
       {!loading && items.length > 0 && (

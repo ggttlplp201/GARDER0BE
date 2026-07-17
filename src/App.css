@@ -1660,3 +1660,18 @@ body.museum-mode .app-nav .app-nav-value      { color: rgba(245,242,234,0.35); }
 .feed-verb { color: var(--text2); }
 .feed-time { font-size: 10px; color: var(--text3); letter-spacing: 0.05em; margin-top: 3px; }
 .feed-thumb { width: 40px; height: 40px; object-fit: cover; border: 1px solid var(--border-light); flex-shrink: 0; }
+
+/* ── Profile showcase ─────────────────────────────────────────────────── */
+.showcase-lvl { font-size: 10px; font-weight: bold; letter-spacing: 0.08em; border: 1px solid var(--border); padding: 2px 6px; margin-left: 8px; vertical-align: middle; }
+.showcase-value { font-size: 12px; color: var(--text2); letter-spacing: 0.04em; margin-top: 6px; display: inline-flex; align-items: center; gap: 3px; }
+.showcase-statrow { display: flex; gap: 20px; flex-wrap: wrap; padding: 14px 0; border-top: 1px solid var(--border-light); border-bottom: 1px solid var(--border-light); margin: 14px 0; font-size: 11px; letter-spacing: 0.05em; color: var(--text2); }
+.showcase-statrow b { color: var(--text); font-size: 13px; }
+.showcase-label { font-size: 10px; letter-spacing: 0.12em; color: var(--text3); }
+.showcase-section { margin: 18px 0 10px; }
+.showcase-loadout { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.showcase-chip { font-size: 10px; letter-spacing: 0.06em; border: 1px solid var(--border-light); padding: 3px 8px; }
+.showcase-pins { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.showcase-ach-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.showcase-ach { border: 1px solid var(--border); padding: 10px; }
+.showcase-ach-name { font-size: 11px; font-weight: bold; letter-spacing: 0.06em; }
+.showcase-ach-xp { font-size: 10px; color: var(--text3); margin-top: 3px; }

@@ -390,6 +390,7 @@ export default function App() {
             if (meta.avatarUrl) setAvatarUrl(meta.avatarUrl);
           });
         }}
+        onViewProfile={() => handleViewFriendProfile({ id: user.id, username: userName, avatar_url: avatarUrl, location: userLocation })}
         mfaEnroll={mfaEnroll}
         mfaVerify={mfaVerify}
         mfaUnenroll={mfaUnenroll}
