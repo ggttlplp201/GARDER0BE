@@ -124,3 +124,138 @@ on conflict (id) do nothing;
 do $$ begin
   alter publication supabase_realtime add table public.xp_events;
 exception when duplicate_object then null; end $$;
+
+-- ── §2 ECONOMY ENGINE ───────────────────────────────────────────────────────
+
+-- Cumulative XP required to reach level n. Parity: src/lib/levels.js xpToReach().
+create or replace function xp_to_reach(p_level int) returns int
+language sql immutable as $$
+  select case when p_level <= 1 then 0 else 50 * p_level * (p_level + 1) - 100 end;
+$$;
+
+create or replace function level_for_xp(p_xp int) returns int
+language plpgsql immutable as $$
+declare n int := 1;
+begin
+  while xp_to_reach(n + 1) <= p_xp loop n := n + 1; end loop;
+  return n;
+end $$;
+
+create or replace function ensure_game_rows(p_user uuid) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  insert into game_state (user_id) values (p_user) on conflict (user_id) do nothing;
+  insert into wallets    (user_id) values (p_user) on conflict (user_id) do nothing;
+end $$;
+
+-- Central XP entry point. One xp_events row per call; carries level-up info.
+create or replace function award_xp(p_user uuid, p_amount int, p_reason text, p_ref uuid default null)
+returns void language plpgsql security definer set search_path = public as $$
+declare
+  v_old_xp int; v_new_xp int; v_old_level int; v_new_level int;
+  v_coins int := 0; v_lvl int;
+begin
+  perform ensure_game_rows(p_user);
+  update game_state
+     set total_xp = total_xp + p_amount, updated_at = now()
+   where user_id = p_user
+   returning total_xp - p_amount, total_xp into v_old_xp, v_new_xp;
+  v_old_level := level_for_xp(v_old_xp);
+  v_new_level := level_for_xp(v_new_xp);
+  if v_new_level > v_old_level then
+    for v_lvl in (v_old_level + 1) .. v_new_level loop
+      v_coins := v_coins + 100 + 25 * v_lvl;
+    end loop;
+    update wallets set coins = coins + v_coins where user_id = p_user;
+  end if;
+  insert into xp_events (user_id, amount, reason, ref_id, leveled_to, coins_awarded)
+  values (p_user, p_amount, p_reason, p_ref,
+          case when v_new_level > v_old_level then v_new_level end,
+          case when v_new_level > v_old_level then v_coins end);
+  if v_new_level > v_old_level then
+    perform check_achievements(p_user, 'level');  -- drip_lord; recursion stops once unlocked
+  end if;
+end $$;
+
+create or replace function compute_metric(p_user uuid, p_metric text) returns int
+language plpgsql security definer set search_path = public as $$
+begin
+  return case p_metric
+    when 'items'          then (select count(*) from items where user_id = p_user and coalesce(status,'owned') <> 'wishlist')
+    when 'outfits'        then (select count(*) from saved_fits where user_id = p_user)
+    when 'wears'          then (select coalesce(sum(coalesce(wear_count,0)),0) from items where user_id = p_user)
+    when 'wear_streak'    then coalesce((
+      with days as (select distinct worn_on from wear_events where user_id = p_user),
+      runs as (select worn_on, worn_on - (row_number() over (order by worn_on))::int as grp from days)
+      select max(cnt)::int from (select count(*) as cnt from runs group by grp) s), 0)
+    when 'likes_given'    then (select count(*) from profile_likes where user_id = p_user)
+    when 'likes_received' then (select count(*) from profile_likes where liked_user_id = p_user)
+    when 'friends'        then (select count(*) from friend_requests where status = 'accepted' and (from_user_id = p_user or to_user_id = p_user))
+    when 'public_fits'    then (select count(*) from outfit_posts where user_id = p_user)
+    when 'level'          then (select level_for_xp(coalesce((select total_xp from game_state where user_id = p_user), 0)))
+    when 'coins_spent'    then (select coalesce((select lifetime_spent from wallets where user_id = p_user), 0))
+    else 0
+  end;
+end $$;
+
+-- Recomputes all achievements on p_metric; unlocks at most once, never lowers progress.
+create or replace function check_achievements(p_user uuid, p_metric text) returns void
+language plpgsql security definer set search_path = public as $$
+declare a record; v int;
+begin
+  v := compute_metric(p_user, p_metric);
+  for a in select * from achievement_defs where metric = p_metric loop
+    insert into user_achievements (user_id, achievement_id, progress)
+    values (p_user, a.id, least(v, a.goal))
+    on conflict (user_id, achievement_id) do update
+      set progress = greatest(user_achievements.progress, excluded.progress);
+    if v >= a.goal then
+      update user_achievements set unlocked_at = now(), progress = a.goal
+       where user_id = p_user and achievement_id = a.id and unlocked_at is null;
+      if found then
+        perform award_xp(p_user, a.xp, 'achievement:' || a.id, null);
+      end if;
+    end if;
+  end loop;
+end $$;
+
+-- Direct unlock for event-style achievements (bargain_hunter) with no countable metric.
+create or replace function unlock_achievement(p_user uuid, p_id text) returns void
+language plpgsql security definer set search_path = public as $$
+declare a achievement_defs;
+begin
+  select * into a from achievement_defs where id = p_id;
+  if not found then return; end if;
+  insert into user_achievements (user_id, achievement_id, progress)
+  values (p_user, p_id, a.goal)
+  on conflict (user_id, achievement_id) do update set progress = a.goal;
+  update user_achievements set unlocked_at = now()
+   where user_id = p_user and achievement_id = p_id and unlocked_at is null;
+  if found then
+    perform award_xp(p_user, a.xp, 'achievement:' || p_id, null);
+  end if;
+end $$;
+
+-- Advances today's quest of p_type; completion pays XP (via award_xp) + coins.
+create or replace function advance_quest(p_user uuid, p_type text) returns void
+language plpgsql security definer set search_path = public as $$
+declare q daily_quests;
+begin
+  update daily_quests
+     set progress = least(goal, progress + 1)
+   where user_id = p_user and quest_date = current_date
+     and quest_type = p_type and completed_at is null
+   returning * into q;
+  if found and q.progress >= q.goal then
+    update daily_quests set completed_at = now() where id = q.id;
+    update wallets set coins = coins + q.coin_reward where user_id = p_user;
+    perform award_xp(p_user, q.xp_reward, 'quest:' || p_type, q.id);
+  end if;
+end $$;
+
+revoke execute on function ensure_game_rows(uuid)                 from public, anon, authenticated;
+revoke execute on function award_xp(uuid,int,text,uuid)           from public, anon, authenticated;
+revoke execute on function compute_metric(uuid,text)              from public, anon, authenticated;
+revoke execute on function check_achievements(uuid,text)          from public, anon, authenticated;
+revoke execute on function unlock_achievement(uuid,text)          from public, anon, authenticated;
+revoke execute on function advance_quest(uuid,text)               from public, anon, authenticated;
