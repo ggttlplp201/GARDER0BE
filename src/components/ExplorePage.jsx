@@ -4,6 +4,7 @@ import { parseImageUrls } from '../lib/imageUtils';
 import { API_URL } from '../lib/constants';
 import Avatar from './Avatar';
 import Username from './Username';
+import FitLikeButton from './FitLikeButton';
 
 // ── Feed cache ────────────────────────────────────────────────────────────────
 const FEED_CACHE_KEY    = 'garderobe-feed-v1';
@@ -416,7 +417,20 @@ function OutfitsFeed({ user }) {
         ? await sb.from('profiles').select('id, username, avatar_url, equipped_frame, equipped_name_effect').in('id', ids)
         : { data: [] };
       const pm = Object.fromEntries((profileRows || []).map(p => [p.id, p]));
-      const enriched = rows.map(r => ({ ...r, profiles: pm[r.user_id] || null }));
+      // Batch-load fit-like counts + which the viewer liked
+      const postIds = rows.map(r => r.id);
+      const counts = {}; const mine = new Set();
+      if (postIds.length) {
+        const { data: likes } = await sb.from('fit_likes').select('post_id, user_id').in('post_id', postIds);
+        (likes || []).forEach(l => {
+          counts[l.post_id] = (counts[l.post_id] || 0) + 1;
+          if (l.user_id === user?.id) mine.add(l.post_id);
+        });
+      }
+      const enriched = rows.map(r => ({
+        ...r, profiles: pm[r.user_id] || null,
+        likeCount: counts[r.id] || 0, likedByMe: mine.has(r.id),
+      }));
       setPosts(prev => pageNum === 0 ? enriched : [...prev, ...enriched]);
       setHasMore(rows.length === OUTFITS_PAGE_SIZE);
     }
@@ -495,6 +509,8 @@ function OutfitsFeed({ user }) {
                   <div className="outfit-post-meta">
                     <span className="mono-dim">{post.slot_count} PCS · ${Math.round(post.total_value || 0).toLocaleString()}</span>
                     <span className="mono-dim">{timeAgo(post.created_at)}</span>
+                    <FitLikeButton key={`${post.id}-${post.likeCount}-${post.likedByMe}`}
+                      postId={post.id} user={user} initialCount={post.likeCount} initialLiked={post.likedByMe} />
                   </div>
                   <div className="outfit-post-user">
                     <Avatar url={post.profiles?.avatar_url} size={18} frame={post.profiles?.equipped_frame} />

@@ -1647,3 +1647,8 @@ body.museum-mode .app-nav .app-nav-value      { color: rgba(245,242,234,0.35); }
 .shop-btn.active { border-color: var(--border); color: var(--text); }
 .shop-btn:hover.active:not(:disabled) { background: var(--text); color: var(--bg1); }
 .shop-btn:disabled { opacity: 0.5; cursor: default; }
+
+/* ── Fit like button ──────────────────────────────────────────────────── */
+.fit-like-btn { display: inline-flex; align-items: center; gap: 4px; background: none; border: none; cursor: pointer; color: var(--text3); font-size: 11px; padding: 0; font-family: inherit; }
+.fit-like-btn:hover { color: #e05; }
+.fit-like-btn.liked { color: #e05; }
