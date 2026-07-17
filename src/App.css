@@ -1579,3 +1579,9 @@ body.museum-mode .app-nav .app-nav-value      { color: rgba(245,242,234,0.35); }
 .levelup-kicker { font-size: 10px; letter-spacing: 0.2em; color: var(--text3); }
 .levelup-level { font-size: 2.4rem; font-weight: bold; margin: 10px 0 4px; }
 .levelup-coins { font-size: 13px; letter-spacing: 0.08em; color: var(--text2); margin-bottom: 8px; }
+
+/* ── Header XP HUD ────────────────────────────────────────────────────── */
+.app-header-meta-col { display: flex; flex-direction: column; gap: 4px; }
+.app-header-lvl { white-space: nowrap; }
+.app-xp-bar { height: 2px; background: var(--border-light); width: 100%; }
+.app-xp-fill { height: 100%; background: var(--text); transition: width 0.4s ease; }

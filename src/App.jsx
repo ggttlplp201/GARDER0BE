@@ -306,6 +306,8 @@ export default function App() {
         userName={userName}
         onProfileOpen={() => setProfileOpen(true)}
         onViewProfile={handleViewFriendProfile}
+        gameState={game.gameState}
+        wallet={game.wallet}
       />
 
       <div className="app-main" ref={mainRef}>

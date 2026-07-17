@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import DesignHouseGlobe from './DesignHouseGlobe';
 import { tzAbbrev } from '../lib/geo';
+import { getLevelState } from '../lib/levels';
 
-export default function AppHeader({ onDark, avatarUrl, location, userName, onProfileOpen, onViewProfile }) {
+export default function AppHeader({ onDark, avatarUrl, location, userName, onProfileOpen, onViewProfile, gameState, wallet }) {
   const [now, setNow] = useState(new Date());
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 1000);
@@ -13,6 +14,7 @@ export default function AppHeader({ onDark, avatarUrl, location, userName, onPro
   const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
   const zoneStr = tzAbbrev(null, now);
   const displayLocation = location?.toUpperCase() || Intl.DateTimeFormat().resolvedOptions().timeZone?.split('/').pop()?.replace(/_/g, ' ').toUpperCase() || 'LOCAL';
+  const lvl = gameState ? getLevelState(gameState.total_xp) : null;
 
   return (
     <div className="app-header">
@@ -22,10 +24,22 @@ export default function AppHeader({ onDark, avatarUrl, location, userName, onPro
         <div className="app-subtitle">your digital wardrobe for all your grails</div>
       </div>
       <div className="app-header-right">
-        <div className="app-header-meta">
-          <div>ISSUE 04 · VOL. XXVI</div>
-          <div>{(userName || 'DEMO').toUpperCase()} · {displayLocation}</div>
-          <div>{dateStr} · {timeStr}{zoneStr ? ` ${zoneStr}` : ''}</div>
+        <div className="app-header-meta-col">
+          <div className="app-header-meta">
+            <div>ISSUE 04 · VOL. XXVI</div>
+            <div>{(userName || 'DEMO').toUpperCase()} · {displayLocation}</div>
+            <div>{dateStr} · {timeStr}{zoneStr ? ` ${zoneStr}` : ''}</div>
+            {lvl && (
+              <div className="app-header-lvl">
+                LVL {lvl.level} · {lvl.xpIntoLevel}/{lvl.xpForNextLevel} XP{wallet ? ` · ${wallet.coins.toLocaleString()} ¢` : ''}
+              </div>
+            )}
+          </div>
+          {lvl && (
+            <div className="app-xp-bar" aria-label={`Level ${lvl.level} progress`}>
+              <div className="app-xp-fill" style={{ width: `${lvl.pct}%` }} />
+            </div>
+          )}
         </div>
         <div className="app-globe-slot">
           <DesignHouseGlobe mini onViewProfile={onViewProfile} myLocation={location} />
