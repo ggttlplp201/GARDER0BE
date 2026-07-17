@@ -1652,3 +1652,11 @@ body.museum-mode .app-nav .app-nav-value      { color: rgba(245,242,234,0.35); }
 .fit-like-btn { display: inline-flex; align-items: center; gap: 4px; background: none; border: none; cursor: pointer; color: var(--text3); font-size: 11px; padding: 0; font-family: inherit; }
 .fit-like-btn:hover { color: #e05; }
 .fit-like-btn.liked { color: #e05; }
+
+/* ── Friends activity feed ────────────────────────────────────────────── */
+.feed-row { display: flex; align-items: center; gap: 14px; padding: 12px 0; border-bottom: 1px solid var(--border-light); }
+.feed-info { flex: 1; min-width: 0; }
+.feed-line { font-size: 12px; letter-spacing: 0.03em; }
+.feed-verb { color: var(--text2); }
+.feed-time { font-size: 10px; color: var(--text3); letter-spacing: 0.05em; margin-top: 3px; }
+.feed-thumb { width: 40px; height: 40px; object-fit: cover; border: 1px solid var(--border-light); flex-shrink: 0; }

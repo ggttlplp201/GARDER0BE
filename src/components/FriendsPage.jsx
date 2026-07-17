@@ -1,11 +1,21 @@
 import { useState, useEffect, useCallback } from 'react';
 import { sb } from '../lib/supabase';
+import { parseImageUrls } from '../lib/imageUtils';
 import Avatar from './Avatar';
 import Username from './Username';
+import FitLikeButton from './FitLikeButton';
 
 function fmtStats(count, value) {
   const v = value >= 1000 ? Math.round(value / 1000) + 'K' : Math.round(value).toLocaleString();
   return `${count} ITEMS · $${v}`;
+}
+
+function timeAgo(iso) {
+  const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+  if (s < 60) return 'now';
+  if (s < 3600) return Math.floor(s / 60) + 'm';
+  if (s < 86400) return Math.floor(s / 3600) + 'h';
+  return Math.floor(s / 86400) + 'd';
 }
 
 export default function FriendsPage({ user, onViewProfile, onRequestsViewed }) {
@@ -16,6 +26,9 @@ export default function FriendsPage({ user, onViewProfile, onRequestsViewed }) {
   const [likes, setLikes]       = useState([]);
   const [itemStats, setItemStats] = useState({});
   const [loading, setLoading]   = useState(true);
+  const [feed, setFeed]         = useState([]);
+  const [feedLoading, setFeedLoading] = useState(false);
+  const [feedShown, setFeedShown] = useState(10);
 
   const load = useCallback(async () => {
     if (!user) return;
@@ -81,6 +94,37 @@ export default function FriendsPage({ user, onViewProfile, onRequestsViewed }) {
     return () => sb.removeChannel(ch);
   }, [user, load]);
 
+  // Query-time activity feed: merge friends' recent items / fits / achievements.
+  const loadFeed = useCallback(async () => {
+    const friendIds = friends.map(f => f.id);
+    if (!friendIds.length) { setFeed([]); return; }
+    setFeedLoading(true);
+    const [{ data: items }, { data: fits }, { data: achs }, { data: adefs }] = await Promise.all([
+      sb.from('items').select('id, user_id, name, image_url, created_at').in('user_id', friendIds).eq('status', 'owned').order('created_at', { ascending: false }).limit(20),
+      sb.from('outfit_posts').select('id, user_id, fit_name, image_url, created_at').in('user_id', friendIds).order('created_at', { ascending: false }).limit(20),
+      sb.from('user_achievements').select('user_id, achievement_id, unlocked_at').in('user_id', friendIds).not('unlocked_at', 'is', null).order('unlocked_at', { ascending: false }).limit(20),
+      sb.from('achievement_defs').select('id, name, xp'),
+    ]);
+    const defMap = Object.fromEntries((adefs || []).map(d => [d.id, d]));
+    // Fit-like counts for the fits in the feed
+    const fitIds = (fits || []).map(f => f.id);
+    const counts = {}; const mine = new Set();
+    if (fitIds.length) {
+      const { data: fl } = await sb.from('fit_likes').select('post_id, user_id').in('post_id', fitIds);
+      (fl || []).forEach(l => { counts[l.post_id] = (counts[l.post_id] || 0) + 1; if (l.user_id === user.id) mine.add(l.post_id); });
+    }
+    const merged = [
+      ...(items || []).map(r => ({ key: 'i' + r.id, type: 'item', actorId: r.user_id, ts: r.created_at, name: r.name, image: parseImageUrls(r.image_url)[0] })),
+      ...(fits || []).map(r => ({ key: 'f' + r.id, type: 'fit', actorId: r.user_id, ts: r.created_at, name: r.fit_name, image: r.image_url, postId: r.id, likeCount: counts[r.id] || 0, likedByMe: mine.has(r.id) })),
+      ...(achs || []).map(r => ({ key: 'a' + r.user_id + r.achievement_id, type: 'achievement', actorId: r.user_id, ts: r.unlocked_at, name: defMap[r.achievement_id]?.name || r.achievement_id, xp: defMap[r.achievement_id]?.xp })),
+    ].sort((a, b) => new Date(b.ts) - new Date(a.ts));
+    setFeed(merged);
+    setFeedShown(10);
+    setFeedLoading(false);
+  }, [friends, user]);
+
+  useEffect(() => { if (tab === 'activity') loadFeed(); }, [tab, loadFeed]);
+
   async function accept(id) { await sb.from('friend_requests').update({ status: 'accepted' }).eq('id', id); load(); }
   async function decline(id) { await sb.from('friend_requests').delete().eq('id', id); load(); }
   async function unfriend(requestId) { await sb.from('friend_requests').delete().eq('id', requestId); load(); }
@@ -90,9 +134,11 @@ export default function FriendsPage({ user, onViewProfile, onRequestsViewed }) {
 
   const tabs = [
     { key: 'friends', label: 'FRIENDS', count: friends.length },
+    { key: 'activity', label: 'ACTIVITY', count: 0 },
     { key: 'requests', label: 'REQUESTS', count: pendingCount, onActivate: onRequestsViewed },
     { key: 'likes', label: 'LIKES', count: likes.length },
   ];
+  const friendsMap = Object.fromEntries(friends.map(f => [f.id, f]));
 
   return (
     <div className="v-screen">
@@ -103,7 +149,7 @@ export default function FriendsPage({ user, onViewProfile, onRequestsViewed }) {
         </div>
       </div>
 
-      <div className="design-people-tabs" style={{ gridTemplateColumns: '1fr 1fr 1fr', margin: '0 36px' }}>
+      <div className="design-people-tabs" style={{ gridTemplateColumns: '1fr 1fr 1fr 1fr', margin: '0 36px' }}>
         {tabs.map(({ key, label, count, onActivate }) => (
           <button
             key={key}
@@ -118,6 +164,43 @@ export default function FriendsPage({ user, onViewProfile, onRequestsViewed }) {
 
       <div className="v-body" style={{ padding: '0 36px 24px' }}>
         {loading && <div className="v-empty">LOADING…</div>}
+
+        {!loading && tab === 'activity' && (
+          feedLoading && feed.length === 0
+            ? <div className="v-empty">LOADING…</div>
+            : feed.length === 0
+              ? <div className="v-empty">No recent activity from friends yet.</div>
+              : <>
+                {feed.slice(0, feedShown).map(ev => {
+                  const a = friendsMap[ev.actorId];
+                  return (
+                    <div key={ev.key} className="feed-row">
+                      <Avatar url={a?.avatar_url} frame={a?.equipped_frame} size={40} />
+                      <div className="feed-info">
+                        <div className="feed-line">
+                          <Username name={a?.username || 'Someone'} effect={a?.equipped_name_effect} />
+                          {ev.type === 'item' && <span className="feed-verb"> added {ev.name}</span>}
+                          {ev.type === 'fit' && <span className="feed-verb"> posted a fit — {ev.name}</span>}
+                          {ev.type === 'achievement' && <span className="feed-verb"> unlocked {ev.name} · +{ev.xp} XP</span>}
+                        </div>
+                        <div className="feed-time">{timeAgo(ev.ts)}</div>
+                      </div>
+                      {ev.image && (ev.type === 'item' || ev.type === 'fit') && (
+                        <img className="feed-thumb" src={ev.image} alt="" loading="lazy" />
+                      )}
+                      {ev.type === 'fit' && (
+                        <FitLikeButton key={`${ev.postId}-${ev.likeCount}-${ev.likedByMe}`}
+                          postId={ev.postId} user={user} initialCount={ev.likeCount} initialLiked={ev.likedByMe} />
+                      )}
+                    </div>
+                  );
+                })}
+                {feed.length > feedShown && (
+                  <button className="design-action-btn" style={{ display: 'block', margin: '16px auto 0' }}
+                    onClick={() => setFeedShown(n => n + 10)}>LOAD MORE</button>
+                )}
+              </>
+        )}
 
         {!loading && tab === 'friends' && (
           friends.length === 0
