@@ -549,6 +549,14 @@ export default function ExplorePage({ user, externalProfile, onExternalProfileCl
     if (externalProfile) { setSelectedProfile(externalProfile); setTab('people'); }
   }, [externalProfile]);
 
+  // Report the browse-Explore daily quest (idempotent server-side; fire-and-forget)
+  useEffect(() => {
+    if (!user) return;
+    sb.rpc('progress_quest', { p_type: 'browse_explore' }).then(({ error }) => {
+      if (error && !/not self-reportable/.test(error.message)) console.error(error);
+    });
+  }, [user]);
+
   const load = useCallback(() => {
     setLoading(true);
     sb.from('profiles').select('*').eq('is_public', true).order('updated_at', { ascending: false })

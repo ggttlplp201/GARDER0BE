@@ -104,7 +104,13 @@ export function useItems(user) {
     if (!item) return;
     const next = (item.wear_count || 0) + 1;
     setItems(prev => prev.map(i => i.id === id ? { ...i, wear_count: next } : i));
-    await sb.from('items').update({ wear_count: next }).eq('id', id);
+    // The wear_events trigger increments items.wear_count and awards XP.
+    const { error } = await sb.from('wear_events').insert({ user_id: user.id, item_id: id });
+    if (error) {
+      // 23505 = already logged today (one wear per item per day)
+      setItems(prev => prev.map(i => i.id === id ? { ...i, wear_count: item.wear_count || 0 } : i));
+      if (error.code !== '23505') console.error(error);
+    }
   }
 
   return { items, loading, loadError, fetchItems, addItem, editItem, removeItem, logWear };
