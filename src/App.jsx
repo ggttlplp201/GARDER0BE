@@ -16,6 +16,7 @@ import WishlistView from './components/WishlistView';
 import OutfitsView from './components/OutfitsView';
 import ExplorePage from './components/ExplorePage';
 import FriendsPage from './components/FriendsPage';
+import StatsPage from './components/StatsPage';
 import ProfilePanel from './components/ProfilePanel';
 import GameToasts from './components/GameToasts';
 import LevelUpModal from './components/LevelUpModal';
@@ -356,6 +357,7 @@ export default function App() {
             onRequestsViewed={() => setRequestCount(0)}
           />
         )}
+        {page === 'stats' && <StatsPage game={game} />}
       </div>
 
       <AppNav
