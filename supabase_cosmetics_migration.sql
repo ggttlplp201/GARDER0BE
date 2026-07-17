@@ -48,3 +48,50 @@ insert into cosmetic_defs (id, type, name, price, min_level, sort) values
   ('gold_shine','name_effect','Gold Shine',500,8,2),
   ('rainbow_shine','name_effect','Rainbow Shine',900,12,3)
 on conflict (id) do nothing;
+
+-- ── §2 BUY + EQUIP GUARD ────────────────────────────────────────────────────
+
+create or replace function buy_cosmetic(p_id text)
+returns void language plpgsql security definer set search_path = public as $$
+declare c cosmetic_defs; v_level int; v_coins int;
+begin
+  if auth.uid() is null then raise exception 'not authenticated'; end if;
+  select * into c from cosmetic_defs where id = p_id;
+  if not found then raise exception 'unknown cosmetic %', p_id; end if;
+  if p_id = 'thin_line' then raise exception 'thin_line is free and already owned'; end if;
+  if exists (select 1 from user_cosmetics where user_id = auth.uid() and cosmetic_id = p_id) then
+    raise exception 'already owned'; end if;
+  perform ensure_game_rows(auth.uid());
+  select level_for_xp(coalesce((select total_xp from game_state where user_id = auth.uid()),0)) into v_level;
+  if v_level < c.min_level then raise exception 'requires level %', c.min_level; end if;
+  select coins into v_coins from wallets where user_id = auth.uid();
+  if coalesce(v_coins,0) < c.price then raise exception 'insufficient coins'; end if;
+  update wallets set coins = coins - c.price, lifetime_spent = lifetime_spent + c.price
+   where user_id = auth.uid();
+  insert into user_cosmetics (user_id, cosmetic_id) values (auth.uid(), p_id);
+  perform check_achievements(auth.uid(), 'coins_spent');
+end $$;
+
+revoke execute on function buy_cosmetic(text) from public, anon;
+grant  execute on function buy_cosmetic(text) to authenticated;
+
+-- Ownership guard: equipping is a plain profiles UPDATE, so verify the equipped
+-- ids are owned (NULL = unequip/default; thin_line is free/universal).
+create or replace function trg_profiles_equip_guard() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if new.equipped_frame is not null and new.equipped_frame <> 'thin_line'
+     and not exists (select 1 from user_cosmetics
+                     where user_id = new.id and cosmetic_id = new.equipped_frame) then
+    raise exception 'frame % not owned', new.equipped_frame;
+  end if;
+  if new.equipped_name_effect is not null
+     and not exists (select 1 from user_cosmetics
+                     where user_id = new.id and cosmetic_id = new.equipped_name_effect) then
+    raise exception 'name effect % not owned', new.equipped_name_effect;
+  end if;
+  return new;
+end $$;
+drop trigger if exists profiles_equip_guard on profiles;
+create trigger profiles_equip_guard before insert or update on profiles
+  for each row execute function trg_profiles_equip_guard();
