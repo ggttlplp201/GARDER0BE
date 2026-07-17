@@ -460,3 +460,37 @@ revoke execute on function roll_daily_quests(uuid) from public, anon, authentica
 revoke execute on function daily_open_for(uuid)    from public, anon, authenticated;
 grant  execute on function record_daily_open()     to authenticated;
 grant  execute on function progress_quest(text)    to authenticated;
+
+-- ── §5 BACKFILL (one-time, idempotent) ─────────────────────────────────────
+-- XP for existing activity; award_xp derives level + cumulative level-up coins.
+-- Achievement checks then unlock anything already earned (their XP stacks on top).
+
+do $$
+declare u record; v_xp int; m text;
+begin
+  for u in select id from auth.users loop
+    if exists (select 1 from xp_events where user_id = u.id and reason = 'backfill') then
+      continue;
+    end if;
+    perform ensure_game_rows(u.id);
+    select coalesce((select count(*) from items
+                      where user_id = u.id and coalesce(status,'owned') <> 'wishlist'), 0) * 25
+         + coalesce((select sum(coalesce(wear_count,0)) from items where user_id = u.id), 0) * 12
+         + coalesce((select count(*) from saved_fits where user_id = u.id), 0) * 20
+         + coalesce((select count(*) from friend_requests
+                      where status = 'accepted' and (from_user_id = u.id or to_user_id = u.id)), 0) * 15
+         + coalesce((select count(*) from profile_likes where liked_user_id = u.id), 0) * 5
+      into v_xp;
+    if v_xp > 0 then
+      perform award_xp(u.id, v_xp, 'backfill', null);
+    else
+      -- still mark as backfilled so the guard holds
+      insert into xp_events (user_id, amount, reason) values (u.id, 0, 'backfill');
+    end if;
+    foreach m in array array['items','outfits','wears','likes_given','likes_received',
+                             'friends','public_fits','level'] loop
+      perform check_achievements(u.id, m);
+    end loop;
+    -- wear_streak intentionally skipped: no historical wear dates exist pre-ledger
+  end loop;
+end $$;
