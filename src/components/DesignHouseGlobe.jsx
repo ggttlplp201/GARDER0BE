@@ -226,12 +226,12 @@ export default function DesignHouseGlobe({ mini = false, onViewProfile, myLocati
       // Prefer live-detected coordinates/timezone; fall back to the base columns
       // if the geo migration hasn't been applied yet.
       let { data: profiles, error } = await sb.from('profiles')
-        .select('id, username, location, avatar_url, timezone, latitude, longitude')
+        .select('id, username, location, avatar_url, timezone, latitude, longitude, equipped_frame, equipped_name_effect')
         .neq('id', uid)
         .not('location', 'is', null);
       if (error) {
         ({ data: profiles } = await sb.from('profiles')
-          .select('id, username, location, avatar_url')
+          .select('id, username, location, avatar_url, equipped_frame, equipped_name_effect')
           .neq('id', uid)
           .not('location', 'is', null));
       }

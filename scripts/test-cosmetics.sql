@@ -10,6 +10,9 @@ declare
 begin
   select id into v_user from auth.users limit 1;
   if v_user is null then raise exception 'SMOKE: no users to test with'; end if;
+  -- Impersonate the user so auth.uid() inside buy_cosmetic resolves to v_user
+  -- (the SQL editor runs as postgres, where auth.uid() is otherwise null).
+  perform set_config('request.jwt.claims', json_build_object('sub', v_user::text)::text, true);
 
   -- clean slate for this user inside the txn
   delete from user_cosmetics where user_id = v_user;

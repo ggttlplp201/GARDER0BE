@@ -66,8 +66,10 @@ begin
   if v_level < c.min_level then raise exception 'requires level %', c.min_level; end if;
   select coins into v_coins from wallets where user_id = auth.uid();
   if coalesce(v_coins,0) < c.price then raise exception 'insufficient coins'; end if;
+  -- Guard the deduction on balance so concurrent buys can't drive coins negative.
   update wallets set coins = coins - c.price, lifetime_spent = lifetime_spent + c.price
-   where user_id = auth.uid();
+   where user_id = auth.uid() and coins >= c.price;
+  if not found then raise exception 'insufficient coins'; end if;
   insert into user_cosmetics (user_id, cosmetic_id) values (auth.uid(), p_id);
   perform check_achievements(auth.uid(), 'coins_spent');
 end $$;
@@ -81,13 +83,13 @@ create or replace function trg_profiles_equip_guard() returns trigger
 language plpgsql security definer set search_path = public as $$
 begin
   if new.equipped_frame is not null and new.equipped_frame <> 'thin_line'
-     and not exists (select 1 from user_cosmetics
-                     where user_id = new.id and cosmetic_id = new.equipped_frame) then
+     and not exists (select 1 from user_cosmetics uc join cosmetic_defs cd on cd.id = uc.cosmetic_id
+                     where uc.user_id = new.id and uc.cosmetic_id = new.equipped_frame and cd.type = 'frame') then
     raise exception 'frame % not owned', new.equipped_frame;
   end if;
   if new.equipped_name_effect is not null
-     and not exists (select 1 from user_cosmetics
-                     where user_id = new.id and cosmetic_id = new.equipped_name_effect) then
+     and not exists (select 1 from user_cosmetics uc join cosmetic_defs cd on cd.id = uc.cosmetic_id
+                     where uc.user_id = new.id and uc.cosmetic_id = new.equipped_name_effect and cd.type = 'name_effect') then
     raise exception 'name effect % not owned', new.equipped_name_effect;
   end if;
   return new;
