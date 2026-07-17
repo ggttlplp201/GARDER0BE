@@ -9,6 +9,19 @@ export function useGame(user) {
   const [achievements, setAchievements]   = useState({});
   const [notifications, setNotifications] = useState([]);
   const [levelUp, setLevelUp]             = useState(null);
+  const [ownedCosmetics, setOwnedCosmetics] = useState(() => new Set());
+  const [equipped, setEquipped]           = useState({ frame: null, name_effect: null });
+
+  const fetchCosmetics = useCallback(async () => {
+    const [{ data: owned }, { data: prof }] = await Promise.all([
+      sb.from('user_cosmetics').select('cosmetic_id').eq('user_id', user.id),
+      sb.from('profiles').select('equipped_frame, equipped_name_effect').eq('id', user.id).maybeSingle(),
+    ]);
+    return {
+      owned: new Set((owned || []).map(r => r.cosmetic_id)),
+      equipped: { frame: prof?.equipped_frame ?? null, name_effect: prof?.equipped_name_effect ?? null },
+    };
+  }, [user]);
 
   const fetchAchievements = useCallback(async () => {
     const [{ data: ad }, { data: ua }] = await Promise.all([
@@ -44,6 +57,7 @@ export function useGame(user) {
       setGameState(null); setWallet(null); setQuests([]);
       setDefs([]); setAchievements({});
       setNotifications([]); setLevelUp(null);
+      setOwnedCosmetics(new Set()); setEquipped({ frame: null, name_effect: null });
       return;
     }
     let cancelled = false;
@@ -52,6 +66,11 @@ export function useGame(user) {
     fetchAchievements().then(({ defs: ad, map }) => {
       if (cancelled) return;
       setDefs(ad); setAchievements(map);
+    });
+
+    fetchCosmetics().then(({ owned, equipped: eq }) => {
+      if (cancelled) return;
+      setOwnedCosmetics(owned); setEquipped(eq);
     });
 
     const ch = sb.channel('xp-events-' + user.id)
@@ -92,10 +111,42 @@ export function useGame(user) {
       });
 
     return () => { cancelled = true; sb.removeChannel(ch); };
-  }, [user, fetchAchievements, fetchGameData, refresh]);
+  }, [user, fetchAchievements, fetchGameData, fetchCosmetics, refresh]);
 
   const shiftNotification = useCallback(() => setNotifications(q => q.slice(1)), []);
   const clearLevelUp = useCallback(() => setLevelUp(null), []);
 
-  return { gameState, wallet, quests, achievements, defs, notifications, shiftNotification, levelUp, clearLevelUp, refresh };
+  // Buy a cosmetic (server validates level/coins/ownership); refresh wallet + owned.
+  const buyCosmetic = useCallback(async (id) => {
+    const { error } = await sb.rpc('buy_cosmetic', { p_id: id });
+    if (!error) {
+      const { owned } = await fetchCosmetics();
+      setOwnedCosmetics(owned);
+      await refresh();
+    }
+    return { error };
+  }, [fetchCosmetics, refresh]);
+
+  // Equip (write the profile column; ownership enforced by DB trigger). type inferred by cosmetic.
+  const equipCosmetic = useCallback(async (id, type) => {
+    const col = type === 'name_effect' ? 'equipped_name_effect' : 'equipped_frame';
+    const { error } = await sb.from('profiles').upsert(
+      { id: user.id, [col]: id, updated_at: new Date().toISOString() }, { onConflict: 'id' });
+    if (!error) setEquipped(e => ({ ...e, [type === 'name_effect' ? 'name_effect' : 'frame']: id }));
+    return { error };
+  }, [user]);
+
+  const unequip = useCallback(async (type) => {
+    const col = type === 'name_effect' ? 'equipped_name_effect' : 'equipped_frame';
+    const { error } = await sb.from('profiles').upsert(
+      { id: user.id, [col]: null, updated_at: new Date().toISOString() }, { onConflict: 'id' });
+    if (!error) setEquipped(e => ({ ...e, [type === 'name_effect' ? 'name_effect' : 'frame']: null }));
+    return { error };
+  }, [user]);
+
+  return {
+    gameState, wallet, quests, achievements, defs, notifications, shiftNotification,
+    levelUp, clearLevelUp, refresh,
+    ownedCosmetics, equipped, buyCosmetic, equipCosmetic, unequip,
+  };
 }
