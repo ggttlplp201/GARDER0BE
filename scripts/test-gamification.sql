@@ -51,8 +51,12 @@ begin
   select level_for_xp(total_xp) into v_level from game_state where user_id = v_user;
   assert v_level = 2, format('expected level 2, got %s', v_level);
   assert v_coins = 150, format('expected 150 coins (100+25*2), got %s', v_coins);
-  assert (select leveled_to from xp_events where user_id = v_user order by created_at desc limit 1) = 2,
+  -- (created_at is now(), frozen per-transaction — never order by it here;
+  -- the 'smoke' reason uniquely identifies the level-up award instead)
+  assert (select leveled_to from xp_events where user_id = v_user and reason = 'smoke') = 2,
          'xp_events missing leveled_to';
+  assert (select coins_awarded from xp_events where user_id = v_user and reason = 'smoke') = 150,
+         'xp_events missing coins_awarded';
 
   -- 5. daily open: first call awards +10 and rolls exactly 3 quests; second call is a no-op
   select total_xp into v_xp from game_state where user_id = v_user;
