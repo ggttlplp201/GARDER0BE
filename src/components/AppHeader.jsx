@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react';
 import DesignHouseGlobe from './DesignHouseGlobe';
 import { tzAbbrev } from '../lib/geo';
 import { getLevelState } from '../lib/levels';
+import CoinIcon from './CoinIcon';
+import { frameOf } from '../lib/cosmetics';
 
-export default function AppHeader({ onDark, avatarUrl, location, userName, onProfileOpen, onViewProfile, gameState, wallet }) {
+export default function AppHeader({ onDark, avatarUrl, location, userName, onProfileOpen, onViewProfile, gameState, wallet, equipped }) {
   const [now, setNow] = useState(new Date());
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 1000);
@@ -31,7 +33,7 @@ export default function AppHeader({ onDark, avatarUrl, location, userName, onPro
             <div>{dateStr} · {timeStr}{zoneStr ? ` ${zoneStr}` : ''}</div>
             {lvl && (
               <div className="app-header-lvl">
-                LVL {lvl.level} · {lvl.xpIntoLevel}/{lvl.xpForNextLevel} XP{wallet ? ` · ${wallet.coins.toLocaleString()} ¢` : ''}
+                LVL {lvl.level} · {lvl.xpIntoLevel}/{lvl.xpForNextLevel} XP{wallet ? <> · {wallet.coins.toLocaleString()} <CoinIcon size={10} /></> : ''}
               </div>
             )}
           </div>
@@ -45,8 +47,11 @@ export default function AppHeader({ onDark, avatarUrl, location, userName, onPro
           <DesignHouseGlobe mini onViewProfile={onViewProfile} myLocation={location} />
         </div>
         <div className="app-header-controls">
-          <button className="app-avatar-btn" onClick={onProfileOpen} aria-label="Profile">
+          <button className="app-avatar-btn" style={{ position: 'relative' }} onClick={onProfileOpen} aria-label="Profile">
             {avatarUrl ? <img src={avatarUrl} alt="Profile" /> : null}
+            {equipped?.frame && equipped.frame !== 'thin_line' && (
+              <span className="cos-frame" dangerouslySetInnerHTML={{ __html: frameOf(equipped.frame).renderFrame(34) }} />
+            )}
           </button>
           <button className="app-dark-btn" onClick={onDark} aria-label="Toggle dark mode">☾</button>
         </div>

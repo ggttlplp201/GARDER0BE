@@ -1,18 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { sb } from '../lib/supabase';
-
-function DesignAvatar({ url, size = 60 }) {
-  if (url) return (
-    <div style={{ width: size, height: size, borderRadius: '50%', border: '1px solid var(--border-light)', overflow: 'hidden', flexShrink: 0 }}>
-      <img src={url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-    </div>
-  );
-  return (
-    <div style={{ width: size, height: size, borderRadius: '50%', border: '1px solid var(--border-light)', background: 'var(--bg3)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: 'var(--text3)' }}>
-      <svg width={size * 0.5} height={size * 0.5} viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>
-    </div>
-  );
-}
+import Avatar from './Avatar';
+import Username from './Username';
 
 function fmtStats(count, value) {
   const v = value >= 1000 ? Math.round(value / 1000) + 'K' : Math.round(value).toLocaleString();
@@ -48,7 +37,7 @@ export default function FriendsPage({ user, onViewProfile, onRequestsViewed }) {
 
     let profileMap = {};
     if (ids.size > 0) {
-      const { data: profiles } = await sb.from('profiles').select('id, username, avatar_url, location').in('id', [...ids]);
+      const { data: profiles } = await sb.from('profiles').select('id, username, avatar_url, location, equipped_frame, equipped_name_effect').in('id', [...ids]);
       (profiles || []).forEach(p => { profileMap[p.id] = p; });
     }
 
@@ -137,9 +126,9 @@ export default function FriendsPage({ user, onViewProfile, onRequestsViewed }) {
               const stats = itemStats[f.id];
               return (
                 <div key={f.id} className="design-people-row" style={{ cursor: 'pointer' }} onClick={() => onViewProfile(f)}>
-                  <DesignAvatar url={f.avatar_url} />
+                  <Avatar url={f.avatar_url} frame={f.equipped_frame} />
                   <div className="design-people-info">
-                    <div className="design-people-name">{f.username || 'Anonymous'}</div>
+                    <div className="design-people-name"><Username name={f.username || 'Anonymous'} effect={f.equipped_name_effect} /></div>
                     {f.location && <div className="design-people-location">{f.location.toUpperCase()}</div>}
                   </div>
                   {stats && <div className="design-people-stats">{fmtStats(stats.count, stats.value)}</div>}
@@ -158,9 +147,9 @@ export default function FriendsPage({ user, onViewProfile, onRequestsViewed }) {
                 <div className="friends-section-label">INCOMING</div>
                 {incoming.map(r => (
                   <div key={r.id} className="design-people-row">
-                    <DesignAvatar url={r.profile?.avatar_url} />
+                    <Avatar url={r.profile?.avatar_url} frame={r.profile?.equipped_frame} />
                     <div className="design-people-info">
-                      <div className="design-people-name">{r.profile?.username || 'Anonymous'}</div>
+                      <div className="design-people-name"><Username name={r.profile?.username || 'Anonymous'} effect={r.profile?.equipped_name_effect} /></div>
                       {r.profile?.location && <div className="design-people-location">{r.profile.location.toUpperCase()}</div>}
                     </div>
                     <div className="design-people-actions">
@@ -176,9 +165,9 @@ export default function FriendsPage({ user, onViewProfile, onRequestsViewed }) {
                 <div className="friends-section-label">SENT</div>
                 {outgoing.map(r => (
                   <div key={r.id} className="design-people-row">
-                    <DesignAvatar url={r.profile?.avatar_url} />
+                    <Avatar url={r.profile?.avatar_url} frame={r.profile?.equipped_frame} />
                     <div className="design-people-info">
-                      <div className="design-people-name">{r.profile?.username || 'Anonymous'}</div>
+                      <div className="design-people-name"><Username name={r.profile?.username || 'Anonymous'} effect={r.profile?.equipped_name_effect} /></div>
                       {r.profile?.location && <div className="design-people-location">{r.profile.location.toUpperCase()}</div>}
                     </div>
                     <div className="design-people-actions">
@@ -199,9 +188,9 @@ export default function FriendsPage({ user, onViewProfile, onRequestsViewed }) {
             ? <div className="v-empty">Nobody has liked your profile yet.</div>
             : likes.map(l => (
               <div key={l.id} className="design-people-row" style={{ cursor: l.profile ? 'pointer' : 'default' }} onClick={() => l.profile && onViewProfile(l.profile)}>
-                <DesignAvatar url={l.profile?.avatar_url} />
+                <Avatar url={l.profile?.avatar_url} frame={l.profile?.equipped_frame} />
                 <div className="design-people-info">
-                  <div className="design-people-name">{l.profile?.username || 'Anonymous'}</div>
+                  <div className="design-people-name"><Username name={l.profile?.username || 'Anonymous'} effect={l.profile?.equipped_name_effect} /></div>
                   <div className="design-people-location">{new Date(l.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase()}</div>
                 </div>
                 <div style={{ flexShrink: 0, color: '#e05' }}>

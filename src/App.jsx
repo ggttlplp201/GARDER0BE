@@ -309,6 +309,7 @@ export default function App() {
         onViewProfile={handleViewFriendProfile}
         gameState={game.gameState}
         wallet={game.wallet}
+        equipped={game.equipped}
       />
 
       <div className="app-main" ref={mainRef}>

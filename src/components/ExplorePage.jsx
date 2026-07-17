@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { sb } from '../lib/supabase';
 import { parseImageUrls } from '../lib/imageUtils';
 import { API_URL } from '../lib/constants';
+import Avatar from './Avatar';
+import Username from './Username';
 
 // ── Feed cache ────────────────────────────────────────────────────────────────
 const FEED_CACHE_KEY    = 'garderobe-feed-v1';
@@ -255,19 +257,6 @@ function NewsFeed({ user }) {
 
 // ── Shared sub-components ─────────────────────────────────────────────────────
 
-function Avatar({ url, size = 60 }) {
-  if (url) return (
-    <div style={{ width: size, height: size, borderRadius: '50%', border: '1px solid var(--border-light)', overflow: 'hidden', flexShrink: 0 }}>
-      <img src={url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-    </div>
-  );
-  return (
-    <div style={{ width: size, height: size, borderRadius: '50%', border: '1px solid var(--border-light)', background: 'var(--bg3)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: 'var(--text3)' }}>
-      <svg width={size * 0.5} height={size * 0.5} viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>
-    </div>
-  );
-}
-
 function PublicItemCard({ item }) {
   const [imgIdx, setImgIdx] = useState(0);
   const imgUrls  = parseImageUrls(item.image_url);
@@ -377,9 +366,9 @@ function ProfileView({ profile, user, onBack }) {
     <div className="explore-profile-view">
       <button className="explore-back" onClick={onBack}>← BACK</button>
       <div className="explore-profile-header">
-        <Avatar url={profile.avatar_url} size={64} />
+        <Avatar url={profile.avatar_url} size={64} frame={profile.equipped_frame} />
         <div style={{ flex: 1 }}>
-          <div className="explore-profile-name">{profile.username || 'Anonymous'}</div>
+          <div className="explore-profile-name"><Username name={profile.username || 'Anonymous'} effect={profile.equipped_name_effect} /></div>
           {profile.location  && <div className="explore-profile-meta">{profile.location}</div>}
           {profile.bio       && <div className="explore-profile-bio">{profile.bio}</div>}
         </div>
@@ -424,7 +413,7 @@ function OutfitsFeed({ user }) {
     if (rows) {
       const ids = [...new Set(rows.map(r => r.user_id))];
       const { data: profileRows } = ids.length
-        ? await sb.from('profiles').select('id, username, avatar_url').in('id', ids)
+        ? await sb.from('profiles').select('id, username, avatar_url, equipped_frame, equipped_name_effect').in('id', ids)
         : { data: [] };
       const pm = Object.fromEntries((profileRows || []).map(p => [p.id, p]));
       const enriched = rows.map(r => ({ ...r, profiles: pm[r.user_id] || null }));
@@ -508,9 +497,9 @@ function OutfitsFeed({ user }) {
                     <span className="mono-dim">{timeAgo(post.created_at)}</span>
                   </div>
                   <div className="outfit-post-user">
-                    <Avatar url={post.profiles?.avatar_url} size={18} />
+                    <Avatar url={post.profiles?.avatar_url} size={18} frame={post.profiles?.equipped_frame} />
                     <span className="outfit-post-username">
-                      {post.profiles?.username || 'ANONYMOUS'}
+                      <Username name={post.profiles?.username || 'ANONYMOUS'} effect={post.profiles?.equipped_name_effect} />
                     </span>
                     {isMine && (
                       <div className="outfit-post-actions">
@@ -625,9 +614,9 @@ export default function ExplorePage({ user, externalProfile, onExternalProfileCl
                 <div className="explore-grid">
                   {filtered.map(p => (
                     <div key={p.id} className="explore-card" onClick={() => setSelectedProfile(p)}>
-                      <Avatar url={p.avatar_url} size={60} />
+                      <Avatar url={p.avatar_url} size={60} frame={p.equipped_frame} />
                       <div className="explore-card-info">
-                        <div className="explore-card-name">{p.username || 'Anonymous'}</div>
+                        <div className="explore-card-name"><Username name={p.username || 'Anonymous'} effect={p.equipped_name_effect} /></div>
                         {p.location && <div className="explore-card-meta">{p.location.toUpperCase()}</div>}
                       </div>
                       <SocialButtons user={user} profileId={p.id} />

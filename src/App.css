@@ -1626,3 +1626,24 @@ body.museum-mode .app-nav .app-nav-value      { color: rgba(245,242,234,0.35); }
 @media (prefers-reduced-motion: reduce) {
   .cos-anim-flicker, .cos-anim-spin, .cos-fx-silver, .cos-fx-gold, .cos-fx-rainbow { animation: none; }
 }
+
+/* ── Cosmetics shop (STATS) ───────────────────────────────────────────── */
+.shop-loadout { display: flex; align-items: center; gap: 14px; padding: 10px 0; }
+.shop-loadout-info { flex: 1; min-width: 0; }
+.shop-loadout-name { font-size: 14px; font-weight: bold; letter-spacing: 0.06em; }
+.shop-loadout-actions { display: flex; gap: 8px; align-items: center; margin-top: 6px; flex-wrap: wrap; }
+.shop-loadout-hint { font-size: 11px; color: var(--text3); letter-spacing: 0.04em; }
+.shop-mini-btn { font-size: 10px; letter-spacing: 0.06em; padding: 4px 8px; border: 1px solid var(--border-light); background: none; color: var(--text2); cursor: pointer; font-family: inherit; }
+.shop-mini-btn:hover:not(:disabled) { border-color: var(--border); color: var(--text); }
+.shop-error { font-size: 11px; color: #c0392b; letter-spacing: 0.04em; margin: 8px 0; }
+.shop-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+.shop-card { border: 1px solid var(--border-light); padding: 14px; display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; }
+.shop-card.equipped { border-color: var(--border); }
+.shop-card-preview { height: 60px; display: flex; align-items: center; justify-content: center; }
+.shop-fx-sample { font-size: 18px; font-weight: bold; letter-spacing: 0.08em; }
+.shop-card-name { font-size: 11px; font-weight: bold; letter-spacing: 0.07em; }
+.shop-card-price { font-size: 11px; color: var(--text2); letter-spacing: 0.04em; display: inline-flex; align-items: center; gap: 3px; }
+.shop-btn { font-size: 10px; letter-spacing: 0.08em; font-weight: bold; padding: 6px 0; width: 100%; border: 1px solid var(--border-light); background: none; color: var(--text2); cursor: pointer; font-family: inherit; }
+.shop-btn.active { border-color: var(--border); color: var(--text); }
+.shop-btn:hover.active:not(:disabled) { background: var(--text); color: var(--bg1); }
+.shop-btn:disabled { opacity: 0.5; cursor: default; }
