@@ -18,7 +18,9 @@ export default function FitLikeButton({ postId, user, initialCount = 0, initialL
     const { error } = next
       ? await sb.from('fit_likes').insert({ user_id: user.id, post_id: postId })
       : await sb.from('fit_likes').delete().eq('user_id', user.id).eq('post_id', postId);
-    if (error) { setLiked(!next); setCount(c => Math.max(0, c + (next ? -1 : 1))); }
+    // 23505 = row already exists (stale initialLiked) → the optimistic "liked"
+    // state already matches the DB, so don't revert it.
+    if (error && error.code !== '23505') { setLiked(!next); setCount(c => Math.max(0, c + (next ? -1 : 1))); }
     setBusy(false);
   }
 

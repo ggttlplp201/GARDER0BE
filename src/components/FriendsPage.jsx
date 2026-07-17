@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { sb } from '../lib/supabase';
 import { parseImageUrls } from '../lib/imageUtils';
 import Avatar from './Avatar';
@@ -95,24 +95,31 @@ export default function FriendsPage({ user, onViewProfile, onRequestsViewed }) {
   }, [user, load]);
 
   // Query-time activity feed: merge friends' recent items / fits / achievements.
+  const feedGenRef = useRef(0);
   const loadFeed = useCallback(async () => {
     const friendIds = friends.map(f => f.id);
     if (!friendIds.length) { setFeed([]); return; }
+    const gen = ++feedGenRef.current;
     setFeedLoading(true);
     const [{ data: items }, { data: fits }, { data: achs }, { data: adefs }] = await Promise.all([
-      sb.from('items').select('id, user_id, name, image_url, created_at').in('user_id', friendIds).eq('status', 'owned').order('created_at', { ascending: false }).limit(20),
+      sb.from('items').select('id, user_id, name, image_url, created_at').in('user_id', friendIds).or('status.eq.owned,status.is.null').order('created_at', { ascending: false }).limit(20),
       sb.from('outfit_posts').select('id, user_id, fit_name, image_url, created_at').in('user_id', friendIds).order('created_at', { ascending: false }).limit(20),
       sb.from('user_achievements').select('user_id, achievement_id, unlocked_at').in('user_id', friendIds).not('unlocked_at', 'is', null).order('unlocked_at', { ascending: false }).limit(20),
       sb.from('achievement_defs').select('id, name, xp'),
     ]);
     const defMap = Object.fromEntries((adefs || []).map(d => [d.id, d]));
-    // Fit-like counts for the fits in the feed
+    // Fit-like counts (bounded, server-aggregated) + which the viewer liked
     const fitIds = (fits || []).map(f => f.id);
     const counts = {}; const mine = new Set();
     if (fitIds.length) {
-      const { data: fl } = await sb.from('fit_likes').select('post_id, user_id').in('post_id', fitIds);
-      (fl || []).forEach(l => { counts[l.post_id] = (counts[l.post_id] || 0) + 1; if (l.user_id === user.id) mine.add(l.post_id); });
+      const [{ data: countRows }, { data: mineRows }] = await Promise.all([
+        sb.rpc('fit_like_counts', { p_ids: fitIds }),
+        sb.from('fit_likes').select('post_id').eq('user_id', user.id).in('post_id', fitIds),
+      ]);
+      (countRows || []).forEach(r => { counts[r.post_id] = Number(r.cnt); });
+      (mineRows || []).forEach(r => mine.add(r.post_id));
     }
+    if (gen !== feedGenRef.current) return; // a newer feed load superseded this one
     const merged = [
       ...(items || []).map(r => ({ key: 'i' + r.id, type: 'item', actorId: r.user_id, ts: r.created_at, name: r.name, image: parseImageUrls(r.image_url)[0] })),
       ...(fits || []).map(r => ({ key: 'f' + r.id, type: 'fit', actorId: r.user_id, ts: r.created_at, name: r.fit_name, image: r.image_url, postId: r.id, likeCount: counts[r.id] || 0, likedByMe: mine.has(r.id) })),

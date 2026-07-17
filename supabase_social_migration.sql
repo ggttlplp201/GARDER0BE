@@ -26,7 +26,8 @@ alter table profiles add column if not exists pinned_item_ids uuid[];
 drop policy if exists "user_achievements_select" on user_achievements;
 create policy "user_achievements_select" on user_achievements for select using (
   auth.uid() = user_id
-  or exists (select 1 from profiles p where p.id = user_achievements.user_id and p.is_public = true)
+  or (unlocked_at is not null
+      and exists (select 1 from profiles p where p.id = user_achievements.user_id and p.is_public = true))
 );
 
 -- ── likes_received now counts profile + fit likes ───────────────────────────
@@ -62,7 +63,12 @@ begin
   if v_owner is not null and v_owner <> new.user_id then
     if not exists (select 1 from xp_events where user_id = v_owner
                    and reason = 'fit_like_received' and ref_id = new.user_id) then
-      perform award_xp(v_owner, 5, 'fit_like_received', new.user_id);
+      -- unique_violation backstop: on a concurrent double-award, the loser is
+      -- caught here so the like still succeeds without a second award.
+      begin
+        perform award_xp(v_owner, 5, 'fit_like_received', new.user_id);
+      exception when unique_violation then null;
+      end;
     end if;
     perform check_achievements(v_owner, 'likes_received');
   end if;
@@ -71,6 +77,20 @@ end $$;
 drop trigger if exists fit_likes_xp on fit_likes;
 create trigger fit_likes_xp after insert on fit_likes
   for each row execute function trg_fit_likes_xp();
+
+-- Extend the xp_events dedupe backstop to cover fit-like awards (concurrency-safe).
+drop index if exists uniq_xp_events_dedupe;
+create unique index if not exists uniq_xp_events_dedupe
+  on xp_events (user_id, reason, ref_id)
+  where reason in ('item_added', 'friend_accepted', 'like_received', 'fit_like_received');
+
+-- Bounded fit-like counts (avoids transferring every liker row to the client).
+create or replace function fit_like_counts(p_ids uuid[])
+returns table(post_id uuid, cnt bigint)
+language sql stable security definer set search_path = public as $$
+  select post_id, count(*) from fit_likes where post_id = any(p_ids) group by post_id;
+$$;
+grant execute on function fit_like_counts(uuid[]) to authenticated;
 
 -- ── pins guard: ≤3, own items only ──────────────────────────────────────────
 create or replace function trg_profiles_pins_guard() returns trigger

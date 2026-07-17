@@ -385,6 +385,7 @@ function ProfileView({ profile, user, onBack }) {
         const { data: w } = await sb.from('wallets').select('coins').eq('user_id', profile.id).maybeSingle();
         coins = w?.coins ?? 0;
       }
+      if (cancelled) return; // a newer profile may have been opened during the awaits
       const defMap = Object.fromEntries((adefs || []).map(d => [d.id, d]));
       const unlocked = (uaRows || [])
         .map(r => ({ ...defMap[r.achievement_id], unlocked_at: r.unlocked_at }))
@@ -517,15 +518,16 @@ function OutfitsFeed({ user }) {
         ? await sb.from('profiles').select('id, username, avatar_url, equipped_frame, equipped_name_effect').in('id', ids)
         : { data: [] };
       const pm = Object.fromEntries((profileRows || []).map(p => [p.id, p]));
-      // Batch-load fit-like counts + which the viewer liked
+      // Fit-like counts (bounded, server-aggregated) + which the viewer liked
       const postIds = rows.map(r => r.id);
       const counts = {}; const mine = new Set();
       if (postIds.length) {
-        const { data: likes } = await sb.from('fit_likes').select('post_id, user_id').in('post_id', postIds);
-        (likes || []).forEach(l => {
-          counts[l.post_id] = (counts[l.post_id] || 0) + 1;
-          if (l.user_id === user?.id) mine.add(l.post_id);
-        });
+        const [{ data: countRows }, { data: mineRows }] = await Promise.all([
+          sb.rpc('fit_like_counts', { p_ids: postIds }),
+          user?.id ? sb.from('fit_likes').select('post_id').eq('user_id', user.id).in('post_id', postIds) : Promise.resolve({ data: [] }),
+        ]);
+        (countRows || []).forEach(r => { counts[r.post_id] = Number(r.cnt); });
+        (mineRows || []).forEach(r => mine.add(r.post_id));
       }
       const enriched = rows.map(r => ({
         ...r, profiles: pm[r.user_id] || null,
