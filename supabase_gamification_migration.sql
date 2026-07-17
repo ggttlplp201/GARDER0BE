@@ -382,3 +382,81 @@ end $$;
 drop trigger if exists price_drop_ach on wishlist_price_history;
 create trigger price_drop_ach after insert on wishlist_price_history
   for each row execute function trg_price_drop_ach();
+
+-- ── §4 DAILY QUESTS & STREAKS ───────────────────────────────────────────────
+
+-- Deterministic 3-of-5 roll per user per day: stable ordering by md5(user‖date‖type).
+create or replace function roll_daily_quests(p_user uuid) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  insert into daily_quests (user_id, quest_date, quest_type, goal, xp_reward, coin_reward)
+  select p_user, current_date, t.quest_type, t.goal, t.xp_reward, t.coin_reward
+    from (values
+      ('log_wear',       2, 30, 10),
+      ('add_item',       1, 25, 10),
+      ('save_outfit',    1, 25, 10),
+      ('like_profile',   1, 15,  5),
+      ('browse_explore', 1, 15,  5)
+    ) as t(quest_type, goal, xp_reward, coin_reward)
+   order by md5(p_user::text || current_date::text || t.quest_type)
+   limit 3
+  on conflict (user_id, quest_date, quest_type) do nothing;
+end $$;
+
+-- Internal core so the smoke script can exercise it for an arbitrary user.
+create or replace function daily_open_for(p_user uuid) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare v_state game_state; v_first boolean := false;
+begin
+  perform ensure_game_rows(p_user);
+  select * into v_state from game_state where user_id = p_user for update;
+  if v_state.last_open_date is distinct from current_date then
+    v_first := true;
+    if v_state.last_open_date = current_date - 1 then
+      update game_state
+         set streak_count = streak_count + 1,
+             best_streak  = greatest(best_streak, streak_count + 1),
+             last_open_date = current_date, updated_at = now()
+       where user_id = p_user;
+    else
+      update game_state
+         set streak_count = 1, best_streak = greatest(best_streak, 1),
+             last_open_date = current_date, updated_at = now()
+       where user_id = p_user;
+    end if;
+    perform award_xp(p_user, 10, 'daily_open', null);
+    -- 7-day login-streak milestone: +50 coins, fires once per run (streak hits exactly 7)
+    if (select streak_count from game_state where user_id = p_user) = 7 then
+      update wallets set coins = coins + 50 where user_id = p_user;
+    end if;
+    perform roll_daily_quests(p_user);
+  end if;
+  return jsonb_build_object(
+    'game_state', (select to_jsonb(g) from game_state g where g.user_id = p_user),
+    'wallet',     (select to_jsonb(w) from wallets w where w.user_id = p_user),
+    'quests',     (select coalesce(jsonb_agg(to_jsonb(q) order by q.quest_type), '[]'::jsonb)
+                     from daily_quests q where q.user_id = p_user and q.quest_date = current_date),
+    'was_first_open', v_first);
+end $$;
+
+-- RPC: idempotent per day; first call of the day grants +10 XP, advances streak, rolls quests.
+create or replace function record_daily_open() returns jsonb
+language plpgsql security definer set search_path = public as $$
+begin
+  if auth.uid() is null then raise exception 'not authenticated'; end if;
+  return daily_open_for(auth.uid());
+end $$;
+
+-- RPC: only self-reportable quest type; farmable only to the quest's daily completion.
+create or replace function progress_quest(p_type text) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if auth.uid() is null then raise exception 'not authenticated'; end if;
+  if p_type <> 'browse_explore' then raise exception 'quest type % is not self-reportable', p_type; end if;
+  perform advance_quest(auth.uid(), p_type);
+end $$;
+
+revoke execute on function roll_daily_quests(uuid) from public, anon, authenticated;
+revoke execute on function daily_open_for(uuid)    from public, anon, authenticated;
+grant  execute on function record_daily_open()     to authenticated;
+grant  execute on function progress_quest(text)    to authenticated;
