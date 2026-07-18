@@ -1,6 +1,4 @@
-# GARDEROBE
-
-### [the-garderobe.com](https://the-garderobe.com) · *try it on mobile and desktop*
+# [GARDEROBE](https://the-garderobe.com)
 
 Your personal wardrobe, reimagined as a living archive — catalog everything you own, build
 outfits, track wishlist prices, and level up a full social + gamification layer with friends.
