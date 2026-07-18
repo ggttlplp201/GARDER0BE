@@ -1,5 +1,5 @@
 // Level curve — MUST stay in parity with xp_to_reach / level_for_xp in
-// supabase_gamification_migration.sql
+// supabase/migrations/07_gamification.sql
 export function xpToReach(level) {
   return level <= 1 ? 0 : 50 * level * (level + 1) - 100;
 }

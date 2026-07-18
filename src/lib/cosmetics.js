@@ -1,5 +1,5 @@
 // Cosmetics registry — single source of truth for the VISUAL of each cosmetic.
-// The `cosmetic_defs` seed in supabase_cosmetics_migration.sql must list the same
+// The `cosmetic_defs` seed in supabase/migrations/09_cosmetics.sql must list the same
 // ids / type / price / min_level (guarded by tests/cosmetics.test.js).
 //
 // Frames render as an inline <svg> overlay (viewBox 0 0 100 100) that Avatar.jsx
