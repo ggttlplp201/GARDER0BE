@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { sb } from '../lib/supabase';
 import Avatar from './Avatar';
 import Username from './Username';
@@ -24,10 +24,14 @@ export default function FitPostView({ postId, user, onClose, onShareToChat }) {
   const [text, setText]           = useState('');
   const [loading, setLoading]     = useState(true);
   const [sharing, setSharing]     = useState(false);
+  const postRef = useRef(postId);
+  useEffect(() => { postRef.current = postId; }, [postId]);
 
   const load = useCallback(async () => {
     if (!postId) return;
+    const pid = postId;
     const { data: p } = await sb.from('outfit_posts').select('*').eq('id', postId).maybeSingle();
+    if (postRef.current !== pid) return; // a newer post was opened
     if (!p) { setPost(null); setLoading(false); return; }
     const [{ data: prof }, { count: lc }, { data: mine }, { count: sc }, { data: cm }] = await Promise.all([
       sb.from('profiles').select('id, username, avatar_url, equipped_frame, equipped_name_effect').eq('id', p.user_id).maybeSingle(),
@@ -42,6 +46,7 @@ export default function FitPostView({ postId, user, onClose, onShareToChat }) {
       const { data: cps } = await sb.from('profiles').select('id, username, avatar_url, equipped_frame, equipped_name_effect').in('id', ids);
       (cps || []).forEach(x => { pm[x.id] = x; });
     }
+    if (postRef.current !== pid) return; // superseded during the awaits
     setPost(p); setPoster(prof); setLikeCount(lc || 0); setLikedByMe(!!mine); setShareCount(sc || 0);
     setComments((cm || []).map(c => ({ ...c, profile: pm[c.user_id] || null })));
     setLoading(false);
@@ -67,7 +72,8 @@ export default function FitPostView({ postId, user, onClose, onShareToChat }) {
   }
   async function delComment(id) {
     setComments(prev => prev.filter(c => c.id !== id));
-    await sb.from('fit_comments').delete().eq('id', id);
+    const { error } = await sb.from('fit_comments').delete().eq('id', id);
+    if (error) load(); // restore if the delete was rejected
   }
 
   if (!postId) return null;

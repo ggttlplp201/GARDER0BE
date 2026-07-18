@@ -299,7 +299,8 @@ export default function App() {
   const shareToChat = useCallback(async (msg, friendId) => {
     const convId = await chat.openConversation(friendId);
     if (!convId) return;
-    await chat.sendMessage(convId, msg);
+    const { error } = await chat.sendMessage(convId, msg) || {};
+    if (error) return; // don't record a share or navigate if delivery failed
     // Record the share so a fit's share count is real.
     if (msg.type === 'fit' && msg.payload?.postId) {
       await sb.from('fit_shares').upsert({ user_id: user.id, post_id: msg.payload.postId }, { onConflict: 'user_id,post_id' });

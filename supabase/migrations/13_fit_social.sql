@@ -25,7 +25,7 @@ alter table fit_shares   enable row level security;
 do $$ begin create policy "fit_comments_select" on fit_comments for select using (true);
 exception when duplicate_object then null; end $$;
 do $$ begin create policy "fit_comments_insert" on fit_comments for insert
-  with check (auth.uid() = user_id and length(btrim(body)) between 1 and 500);
+  with check (auth.uid() = user_id and length(btrim(body)) between 1 and 500 and length(body) <= 600);
 exception when duplicate_object then null; end $$;
 do $$ begin create policy "fit_comments_delete" on fit_comments for delete using (auth.uid() = user_id);
 exception when duplicate_object then null; end $$;
