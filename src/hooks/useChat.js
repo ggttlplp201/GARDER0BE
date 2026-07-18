@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { sb } from '../lib/supabase';
 
-const ONLINE_MS = 120 * 1000;
+const ONLINE_MS = 90 * 1000;
 
 const otherOf  = (c, uid) => (c.user_low === uid ? c.user_high : c.user_low);
 const myReadOf = (c, uid) => (c.user_low === uid ? c.low_last_read : c.high_last_read);
@@ -97,7 +97,7 @@ export function useChat(user) {
       .subscribe();
     // Refresh periodically so presence (online/offline) and last-message stay
     // current even when no new message arrives.
-    const poll = setInterval(loadConversations, 45000);
+    const poll = setInterval(loadConversations, 30000);
     return () => { sb.removeChannel(ch); clearInterval(poll); };
   }, [user, loadConversations, markRead]);
 
