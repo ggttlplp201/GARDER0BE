@@ -24,11 +24,11 @@ export function useAuth() {
   }
 
   async function signUp(email, password, captchaToken) {
-    const { data, error } = await sb.auth.signUp({
-      email,
-      password,
-      options: { captchaToken },
-    });
+    let ref = null;
+    try { ref = sessionStorage.getItem('garderobe-ref') || null; } catch {}
+    const options = { captchaToken };
+    if (ref) options.data = { ref };
+    const { data, error } = await sb.auth.signUp({ email, password, options });
     return { data, error };
   }
 

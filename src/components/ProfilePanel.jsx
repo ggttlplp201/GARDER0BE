@@ -14,6 +14,7 @@ export default function ProfilePanel({ open, user, onClose, onSignOut, avatarUrl
   const [saveError, setSaveError] = useState('');
   const [uploading, setUploading]   = useState(false);
   const [cropFile, setCropFile]     = useState(null);
+  const [inviteCopied, setInviteCopied] = useState(false);
   const storageKey = `garderobe-profile-${user?.id || 'guest'}`;
   const fileInputRef = useRef(null);
 
@@ -134,6 +135,12 @@ export default function ProfilePanel({ open, user, onClose, onSignOut, avatarUrl
         <button className="profile-save-btn" onClick={save}>SAVE CHANGES</button>
         {user && onViewProfile && (
           <button className="profile-export-btn" onClick={() => { onClose(); onViewProfile(); }}>VIEW PUBLIC PROFILE</button>
+        )}
+        {user && (
+          <button className="profile-export-btn" onClick={async () => {
+            const link = `${location.origin}/?ref=${user.id}`;
+            try { await navigator.clipboard.writeText(link); setInviteCopied(true); setTimeout(() => setInviteCopied(false), 2000); } catch { setSaveError('Copy failed — link: ' + link); }
+          }}>{inviteCopied ? 'INVITE LINK COPIED ✓' : 'COPY INVITE LINK (+100 COINS)'}</button>
         )}
         <div className="profile-user-email">{user?.email || ''}</div>
         {onExportCSV && <button className="profile-export-btn" onClick={onExportCSV}>EXPORT COLLECTION AS CSV</button>}

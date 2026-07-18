@@ -5,6 +5,7 @@ import { API_URL } from '../lib/constants';
 import Avatar from './Avatar';
 import Username from './Username';
 import FitLikeButton from './FitLikeButton';
+import ShareToFriendModal from './ShareToFriendModal';
 import CoinIcon from './CoinIcon';
 import { getLevelState } from '../lib/levels';
 import { COSMETICS } from '../lib/cosmetics';
@@ -149,7 +150,8 @@ function interleave(groups) {
   return result;
 }
 
-function NewsFeed({ user }) {
+function NewsFeed({ user, onShareToChat }) {
+  const [shareArticle, setShareArticle] = useState(null);
   const [articles, setArticles]         = useState([]);
   const [brandFreq, setBrandFreq]       = useState({});
   const [wishlistBrands, setWishlist]   = useState([]);
@@ -251,10 +253,20 @@ function NewsFeed({ user }) {
               </div>
               <div className="news-card-title">{a.title}</div>
               {a.desc && <div className="news-card-desc">{a.desc}</div>}
+              {onShareToChat && (
+                <button className="feed-share-btn" onClick={e => { e.preventDefault(); e.stopPropagation(); setShareArticle(a); }}>↗ SHARE</button>
+              )}
             </div>
           </a>
         );
       })}
+      {shareArticle && (
+        <ShareToFriendModal
+          user={user}
+          onClose={() => setShareArticle(null)}
+          onShare={fid => onShareToChat({ type: 'article', payload: { url: shareArticle.link, title: shareArticle.title, image: shareArticle.image || null } }, fid)}
+        />
+      )}
     </div>
   );
 }
@@ -491,7 +503,8 @@ function ProfileView({ profile, user, onBack }) {
   );
 }
 
-function OutfitsFeed({ user }) {
+function OutfitsFeed({ user, onShareToChat }) {
+  const [shareFit,  setShareFit]  = useState(null);
   const [filter,    setFilter]    = useState('all');
   const [posts,     setPosts]     = useState([]);
   const [loading,   setLoading]   = useState(true);
@@ -613,6 +626,9 @@ function OutfitsFeed({ user }) {
                     <span className="mono-dim">{timeAgo(post.created_at)}</span>
                     <FitLikeButton key={`${post.id}-${post.likeCount}-${post.likedByMe}`}
                       postId={post.id} user={user} initialCount={post.likeCount} initialLiked={post.likedByMe} />
+                    {onShareToChat && (
+                      <button className="feed-share-btn" onClick={() => setShareFit(post)}>↗</button>
+                    )}
                   </div>
                   <div className="outfit-post-user">
                     <Avatar url={post.profiles?.avatar_url} size={18} frame={post.profiles?.equipped_frame} />
@@ -639,13 +655,20 @@ function OutfitsFeed({ user }) {
           )}
         </>
       )}
+      {shareFit && (
+        <ShareToFriendModal
+          user={user}
+          onClose={() => setShareFit(null)}
+          onShare={fid => onShareToChat({ type: 'fit', payload: { postId: shareFit.id, image_url: shareFit.image_url, fit_name: shareFit.fit_name } }, fid)}
+        />
+      )}
     </div>
   );
 }
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 
-export default function ExplorePage({ user, externalProfile, onExternalProfileClear, likeCount, onLikesViewed }) {
+export default function ExplorePage({ user, externalProfile, onExternalProfileClear, likeCount, onLikesViewed, onShareToChat }) {
   const [tab, setTab]                             = useState('feed');
   const [profiles, setProfiles]                   = useState([]);
   const [loading, setLoading]                     = useState(true);
@@ -743,8 +766,8 @@ export default function ExplorePage({ user, externalProfile, onExternalProfileCl
                 </div>
               </>
             )}
-            {tab === 'feed' && <NewsFeed user={user} />}
-            {tab === 'outfits' && <OutfitsFeed user={user} />}
+            {tab === 'feed' && <NewsFeed user={user} onShareToChat={onShareToChat} />}
+            {tab === 'outfits' && <OutfitsFeed user={user} onShareToChat={onShareToChat} />}
           </div>
         </>
       )}

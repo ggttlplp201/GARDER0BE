@@ -81,6 +81,14 @@ export default function App() {
   const [friendsProfile, setFriendsProfile] = useState(null);
   const [toasts, setToasts]           = useState([]);
 
+  // Capture an invite ref (?ref=<inviterId>) once so it survives the auth screens.
+  useEffect(() => {
+    try {
+      const ref = new URLSearchParams(window.location.search).get('ref');
+      if (ref) sessionStorage.setItem('garderobe-ref', ref);
+    } catch {}
+  }, []);
+
   useEffect(() => {
     if (!window.DeviceOrientationEvent) return;
     document.addEventListener('click', requestGyroPermission);
@@ -283,6 +291,11 @@ export default function App() {
     navigate('explore');
   };
 
+  const shareToChat = useCallback(async (msg, friendId) => {
+    const convId = await chat.openConversation(friendId);
+    if (convId) { await chat.sendMessage(convId, msg); navigate('chat'); }
+  }, [chat, navigate]);
+
   if (user === undefined) return (
     <div className="app-loading"><span className="app-loading-text">GARDEROBE</span></div>
   );
@@ -367,6 +380,7 @@ export default function App() {
             onExternalProfileClear={() => setFriendsProfile(null)}
             likeCount={likeCount}
             onLikesViewed={() => setLikeCount(0)}
+            onShareToChat={shareToChat}
           />
         )}
         {page === 'friends' && (

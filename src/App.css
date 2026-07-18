@@ -1708,3 +1708,6 @@ body.museum-mode .app-nav .app-nav-value      { color: rgba(245,242,234,0.35); }
 .chat-input { flex: 1; padding: 10px 12px; border: 1px solid var(--border-light); background: var(--bg1); color: var(--text); font-family: inherit; font-size: 13px; }
 .chat-send { padding: 0 18px; font-size: 11px; font-weight: bold; letter-spacing: 0.08em; border: 1px solid var(--border); background: var(--text); color: var(--bg1); cursor: pointer; font-family: inherit; }
 .chat-send:disabled { opacity: 0.5; cursor: default; }
+
+.feed-share-btn { background: none; border: none; color: var(--text3); font-size: 11px; letter-spacing: 0.04em; cursor: pointer; padding: 2px 4px; font-family: inherit; }
+.feed-share-btn:hover { color: var(--text); }
