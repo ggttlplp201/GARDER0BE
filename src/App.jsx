@@ -296,6 +296,11 @@ export default function App() {
     if (convId) { await chat.sendMessage(convId, msg); navigate('chat'); }
   }, [chat, navigate]);
 
+  const messageFriend = useCallback(async (friendId) => {
+    const convId = await chat.openConversation(friendId);
+    if (convId) navigate('chat');
+  }, [chat, navigate]);
+
   if (user === undefined) return (
     <div className="app-loading"><span className="app-loading-text">GARDEROBE</span></div>
   );
@@ -388,6 +393,7 @@ export default function App() {
             user={user}
             onViewProfile={handleViewFriendProfile}
             onRequestsViewed={() => setRequestCount(0)}
+            onMessage={messageFriend}
           />
         )}
         {page === 'stats' && <StatsPage game={game} />}

@@ -18,7 +18,7 @@ function timeAgo(iso) {
   return Math.floor(s / 86400) + 'd';
 }
 
-export default function FriendsPage({ user, onViewProfile, onRequestsViewed }) {
+export default function FriendsPage({ user, onViewProfile, onRequestsViewed, onMessage }) {
   const [tab, setTab]           = useState('friends');
   const [friends, setFriends]   = useState([]);
   const [incoming, setIncoming] = useState([]);
@@ -223,6 +223,7 @@ export default function FriendsPage({ user, onViewProfile, onRequestsViewed }) {
                   </div>
                   {stats && <div className="design-people-stats">{fmtStats(stats.count, stats.value)}</div>}
                   <div className="design-people-actions" onClick={e => e.stopPropagation()}>
+                    {onMessage && <button className="design-action-btn active" onClick={() => onMessage(f.id)}>MESSAGE</button>}
                     <button className="design-action-btn" onClick={() => unfriend(f.requestId)}>UNFRIEND</button>
                   </div>
                 </div>
