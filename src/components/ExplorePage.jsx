@@ -503,13 +503,12 @@ function ProfileView({ profile, user, onBack }) {
   );
 }
 
-function OutfitsFeed({ user, onShareToChat, focusPostId, onFocusConsumed }) {
+function OutfitsFeed({ user, onShareToChat, onOpenPost }) {
   const [shareFit,  setShareFit]  = useState(null);
   const [filter,    setFilter]    = useState('all');
   const [posts,     setPosts]     = useState([]);
   const [loading,   setLoading]   = useState(true);
   const [hasMore,   setHasMore]   = useState(true);
-  const [lbUrl,     setLbUrl]     = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [editName,  setEditName]  = useState('');
 
@@ -554,16 +553,6 @@ function OutfitsFeed({ user, onShareToChat, focusPostId, onFocusConsumed }) {
 
   useEffect(() => { fetchPage(0); }, [fetchPage]);
 
-  // A fit shared into chat was opened → show that specific post's image.
-  useEffect(() => {
-    if (!focusPostId) return;
-    let cancelled = false;
-    sb.from('outfit_posts').select('image_url').eq('id', focusPostId).maybeSingle()
-      .then(({ data }) => { if (!cancelled && data?.image_url) setLbUrl(data.image_url); });
-    onFocusConsumed?.();
-    return () => { cancelled = true; };
-  }, [focusPostId]); // eslint-disable-line react-hooks/exhaustive-deps
-
   async function handleDelete(postId) {
     if (!user?.id) return;
     const { error } = await sb.from('outfit_posts').delete().eq('id', postId).eq('user_id', user.id);
@@ -589,12 +578,6 @@ function OutfitsFeed({ user, onShareToChat, focusPostId, onFocusConsumed }) {
 
   return (
     <div className="outfits-feed">
-      {lbUrl && (
-        <div className="outfits-feed-lb" onClick={() => setLbUrl(null)}>
-          <img src={lbUrl} alt="Outfit" />
-        </div>
-      )}
-
       <div className="outfits-filter-bar">
         {filterOpts.map(([k, label]) => (
           <button key={k} className={`mode-btn${filter === k ? ' active' : ''}`} onClick={() => setFilter(k)}>{label}</button>
@@ -612,7 +595,7 @@ function OutfitsFeed({ user, onShareToChat, focusPostId, onFocusConsumed }) {
           <div className="outfits-feed-grid">
             {posts.map(post => (
               <div key={post.id} className="outfit-post-card">
-                <div className="outfit-post-img-wrap" onClick={() => setLbUrl(post.image_url)}>
+                <div className="outfit-post-img-wrap" onClick={() => onOpenPost?.(post.id)}>
                   <img src={post.image_url} alt={post.fit_name} loading="lazy" />
                 </div>
                 <div className="outfit-post-info">
@@ -678,7 +661,7 @@ function OutfitsFeed({ user, onShareToChat, focusPostId, onFocusConsumed }) {
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 
-export default function ExplorePage({ user, externalProfile, onExternalProfileClear, likeCount, onLikesViewed, onShareToChat, focusPost, onFocusConsumed }) {
+export default function ExplorePage({ user, externalProfile, onExternalProfileClear, likeCount, onLikesViewed, onShareToChat, onOpenPost }) {
   const [tab, setTab]                             = useState('feed');
   const [profiles, setProfiles]                   = useState([]);
   const [loading, setLoading]                     = useState(true);
@@ -688,11 +671,6 @@ export default function ExplorePage({ user, externalProfile, onExternalProfileCl
   useEffect(() => {
     if (externalProfile) { setSelectedProfile(externalProfile); setTab('people'); }
   }, [externalProfile]);
-
-  // A fit shared into chat was clicked → jump to the outfits feed on that post.
-  useEffect(() => {
-    if (focusPost) { setSelectedProfile(null); setTab('outfits'); }
-  }, [focusPost]);
 
   // Report the browse-Explore daily quest (idempotent server-side; fire-and-forget)
   useEffect(() => {
@@ -782,7 +760,7 @@ export default function ExplorePage({ user, externalProfile, onExternalProfileCl
               </>
             )}
             {tab === 'feed' && <NewsFeed user={user} onShareToChat={onShareToChat} />}
-            {tab === 'outfits' && <OutfitsFeed user={user} onShareToChat={onShareToChat} focusPostId={focusPost} onFocusConsumed={onFocusConsumed} />}
+            {tab === 'outfits' && <OutfitsFeed user={user} onShareToChat={onShareToChat} onOpenPost={onOpenPost} />}
           </div>
         </>
       )}

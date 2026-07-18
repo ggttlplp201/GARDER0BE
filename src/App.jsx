@@ -19,6 +19,7 @@ import ExplorePage from './components/ExplorePage';
 import FriendsPage from './components/FriendsPage';
 import StatsPage from './components/StatsPage';
 import ChatPage from './components/ChatPage';
+import FitPostView from './components/FitPostView';
 import ProfilePanel from './components/ProfilePanel';
 import GameToasts from './components/GameToasts';
 import LevelUpModal from './components/LevelUpModal';
@@ -79,7 +80,7 @@ export default function App() {
   const [requestCount, setRequestCount] = useState(0);
   const [likeCount, setLikeCount]     = useState(0);
   const [friendsProfile, setFriendsProfile] = useState(null);
-  const [focusPost, setFocusPost]     = useState(null);
+  const [fitPostId, setFitPostId]     = useState(null);
   const [toasts, setToasts]           = useState([]);
 
   // Capture an invite ref (?ref=<inviterId>) once so it survives the auth screens.
@@ -297,13 +298,17 @@ export default function App() {
 
   const shareToChat = useCallback(async (msg, friendId) => {
     const convId = await chat.openConversation(friendId);
-    if (convId) { await chat.sendMessage(convId, msg); navigate('chat'); }
-  }, [chat, navigate]);
+    if (!convId) return;
+    await chat.sendMessage(convId, msg);
+    // Record the share so a fit's share count is real.
+    if (msg.type === 'fit' && msg.payload?.postId) {
+      await sb.from('fit_shares').upsert({ user_id: user.id, post_id: msg.payload.postId }, { onConflict: 'user_id,post_id' });
+    }
+    setFitPostId(null);
+    navigate('chat');
+  }, [chat, navigate, user]);
 
-  const openFitPost = useCallback((postId) => {
-    setFocusPost(postId);
-    navigate('explore');
-  }, [navigate]);
+  const openFitPost = useCallback((postId) => setFitPostId(postId), []);
 
   // Mark offline immediately on explicit sign-out (before the session is gone).
   const handleSignOut = useCallback(async () => {
@@ -403,8 +408,7 @@ export default function App() {
             likeCount={likeCount}
             onLikesViewed={() => setLikeCount(0)}
             onShareToChat={shareToChat}
-            focusPost={focusPost}
-            onFocusConsumed={() => setFocusPost(null)}
+            onOpenPost={openFitPost}
           />
         )}
         {page === 'friends' && (
@@ -478,6 +482,9 @@ export default function App() {
         />
       )}
 
+      {fitPostId && (
+        <FitPostView postId={fitPostId} user={user} onClose={() => setFitPostId(null)} onShareToChat={shareToChat} />
+      )}
       <NotifToast toasts={toasts} onDismiss={dismissToast} />
       <GameToasts queue={game.notifications} shift={game.shiftNotification} defs={game.defs} />
       <LevelUpModal event={game.levelUp} onClose={game.clearLevelUp} />
