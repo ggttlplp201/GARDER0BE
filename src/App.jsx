@@ -180,9 +180,12 @@ export default function App() {
   // Presence heartbeat: bump last_active while the tab is visible.
   useEffect(() => {
     if (!user) return;
-    const beat = () => {
+    const beat = async () => {
       if (document.visibilityState === 'visible') {
-        sb.from('profiles').upsert({ id: user.id, last_active: new Date().toISOString() }, { onConflict: 'id' });
+        // Must await: the supabase-js builder is lazy and never sends otherwise.
+        const { error } = await sb.from('profiles')
+          .upsert({ id: user.id, last_active: new Date().toISOString() }, { onConflict: 'id' });
+        if (error) console.error('[presence]', error.message);
       }
     };
     beat();

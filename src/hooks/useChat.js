@@ -95,7 +95,10 @@ export function useChat(user) {
         loadConversations();
       })
       .subscribe();
-    return () => sb.removeChannel(ch);
+    // Refresh periodically so presence (online/offline) and last-message stay
+    // current even when no new message arrives.
+    const poll = setInterval(loadConversations, 45000);
+    return () => { sb.removeChannel(ch); clearInterval(poll); };
   }, [user, loadConversations, markRead]);
 
   const totalUnread = conversations.reduce((s, c) => s + c.unread, 0);
