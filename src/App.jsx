@@ -18,6 +18,7 @@ import OutfitsView from './components/OutfitsView';
 import ExplorePage from './components/ExplorePage';
 import FriendsPage from './components/FriendsPage';
 import StatsPage from './components/StatsPage';
+import ChatPage from './components/ChatPage';
 import ProfilePanel from './components/ProfilePanel';
 import GameToasts from './components/GameToasts';
 import LevelUpModal from './components/LevelUpModal';
@@ -376,6 +377,7 @@ export default function App() {
           />
         )}
         {page === 'stats' && <StatsPage game={game} />}
+        {page === 'chat' && <ChatPage user={user} chat={chat} />}
       </div>
 
       <AppNav
@@ -388,6 +390,7 @@ export default function App() {
         total={total}
         requestCount={requestCount}
         likeCount={likeCount}
+        chatUnread={chat.totalUnread}
       />
 
       {/* Overlays */}
