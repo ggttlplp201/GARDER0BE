@@ -4,6 +4,7 @@ import { useAuth } from './hooks/useAuth';
 import { useTheme } from './hooks/useTheme';
 import { useItems } from './hooks/useItems';
 import { useGame } from './hooks/useGame';
+import { useChat } from './hooks/useChat';
 import TwoFactorChallenge from './components/TwoFactorChallenge';
 import AuthScreen from './components/AuthScreen';
 import EmailVerificationScreen from './components/EmailVerificationScreen';
@@ -61,6 +62,7 @@ export default function App() {
   const { dark, toggle: toggleTheme } = useTheme();
   const { items, loading, loadError, fetchItems, addItem, editItem, removeItem, logWear } = useItems(user);
   const game = useGame(user);
+  const chat = useChat(user);
 
   const [mfaPending, setMfaPending]   = useState(null); // { factorId } | null
   const [page, setPage]               = useState(() => sessionStorage.getItem('garderobe-page') || 'wardrobe');
@@ -164,6 +166,20 @@ export default function App() {
   useEffect(() => {
     if (!user) return;
     pollRequests(user.id, setRequestCount);
+  }, [user]);
+
+  // Presence heartbeat: bump last_active while the tab is visible.
+  useEffect(() => {
+    if (!user) return;
+    const beat = () => {
+      if (document.visibilityState === 'visible') {
+        sb.from('profiles').upsert({ id: user.id, last_active: new Date().toISOString() }, { onConflict: 'id' });
+      }
+    };
+    beat();
+    const id = setInterval(beat, 60000);
+    document.addEventListener('visibilitychange', beat);
+    return () => { clearInterval(id); document.removeEventListener('visibilitychange', beat); };
   }, [user]);
 
   useEffect(() => {
