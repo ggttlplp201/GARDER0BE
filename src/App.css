@@ -1711,3 +1711,9 @@ body.museum-mode .app-nav .app-nav-value      { color: rgba(245,242,234,0.35); }
 
 .feed-share-btn { background: none; border: none; color: var(--text3); font-size: 11px; letter-spacing: 0.04em; cursor: pointer; padding: 2px 4px; font-family: inherit; }
 .feed-share-btn:hover { color: var(--text); }
+
+/* ── Chat shared-card lightbox ────────────────────────────────────────── */
+.chat-card-clickable { cursor: pointer; }
+.chat-card-clickable:hover .chat-card-img { opacity: 0.85; }
+.chat-lightbox { position: fixed; inset: 0; z-index: 1200; background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center; padding: 24px; cursor: zoom-out; }
+.chat-lightbox img { max-width: 90vw; max-height: 90vh; object-fit: contain; }

@@ -19,16 +19,18 @@ function preview(m) {
   return m.body || '';
 }
 
-function SharedCard({ m }) {
+function SharedCard({ m, onOpenImage }) {
   const p = m.payload || {};
   if (m.type === 'fit') return (
-    <div className="chat-card">
+    <div className={`chat-card${p.image_url ? ' chat-card-clickable' : ''}`}
+      onClick={p.image_url ? () => onOpenImage(p.image_url) : undefined}>
       {p.image_url && <img src={p.image_url} alt="" className="chat-card-img" />}
       <div className="chat-card-meta"><span className="chat-card-kicker">FIT</span>{p.fit_name || 'Untitled'}</div>
     </div>
   );
   if (m.type === 'item') return (
-    <div className="chat-card">
+    <div className={`chat-card${p.image_url ? ' chat-card-clickable' : ''}`}
+      onClick={p.image_url ? () => onOpenImage(p.image_url) : undefined}>
       {p.image_url && <img src={p.image_url} alt="" className="chat-card-img" />}
       <div className="chat-card-meta"><span className="chat-card-kicker">ITEM</span>{p.name || 'Item'}</div>
     </div>
@@ -51,6 +53,7 @@ function SharedCard({ m }) {
 export default function ChatPage({ user, chat }) {
   const { conversations, activeId, messages, openConversation, closeConversation, sendMessage } = chat;
   const [text, setText] = useState('');
+  const [lightbox, setLightbox] = useState(null);
   const endRef = useRef(null);
 
   useEffect(() => { endRef.current?.scrollIntoView({ block: 'end' }); }, [messages]);
@@ -81,13 +84,18 @@ export default function ChatPage({ user, chat }) {
           {messages.map(m => (
             <div key={m.id} className={`chat-msg${m.sender_id === user.id ? ' mine' : ''}`}>
               <div className="chat-bubble">
-                {m.type === 'text' ? m.body : <SharedCard m={m} />}
+                {m.type === 'text' ? m.body : <SharedCard m={m} onOpenImage={setLightbox} />}
                 <div className="chat-msg-time">{timeAgo(m.created_at)}</div>
               </div>
             </div>
           ))}
           <div ref={endRef} />
         </div>
+        {lightbox && (
+          <div className="chat-lightbox" onClick={() => setLightbox(null)}>
+            <img src={lightbox} alt="" />
+          </div>
+        )}
         <div className="chat-composer">
           <input
             value={text}
