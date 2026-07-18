@@ -33,12 +33,18 @@ function SharedCard({ m }) {
       <div className="chat-card-meta"><span className="chat-card-kicker">ITEM</span>{p.name || 'Item'}</div>
     </div>
   );
-  if (m.type === 'article') return (
-    <a className="chat-card chat-card-link" href={p.url} target="_blank" rel="noopener noreferrer">
-      {p.image && <img src={p.image} alt="" className="chat-card-img" />}
-      <div className="chat-card-meta"><span className="chat-card-kicker">ARTICLE</span>{p.title || p.url}</div>
-    </a>
-  );
+  if (m.type === 'article') {
+    const safeUrl = /^https?:\/\//i.test(p.url || '') ? p.url : null;
+    const inner = (
+      <>
+        {p.image && <img src={p.image} alt="" className="chat-card-img" />}
+        <div className="chat-card-meta"><span className="chat-card-kicker">ARTICLE</span>{p.title || p.url || 'Article'}</div>
+      </>
+    );
+    return safeUrl
+      ? <a className="chat-card chat-card-link" href={safeUrl} target="_blank" rel="noopener noreferrer">{inner}</a>
+      : <div className="chat-card">{inner}</div>;
+  }
   return null;
 }
 

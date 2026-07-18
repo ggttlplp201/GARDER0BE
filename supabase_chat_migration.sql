@@ -97,13 +97,17 @@ declare v_ref uuid; v_reason text; v_xp int; v_coins int; v_today int;
 begin
   update conversations set last_message_at = new.created_at where id = new.conversation_id;
   if new.type = 'fit' then
-    v_reason := 'share_fit'; v_xp := 10; v_coins := 20;
     v_ref := nullif(new.payload->>'postId','')::uuid;
+    -- only reward for a real, existing fit post (blocks arbitrary-UUID farming)
+    if v_ref is null or not exists (select 1 from outfit_posts where id = v_ref) then return new; end if;
+    v_reason := 'share_fit'; v_xp := 10; v_coins := 20;
   elsif new.type = 'article' then
     v_reason := 'share_article'; v_xp := 8; v_coins := 15; v_ref := null;
   else
     return new;
   end if;
+  -- serialize this sender's reward processing so the daily cap can't be raced
+  perform pg_advisory_xact_lock(hashtext(new.sender_id::text)::bigint);
   select count(*) into v_today from xp_events
    where user_id = new.sender_id and reason like 'share\_%' and created_at::date = current_date;
   if v_today >= 5 then return new; end if;
@@ -131,7 +135,9 @@ create or replace function reward_referral(p_invitee uuid) returns void
 language plpgsql security definer set search_path = public as $$
 declare v_inviter uuid;
 begin
-  select inviter_id into v_inviter from referrals where invitee_id = p_invitee and status = 'pending';
+  -- FOR UPDATE serializes concurrent reward attempts for the same invitee
+  select inviter_id into v_inviter from referrals
+   where invitee_id = p_invitee and status = 'pending' for update;
   if v_inviter is null then return; end if;
   perform ensure_game_rows(v_inviter);
   perform award_xp(v_inviter, 50, 'referral', p_invitee);

@@ -12,6 +12,7 @@ export function useChat(user) {
   const [activeId, setActiveId]           = useState(null);
   const [messages, setMessages]           = useState([]);
   const activeRef = useRef(null);
+  const openGenRef = useRef(0);
   useEffect(() => { activeRef.current = activeId; }, [activeId]);
 
   const loadConversations = useCallback(async () => {
@@ -56,11 +57,14 @@ export function useChat(user) {
 
   const openConversation = useCallback(async (otherId) => {
     if (!user) return;
+    const gen = ++openGenRef.current;
     const { data: convId, error } = await sb.rpc('get_or_create_conversation', { p_other: otherId });
     if (error) { console.error(error); return; }
+    if (gen !== openGenRef.current) return convId; // superseded by a newer open
     setActiveId(convId);
     const { data: msgs } = await sb.from('messages')
       .select('*').eq('conversation_id', convId).order('created_at', { ascending: true });
+    if (gen !== openGenRef.current) return convId; // superseded during message load
     setMessages(msgs || []);
     markRead(convId);
     return convId;
@@ -81,11 +85,12 @@ export function useChat(user) {
     if (!user) { setConversations([]); setActiveId(null); setMessages([]); return; }
     loadConversations();
     const ch = sb.channel('messages-' + user.id)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, async payload => {
         const m = payload.new;
         if (m.conversation_id === activeRef.current) {
           setMessages(prev => prev.some(x => x.id === m.id) ? prev : [...prev, m]);
-          if (m.sender_id !== user.id) markRead(m.conversation_id);
+          // mark read before recomputing the list so unread doesn't flicker back
+          if (m.sender_id !== user.id) await markRead(m.conversation_id);
         }
         loadConversations();
       })
