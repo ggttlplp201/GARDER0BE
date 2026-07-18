@@ -19,15 +19,20 @@ function preview(m) {
   return m.body || '';
 }
 
-function SharedCard({ m, onOpenImage }) {
+function SharedCard({ m, onOpenImage, onOpenFit }) {
   const p = m.payload || {};
-  if (m.type === 'fit') return (
-    <div className={`chat-card${p.image_url ? ' chat-card-clickable' : ''}`}
-      onClick={p.image_url ? () => onOpenImage(p.image_url) : undefined}>
-      {p.image_url && <img src={p.image_url} alt="" className="chat-card-img" />}
-      <div className="chat-card-meta"><span className="chat-card-kicker">FIT</span>{p.fit_name || 'Untitled'}</div>
-    </div>
-  );
+  if (m.type === 'fit') {
+    // Clicking a shared fit opens its post in the Explore outfits feed;
+    // if there's no post id (legacy), fall back to viewing the image.
+    const handler = p.postId ? () => onOpenFit(p.postId)
+      : p.image_url ? () => onOpenImage(p.image_url) : undefined;
+    return (
+      <div className={`chat-card${handler ? ' chat-card-clickable' : ''}`} onClick={handler}>
+        {p.image_url && <img src={p.image_url} alt="" className="chat-card-img" />}
+        <div className="chat-card-meta"><span className="chat-card-kicker">FIT</span>{p.fit_name || 'Untitled'}</div>
+      </div>
+    );
+  }
   if (m.type === 'item') return (
     <div className={`chat-card${p.image_url ? ' chat-card-clickable' : ''}`}
       onClick={p.image_url ? () => onOpenImage(p.image_url) : undefined}>
@@ -50,7 +55,7 @@ function SharedCard({ m, onOpenImage }) {
   return null;
 }
 
-export default function ChatPage({ user, chat }) {
+export default function ChatPage({ user, chat, onOpenFit }) {
   const { conversations, activeId, messages, openConversation, closeConversation, sendMessage } = chat;
   const [text, setText] = useState('');
   const [lightbox, setLightbox] = useState(null);
@@ -84,7 +89,7 @@ export default function ChatPage({ user, chat }) {
           {messages.map(m => (
             <div key={m.id} className={`chat-msg${m.sender_id === user.id ? ' mine' : ''}`}>
               <div className="chat-bubble">
-                {m.type === 'text' ? m.body : <SharedCard m={m} onOpenImage={setLightbox} />}
+                {m.type === 'text' ? m.body : <SharedCard m={m} onOpenImage={setLightbox} onOpenFit={onOpenFit} />}
                 <div className="chat-msg-time">{timeAgo(m.created_at)}</div>
               </div>
             </div>

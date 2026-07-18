@@ -79,6 +79,7 @@ export default function App() {
   const [requestCount, setRequestCount] = useState(0);
   const [likeCount, setLikeCount]     = useState(0);
   const [friendsProfile, setFriendsProfile] = useState(null);
+  const [focusPost, setFocusPost]     = useState(null);
   const [toasts, setToasts]           = useState([]);
 
   // Capture an invite ref (?ref=<inviterId>) once so it survives the auth screens.
@@ -189,7 +190,7 @@ export default function App() {
       }
     };
     beat();
-    const id = setInterval(beat, 60000);
+    const id = setInterval(beat, 45000);
     document.addEventListener('visibilitychange', beat);
     return () => { clearInterval(id); document.removeEventListener('visibilitychange', beat); };
   }, [user]);
@@ -299,6 +300,19 @@ export default function App() {
     if (convId) { await chat.sendMessage(convId, msg); navigate('chat'); }
   }, [chat, navigate]);
 
+  const openFitPost = useCallback((postId) => {
+    setFocusPost(postId);
+    navigate('explore');
+  }, [navigate]);
+
+  // Mark offline immediately on explicit sign-out (before the session is gone).
+  const handleSignOut = useCallback(async () => {
+    try { if (user) await sb.from('profiles').update({ last_active: null }).eq('id', user.id); } catch {}
+    sessionStorage.removeItem('garderobe-page');
+    signOut();
+    setProfileOpen(false);
+  }, [user, signOut]);
+
   const messageFriend = useCallback(async (friendId) => {
     const convId = await chat.openConversation(friendId);
     if (convId) navigate('chat');
@@ -389,6 +403,8 @@ export default function App() {
             likeCount={likeCount}
             onLikesViewed={() => setLikeCount(0)}
             onShareToChat={shareToChat}
+            focusPost={focusPost}
+            onFocusConsumed={() => setFocusPost(null)}
           />
         )}
         {page === 'friends' && (
@@ -400,7 +416,7 @@ export default function App() {
           />
         )}
         {page === 'stats' && <StatsPage game={game} />}
-        {page === 'chat' && <ChatPage user={user} chat={chat} />}
+        {page === 'chat' && <ChatPage user={user} chat={chat} onOpenFit={openFitPost} />}
       </div>
 
       <AppNav
@@ -422,7 +438,7 @@ export default function App() {
         user={user}
         open={profileOpen}
         onClose={() => setProfileOpen(false)}
-        onSignOut={() => { sessionStorage.removeItem('garderobe-page'); signOut(); setProfileOpen(false); }}
+        onSignOut={handleSignOut}
         avatarUrl={avatarUrl}
         onAvatarChange={url => setAvatarUrl(url)}
         onProfileSave={() => {

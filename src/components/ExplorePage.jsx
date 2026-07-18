@@ -503,7 +503,7 @@ function ProfileView({ profile, user, onBack }) {
   );
 }
 
-function OutfitsFeed({ user, onShareToChat }) {
+function OutfitsFeed({ user, onShareToChat, focusPostId, onFocusConsumed }) {
   const [shareFit,  setShareFit]  = useState(null);
   const [filter,    setFilter]    = useState('all');
   const [posts,     setPosts]     = useState([]);
@@ -553,6 +553,16 @@ function OutfitsFeed({ user, onShareToChat }) {
   }, [filter, user]);
 
   useEffect(() => { fetchPage(0); }, [fetchPage]);
+
+  // A fit shared into chat was opened → show that specific post's image.
+  useEffect(() => {
+    if (!focusPostId) return;
+    let cancelled = false;
+    sb.from('outfit_posts').select('image_url').eq('id', focusPostId).maybeSingle()
+      .then(({ data }) => { if (!cancelled && data?.image_url) setLbUrl(data.image_url); });
+    onFocusConsumed?.();
+    return () => { cancelled = true; };
+  }, [focusPostId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleDelete(postId) {
     if (!user?.id) return;
@@ -668,7 +678,7 @@ function OutfitsFeed({ user, onShareToChat }) {
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 
-export default function ExplorePage({ user, externalProfile, onExternalProfileClear, likeCount, onLikesViewed, onShareToChat }) {
+export default function ExplorePage({ user, externalProfile, onExternalProfileClear, likeCount, onLikesViewed, onShareToChat, focusPost, onFocusConsumed }) {
   const [tab, setTab]                             = useState('feed');
   const [profiles, setProfiles]                   = useState([]);
   const [loading, setLoading]                     = useState(true);
@@ -678,6 +688,11 @@ export default function ExplorePage({ user, externalProfile, onExternalProfileCl
   useEffect(() => {
     if (externalProfile) { setSelectedProfile(externalProfile); setTab('people'); }
   }, [externalProfile]);
+
+  // A fit shared into chat was clicked → jump to the outfits feed on that post.
+  useEffect(() => {
+    if (focusPost) { setSelectedProfile(null); setTab('outfits'); }
+  }, [focusPost]);
 
   // Report the browse-Explore daily quest (idempotent server-side; fire-and-forget)
   useEffect(() => {
@@ -767,7 +782,7 @@ export default function ExplorePage({ user, externalProfile, onExternalProfileCl
               </>
             )}
             {tab === 'feed' && <NewsFeed user={user} onShareToChat={onShareToChat} />}
-            {tab === 'outfits' && <OutfitsFeed user={user} onShareToChat={onShareToChat} />}
+            {tab === 'outfits' && <OutfitsFeed user={user} onShareToChat={onShareToChat} focusPostId={focusPost} onFocusConsumed={onFocusConsumed} />}
           </div>
         </>
       )}
