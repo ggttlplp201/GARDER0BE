@@ -1162,6 +1162,15 @@ html.dark .outfit-in-fit-badge { background: rgba(0,0,0,0.7); }
   .design-people-row > div:first-child { width: 44px !important; height: 44px !important; min-width: 44px !important; }
   .design-people-name { font-size: 15px; }
   .design-action-btn { font-size: 8px !important; padding: 5px 10px !important; letter-spacing: 0.1em !important; }
+
+  /* Chat rows wrap the avatar (for the presence dot), so the rule above only
+     shrank the wrapper — the 60px Avatar inside kept its inline size and
+     spilled over the name. Pull it down to match the wrapper. */
+  .chat-avatar-wrap > .cos-avatar { width: 44px !important; height: 44px !important; }
+
+  /* Chat composer — 16px stops iOS Safari force-zooming the page on focus.
+     !important because the base .chat-input rule is later in this file. */
+  .chat-input { font-size: 16px !important; }
 }
 
 /* ── Share modal ─────────────────────────────────────────────────────────── */
@@ -1636,6 +1645,9 @@ body.museum-mode .app-nav .app-nav-value      { color: rgba(245,242,234,0.35); }
 .cos-avatar { position: relative; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .cos-avatar-img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block; }
 .cos-avatar-ph { width: 100%; height: 100%; border-radius: 50%; background: var(--bg3); display: flex; align-items: center; justify-content: center; color: var(--text3); }
+/* Avatar renders the fallback icon at size*0.5, so this matches it exactly at
+   the natural size — but keeps the ratio when CSS shrinks the avatar instead */
+.cos-avatar-ph svg { width: 50%; height: 50%; }
 .cos-frame { position: absolute; top: 50%; left: 50%; width: 116%; height: 116%; transform: translate(-50%, -50%); pointer-events: none; color: var(--text2); }
 .cos-frame-svg { width: 100%; height: 100%; overflow: visible; display: block; }
 
