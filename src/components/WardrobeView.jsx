@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { gsap } from 'gsap';
 import { parseImageUrls } from '../lib/imageUtils';
 import { ITEM_TYPES } from '../lib/constants';
@@ -40,29 +40,48 @@ export default function WardrobeView({ items = [], loading, loadError, onRetry, 
     gsap.from(cards, { opacity: 0, y: 18, duration: 0.28, stagger: 0.035, ease: 'power2.out', overwrite: true, clearProps: 'all' });
   }, [mode, loading]);  
 
-  const filtered = items.filter(it => {
+  const filtered = useMemo(() => items.filter(it => {
     if (search) {
       const q = search.toLowerCase();
       if (!it.name?.toLowerCase().includes(q) && !it.brand?.toLowerCase().includes(q)) return false;
     }
     if (filterType !== 'ALL' && it.type !== filterType) return false;
     return true;
-  });
+  }), [items, search, filterType]);
 
-  const idxMap = new Map(items.map((item, i) => [item.id, i]));
-  const museumItems = filtered.map((item) => ({
-    id: item.id,
-    cat: catNum(idxMap.get(item.id) ?? 0),
-    brand: item.brand || '—',
-    name: item.name || 'Untitled',
-    type: item.type || '',
-    color: item.color || '#888888',
-    imageUrls: parseImageUrls(item.image_url),
-  }));
+  // Museum frame data is derived from `items` alone, so each frame object —
+  // and its imageUrls array — keeps its identity while you type. Rebuilding
+  // these per keystroke re-parsed every image_url and handed every frame fresh
+  // props, which re-ran the image pre-decode pass across the whole room.
+  const museumById = useMemo(() => {
+    const map = new Map();
+    items.forEach((item, i) => {
+      map.set(item.id, {
+        id: item.id,
+        cat: catNum(i),
+        brand: item.brand || '—',
+        name: item.name || 'Untitled',
+        type: item.type || '',
+        color: item.color || '#888888',
+        imageUrls: parseImageUrls(item.image_url),
+      });
+    });
+    return map;
+  }, [items]);
+
+  const museumItems = useMemo(
+    () => filtered.map(it => museumById.get(it.id)).filter(Boolean),
+    [filtered, museumById],
+  );
 
   const handleProgress = useCallback(({ progress }) => {
     setMuseumProgress(progress);
   }, []);
+
+  const handleMuseumItem = useCallback((mi) => {
+    const it = items.find(i => i.id === mi.id);
+    if (it) onItemClick(it);
+  }, [items, onItemClick]);
 
   useEffect(() => {
     if (mode !== 'MUSEUM') { setMuseumReady(false); return; }
@@ -135,7 +154,7 @@ export default function WardrobeView({ items = [], loading, loadError, onRetry, 
         {!loading && !loadError && items.length > 0 && (
           <Museum
             items={museumItems}
-            onItem={(mi) => { const it = items.find(i => i.id === mi.id); if (it) onItemClick(it); }}
+            onItem={handleMuseumItem}
             hideOverlays
             onProgress={handleProgress}
           />

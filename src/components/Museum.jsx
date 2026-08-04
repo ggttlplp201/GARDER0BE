@@ -84,14 +84,18 @@ const MuseumFrame = memo(({ item, side, depth, onClick, imageUrls = [], layout, 
   }, [culled]);
 
   // Pre-decode every cycle image so src swaps and re-entry after culling
-  // never paint an undecoded (blank) frame
+  // never paint an undecoded (blank) frame.
+  // Keyed on the joined URLs, not the array identity: a caller that rebuilds
+  // the array each render would otherwise re-decode every image of every frame
+  // on every keystroke, which is enough to OOM the tab on mobile Safari.
+  const urlKey = imageUrls.join('|');
   useEffect(() => {
-    imageUrls.forEach(url => {
+    urlKey.split('|').filter(Boolean).forEach(url => {
       const im = new Image();
       im.src = url;
       im.decode?.().catch(() => {});
     });
-  }, [imageUrls]);
+  }, [urlKey]);
 
   // Auto-cycle images when there are multiple (paused while culled so we
   // never swap to a not-yet-decoded image right before re-entry)
@@ -146,7 +150,7 @@ const MuseumFrame = memo(({ item, side, depth, onClick, imageUrls = [], layout, 
 
   return (
     <div
-      onClick={onClick}
+      onClick={() => onClick?.(item)}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
       style={{
@@ -231,6 +235,12 @@ export default function Museum({ items = [], onItem, hideOverlays = false, onPro
   const clampZ = useCallback((z) =>
     Math.min(ROOM_DEPTH - 200, Math.max(cameraStart, z)),
   [cameraStart, ROOM_DEPTH]);
+
+  // Filtering shrinks the room — pull the camera back inside its new bounds
+  // so a search that drops the far frames doesn't strand you past the wall
+  useEffect(() => {
+    setCameraZ(z => clampZ(z));
+  }, [clampZ]);
 
   // Wheel (desktop / trackpad)
   useEffect(() => {
@@ -431,7 +441,7 @@ export default function Museum({ items = [], onItem, hideOverlays = false, onPro
               depth={f.depth}
               layout={layout}
               cameraZ={cameraZ}
-              onClick={() => onItem && onItem(f.item)}
+              onClick={onItem}
               imageUrls={f.item.imageUrls || []}
             />
           ))}

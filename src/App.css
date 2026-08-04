@@ -176,6 +176,9 @@ h1 { font-size: 2rem; font-weight: bold; margin-bottom: 2px; }
   .skeleton-card { animation: none !important; background: #ebebeb !important; }
   .app-loading-text { animation: none !important; opacity: 0.6 !important; }
   .card-shine { display: none !important; }
+  .outfits-right,
+  .outfits-right > *,
+  .rack-toggle-btn svg { transition: none !important; }
 }
 
 .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: var(--bg); border-top: 1.5px solid var(--border); z-index: 40; }
@@ -1076,10 +1079,13 @@ html.dark .outfit-in-fit-badge { background: rgba(0,0,0,0.7); }
   /* On mobile show only VIEW →, hide + ADD SOURCE */
   .wish-row > div:nth-child(8) button:first-child { display: none !important; }
 
-  /* Hide header on all pages except wardrobe and friends */
+  /* Hide the GARDEROBE banner on every page except wardrobe */
   .page-timeline .app-header,
   .page-wishlist .app-header,
   .page-explore .app-header,
+  .page-friends .app-header,
+  .page-stats   .app-header,
+  .page-chat    .app-header,
   .page-detail  .app-header { display: none !important; }
 
   /* Detail view — image top, scrollable info below */
@@ -1097,9 +1103,15 @@ html.dark .outfit-in-fit-badge { background: rgba(0,0,0,0.7); }
   .page-outfits .v-screen-header { display: none !important; }
   .page-outfits .v-body { overflow: hidden; display: flex; flex-direction: column; }
   .page-outfits .outfits-cols { display: flex !important; flex-direction: column !important; height: 100%; overflow: hidden; }
-  .page-outfits .outfits-left { flex: 3 !important; min-height: 0 !important; overflow-y: auto !important; width: 100% !important; border-right: none !important; border-bottom: 1px solid var(--border); padding: 10px 14px 14px !important; }
-  .page-outfits .outfits-right { flex: 2 !important; min-height: 0 !important; overflow-y: auto !important; width: 100% !important; padding: 10px 14px !important; }
+  /* The rack's 48px flex-basis is its collapsed height (header + padding) and
+     flex-grow adds the open portion on top, so collapsing is a grow → 0 tween.
+     Grow is 1.6 rather than 2 so the open split still lands on the old 60/40. */
+  .page-outfits .outfits-left { flex: 3 1 0 !important; min-height: 0 !important; overflow-y: auto !important; width: 100% !important; border-right: none !important; border-bottom: 1px solid var(--border); padding: 10px 14px 14px !important; }
+  .page-outfits .outfits-right { flex: 1.6 1 48px !important; min-height: 0 !important; overflow-y: auto !important; width: 100% !important; padding: 10px 14px !important; }
   .outfit-rack-grid { grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)) !important; }
+
+  /* Actions (clear / shuffle / save / share) sit at the very top on mobile */
+  .page-outfits .outfit-actions { order: -1; margin-top: 0; margin-bottom: 10px; }
   /* Mobile saved fits bar — shown only on mobile (hidden on desktop via default display:none) */
   .outfit-mobile-bar { display: flex; margin-bottom: 10px; }
   .outfit-mobile-bar-btn { flex: 1; background: transparent; color: var(--text); border: 1px solid var(--border); padding: 7px 14px; font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.15em; cursor: pointer; text-align: center; }
@@ -1109,10 +1121,25 @@ html.dark .outfit-in-fit-badge { background: rgba(0,0,0,0.7); }
   .rack-toggle-btn { display: flex; align-items: center; justify-content: center; padding: 4px 8px; background: transparent; color: var(--text2); border: 1px solid var(--border); cursor: pointer; }
   .rack-toggle-btn:active { opacity: 0.6; }
 
-  /* Collapsed rack: left fills space, right shrinks to just its header */
-  .page-outfits .outfits-cols.rack-collapsed .outfits-left { flex: 1 !important; border-bottom: none !important; }
-  .page-outfits .outfits-cols.rack-collapsed .outfits-right { flex: none !important; overflow: hidden !important; padding: 8px 14px !important; }
-  .page-outfits .outfits-cols.rack-collapsed .outfits-right > *:not(.outfits-rack-header) { display: none !important; }
+  /* Collapsed rack: the panel slides shut down to just its header.
+     Animating flex-grow (not display:none) keeps the header pinned in place
+     while the builder column expands into the freed space in the same frame. */
+  .page-outfits .outfits-right {
+    transition: flex-grow 400ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .page-outfits .outfits-right > *:not(.outfits-rack-header) {
+    transition: opacity 260ms ease-out;
+  }
+  .page-outfits .outfits-cols.rack-collapsed .outfits-right {
+    flex-grow: 0 !important;
+    overflow: hidden !important;
+  }
+  .page-outfits .outfits-cols.rack-collapsed .outfits-right > *:not(.outfits-rack-header) {
+    opacity: 0;
+    pointer-events: none;
+  }
+  .rack-toggle-btn svg { transition: transform 400ms cubic-bezier(0.22, 1, 0.36, 1); }
+  .rack-toggle-btn.is-closed svg { transform: rotate(180deg); }
 
   /* Explore tabs */
   .explore-page { padding: 16px 16px 20px; }
@@ -1564,7 +1591,11 @@ body.museum-mode .app-nav .app-nav-value      { color: rgba(245,242,234,0.35); }
 /* Mobile: collapse search on small screens */
 @media (max-width: 479px) {
   .museum-hud-search {
-    max-width: 100px;
+    max-width: 110px;
+    /* 16px is the threshold below which iOS Safari force-zooms the page on
+       focus — which strands you zoomed into a touch-action:none 3D scene */
+    font-size: 16px;
+    letter-spacing: 0.02em;
   }
   .museum-hud-select { display: none; }
 }
