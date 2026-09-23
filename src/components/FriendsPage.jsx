@@ -5,7 +5,8 @@ import Avatar from './Avatar';
 import Username from './Username';
 import FitLikeButton from './FitLikeButton';
 
-function fmtStats(count, value) {
+// temporarily disabled: value param (was used to render $ value) — restore signature (count, value) to revert
+function fmtStats(count) {
   // temporarily disabled: const v = value >= 1000 ? Math.round(value / 1000) + 'K' : Math.round(value).toLocaleString();
   return `${count} ITEMS`;
 }

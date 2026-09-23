@@ -95,12 +95,12 @@ function DetailCarousel({ imgs, imgIdx, onNav }) {
   );
 }
 
+/* Temporarily disabled: price-source tracking feature
 async function getToken() {
   const { data: { session } } = await sb.auth.getSession();
   return session?.access_token ?? '';
 }
 
-/* Temporarily disabled: price-source tracking feature
 function PriceSources({ item }) {
   const [sources, setSources]     = useState([]);
   const [loadingSrc, setLoadingSrc] = useState(true);

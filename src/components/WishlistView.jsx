@@ -1,5 +1,7 @@
-import { useEffect, useState, useCallback } from 'react';
 import { parseImageUrls } from '../lib/imageUtils';
+
+/* Temporarily disabled: price tracking feature (derive/format/badge helpers)
+import { useEffect, useState, useCallback } from 'react';
 import { sb } from '../lib/supabase';
 
 // Derive per-item tracking summary from raw source + history data
@@ -72,9 +74,12 @@ function DeltaBadge({ amt, pct }) {
     </span>
   );
 }
+*/
 
 export default function WishlistView({ items, onItemClick, onAdd }) {
   const wishlist = items.filter(i => i.status === 'wishlist');
+
+  /* Temporarily disabled: price tracking fetch
   const [tracking, setTracking] = useState({}); // itemId → derived tracking object
 
   const fetchTracking = useCallback(async () => {
@@ -105,8 +110,8 @@ export default function WishlistView({ items, onItemClick, onAdd }) {
     }
   }, [items]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // temporarily disabled: price tracking fetch
-  // useEffect(() => { fetchTracking(); }, [fetchTracking]);
+  useEffect(() => { fetchTracking(); }, [fetchTracking]);
+  */
 
   return (
     <div className="v-screen">
@@ -139,8 +144,7 @@ export default function WishlistView({ items, onItemClick, onAdd }) {
 
               {wishlist.map((it, i) => {
                 const imgs = parseImageUrls(it.image_url);
-                const t    = tracking[it.id];
-                const hasSources = t !== null && t !== undefined;
+                // temporarily disabled: const t = tracking[it.id]; const hasSources = t !== null && t !== undefined;
 
                 return (
                   <div key={it.id} className="wish-row">

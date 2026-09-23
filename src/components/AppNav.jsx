@@ -81,11 +81,10 @@ const NAV_ITEMS = [
   },
 ];
 
-import { useRef, useEffect, useState } from 'react';
-import { gsap } from 'gsap';
-
-export default function AppNav({ page, setPage, total, requestCount, likeCount, chatUnread }) {
+export default function AppNav({ page, setPage, requestCount, likeCount, chatUnread }) {
   const activePage = page === 'detail' ? 'wardrobe' : page;
+
+  /* Temporarily disabled: collection $ value display (animated counter)
   const [displayTotal, setDisplayTotal] = useState(0);
   const counterObj = useRef({ val: 0 });
 
@@ -97,6 +96,7 @@ export default function AppNav({ page, setPage, total, requestCount, likeCount, 
       onUpdate: () => setDisplayTotal(Math.round(counterObj.current.val)),
     });
   }, [total]);
+  */
 
   return (
     <div className="app-nav">
