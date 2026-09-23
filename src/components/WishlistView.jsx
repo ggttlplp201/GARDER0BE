@@ -105,16 +105,17 @@ export default function WishlistView({ items, onItemClick, onAdd }) {
     }
   }, [items]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => { fetchTracking(); }, [fetchTracking]);
+  // temporarily disabled: price tracking fetch
+  // useEffect(() => { fetchTracking(); }, [fetchTracking]);
 
   return (
     <div className="v-screen">
       <div className="v-screen-header">
         <div>
           <div className="v-screen-title">WISHLIST</div>
-          <div className="v-screen-sub">{String(wishlist.length).padStart(2, '0')} ITEMS · PRICE TRACKING</div>
+          <div className="v-screen-sub">{String(wishlist.length).padStart(2, '0')} ITEMS{/* temporarily disabled: · PRICE TRACKING */}</div>
         </div>
-        <button className="toolbar-add" style={{ alignSelf: 'flex-end' }} onClick={onAdd}>+ TRACK NEW</button>
+        <button className="toolbar-add" style={{ alignSelf: 'flex-end' }} onClick={onAdd}>+ ADD ITEM</button>
       </div>
 
       <div className="v-body">
@@ -129,10 +130,10 @@ export default function WishlistView({ items, onItemClick, onAdd }) {
                 <div>№</div>
                 <div />
                 <div>BRAND · ITEM</div>
-                <div>DELTA</div>
-                <div style={{ textAlign: 'right' }}>BEST PRICE</div>
-                <div style={{ textAlign: 'right' }}>LAST CHECKED</div>
-                <div style={{ textAlign: 'right' }}>SOURCES</div>
+                <div>{/* temporarily disabled: DELTA */}</div>
+                <div style={{ textAlign: 'right' }}>{/* temporarily disabled: BEST PRICE */}</div>
+                <div style={{ textAlign: 'right' }}>{/* temporarily disabled: LAST CHECKED */}</div>
+                <div style={{ textAlign: 'right' }}>{/* temporarily disabled: SOURCES */}</div>
                 <div style={{ textAlign: 'right' }}>ACTION</div>
               </div>
 
@@ -155,42 +156,51 @@ export default function WishlistView({ items, onItemClick, onAdd }) {
                     <div>
                       <div className="mono-dim" style={{ fontSize: 9, letterSpacing: '0.12em' }}>{(it.brand || '—').toUpperCase()}</div>
                       <div className="timeline-item-name">{it.name || 'Untitled'}</div>
-                      {hasSources && t.bestSourceName && (
+                      {/* temporarily disabled: {hasSources && t.bestSourceName && (
                         <div className="mono-dim" style={{ fontSize: 8, marginTop: 2 }}>{t.bestSourceName.toUpperCase()}</div>
-                      )}
+                      )} */}
                     </div>
 
-                    {/* Delta */}
+                    {/* Delta — temporarily disabled
                     <div style={{ display: 'flex', alignItems: 'center' }}>
                       {hasSources
                         ? <DeltaBadge amt={t.deltaAmt} pct={t.deltaPct} />
                         : <span className="mono-dim" style={{ fontSize: 9 }}>NO SOURCES</span>
                       }
                     </div>
+                    */}
+                    <div />
 
-                    {/* Best price */}
+                    {/* Best price — temporarily disabled
                     <div style={{ textAlign: 'right' }}>
                       {hasSources && t.latestPrice != null
                         ? <div className="wish-current">${Number(t.latestPrice).toLocaleString()}</div>
                         : <div className="mono-dim" style={{ fontSize: 10 }}>—</div>
                       }
                     </div>
+                    */}
+                    <div />
 
-                    {/* Last checked */}
+                    {/* Last checked — temporarily disabled (tracking fetch is off, would always read as never-checked)
                     <div className="mono-dim" style={{ fontSize: 9, textAlign: 'right', letterSpacing: '0.08em' }}>
                       {hasSources ? formatChecked(t.lastChecked) : '—'}
                     </div>
+                    */}
+                    <div />
 
-                    {/* Source count */}
+                    {/* Source count — temporarily disabled
                     <div style={{ textAlign: 'right' }}>
                       {hasSources
                         ? <span className="mono-dim" style={{ fontSize: 9 }}>{t.sourceCount} SOURCE{t.sourceCount !== 1 ? 'S' : ''}</span>
                         : <span className="mono-dim" style={{ fontSize: 9 }}>—</span>
                       }
                     </div>
+                    */}
+                    <div />
 
                     {/* Action */}
                     <div style={{ textAlign: 'right', display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                      {/* temporarily disabled: price-source tracking
                       {!hasSources && (
                         <button
                           className="mode-btn"
@@ -198,6 +208,7 @@ export default function WishlistView({ items, onItemClick, onAdd }) {
                           onClick={() => onItemClick(it)}
                         >+ ADD SOURCE</button>
                       )}
+                      */}
                       <button
                         className="mode-btn"
                         style={{ border: '1px solid var(--border)', padding: '7px 14px' }}

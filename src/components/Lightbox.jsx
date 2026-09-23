@@ -126,7 +126,7 @@ export default function Lightbox({ item, onClose, onEdit }) {
           {item.brand && <div className="lb-brand">{item.brand}</div>}
           {item.type  && <div className="lb-type">{item.type}</div>}
           {item.size  && <div className="lb-size">Size: {item.size}</div>}
-          {item.price > 0 && <div className="lb-price">${parseFloat(item.price).toLocaleString()}</div>}
+          {/* temporarily disabled: {item.price > 0 && <div className="lb-price">${parseFloat(item.price).toLocaleString()}</div>} */}
           <button className="lb-edit-btn" onClick={() => { onClose(); onEdit(item.id); }}>EDIT ITEM</button>
           {dateStr && <div className="lb-date">Added {dateStr}</div>}
         </div>

@@ -116,9 +116,11 @@ export default function AppNav({ page, setPage, total, requestCount, likeCount, 
           );
         })}
       </div>
+      {/* Temporarily disabled: collection $ value display
       <div className="app-nav-value">
         COLLECTION VALUE — <strong>${displayTotal.toLocaleString()}.00</strong>
       </div>
+      */}
     </div>
   );
 }

@@ -96,7 +96,7 @@ export default function FitPostView({ postId, user, onClose, onShareToChat }) {
                   <div className="fitpost-fitname">{post.fit_name}</div>
                 </div>
               </div>
-              <div className="fitpost-metaline">{post.slot_count} PIECES · ${Math.round(post.total_value || 0).toLocaleString()} · {timeAgo(post.created_at)}</div>
+              <div className="fitpost-metaline">{post.slot_count} PIECES{/* temporarily disabled: · ${Math.round(post.total_value || 0).toLocaleString()} */} · {timeAgo(post.created_at)}</div>
 
               <div className="fitpost-actions">
                 <FitLikeButton key={`${postId}-${likeCount}-${likedByMe}`} postId={postId} user={user} initialCount={likeCount} initialLiked={likedByMe} />

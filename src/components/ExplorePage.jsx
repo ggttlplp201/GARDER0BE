@@ -303,7 +303,7 @@ function PublicItemCard({ item }) {
         <div className="card-brand">{item.brand || '—'}</div>
         <div className="card-type">{item.type}{item.condition ? ` · ${item.condition}` : ''}</div>
         {item.size  && <div className="card-type">{item.size}</div>}
-        {item.price > 0 && <div className="card-price">${parseFloat(item.price).toLocaleString()}</div>}
+        {/* temporarily disabled: {item.price > 0 && <div className="card-price">${parseFloat(item.price).toLocaleString()}</div>} */}
       </div>
     </div>
   );
@@ -441,10 +441,10 @@ function ProfileView({ profile, user, onBack }) {
           </div>
           {profile.location && <div className="explore-profile-meta">{profile.location}</div>}
           {profile.bio && <div className="explore-profile-bio">{profile.bio}</div>}
-          {show && (
+          {/* temporarily disabled: ${show.collectionValue.toLocaleString()} */}
+          {show && isSelf && show.coins != null && (
             <div className="showcase-value">
-              ${show.collectionValue.toLocaleString()}
-              {isSelf && show.coins != null && <> · {show.coins.toLocaleString()} <CoinIcon size={10} /></>}
+              {show.coins.toLocaleString()} <CoinIcon size={10} />
             </div>
           )}
         </div>
@@ -615,7 +615,7 @@ function OutfitsFeed({ user, onShareToChat, onOpenPost }) {
                     <div className="outfit-post-name">{post.fit_name}</div>
                   )}
                   <div className="outfit-post-meta">
-                    <span className="mono-dim">{post.slot_count} PCS · ${Math.round(post.total_value || 0).toLocaleString()}</span>
+                    <span className="mono-dim">{post.slot_count} PCS{/* temporarily disabled: · ${Math.round(post.total_value || 0).toLocaleString()} */}</span>
                     <span className="mono-dim">{timeAgo(post.created_at)}</span>
                     <FitLikeButton key={`${post.id}-${post.likeCount}-${post.likedByMe}`}
                       postId={post.id} user={user} initialCount={post.likeCount} initialLiked={post.likedByMe} />

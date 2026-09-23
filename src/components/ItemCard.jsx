@@ -188,7 +188,7 @@ export default function ItemCard({ item, onRemove, onEdit, onClick }) {
         <div className="card-brand">{item.brand || '—'}</div>
         <div className="card-type">{item.type}{item.condition ? ` · ${item.condition}` : ''}</div>
         {item.size  && <div className="card-type">{item.size}</div>}
-        {item.price > 0 && <div className="card-price">${parseFloat(item.price).toLocaleString()}</div>}
+        {/* temporarily disabled: {item.price > 0 && <div className="card-price">${parseFloat(item.price).toLocaleString()}</div>} */}
         <button className="edit-btn" onClick={e => { e.stopPropagation(); onEdit(item.id); }}>EDIT</button>
       </div>
     </div>

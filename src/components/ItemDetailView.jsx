@@ -100,6 +100,7 @@ async function getToken() {
   return session?.access_token ?? '';
 }
 
+/* Temporarily disabled: price-source tracking feature
 function PriceSources({ item }) {
   const [sources, setSources]     = useState([]);
   const [loadingSrc, setLoadingSrc] = useState(true);
@@ -254,6 +255,7 @@ function PriceSources({ item }) {
     </div>
   );
 }
+*/
 
 export default function ItemDetailView({ item, items, user, onBack, onEdit, onNavigate, onRemove, onLogWear }) {
   const [imgIdx, setImgIdx]         = useState(0);
@@ -323,7 +325,7 @@ export default function ItemDetailView({ item, items, user, onBack, onEdit, onNa
     ['SIZE',      item.size      || '—'],
     ['STATUS',    (item.status || 'owned').toUpperCase()],
     ['ACQUIRED',  dateStr],
-    ['PRICE',     parseFloat(item.price) ? `$${parseFloat(item.price).toLocaleString()}` : 'N/A'],
+    // ['PRICE',     parseFloat(item.price) ? `$${parseFloat(item.price).toLocaleString()}` : 'N/A'], // temporarily disabled
     ['WORN',      `${wearCount}×`],
   ];
 
@@ -381,7 +383,7 @@ export default function ItemDetailView({ item, items, user, onBack, onEdit, onNa
               <div className="detail-entry-lines">
                 <div>ENTRY № {cat}</div>
                 <div>ACQ. {dateStr}</div>
-                <div>COND. {(item.condition || '—').toUpperCase()} · SIZE {item.size || '—'} · {parseFloat(item.price) ? `$${parseFloat(item.price).toLocaleString()}` : 'N/A'}</div>
+                <div>COND. {(item.condition || '—').toUpperCase()} · SIZE {item.size || '—'}{/* temporarily disabled: · {parseFloat(item.price) ? `$${parseFloat(item.price).toLocaleString()}` : 'N/A'} */}</div>
               </div>
             </div>
 
@@ -424,7 +426,7 @@ export default function ItemDetailView({ item, items, user, onBack, onEdit, onNa
             </div>
             {pinMsg && <div className="detail-pin-msg">{pinMsg}</div>}
 
-            {item.status === 'wishlist' && <PriceSources item={item} />}
+            {/* temporarily disabled: {item.status === 'wishlist' && <PriceSources item={item} />} */}
           </div>
         </div>
       </div>

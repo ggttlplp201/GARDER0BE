@@ -101,10 +101,12 @@ export default function AddItemModal({ open, onClose, onAdd }) {
           <label>Size</label>
           <input value={fields.size} onChange={e => set('size', e.target.value)} placeholder="e.g. M, L, 42" />
         </div>
+        {/* temporarily disabled: price field
         <div className="field">
           <label>Price ($)</label>
           <input type="number" min="0" value={fields.price} onChange={e => set('price', e.target.value)} placeholder="0" />
         </div>
+        */}
 
         <div className="field">
           <label>Status</label>

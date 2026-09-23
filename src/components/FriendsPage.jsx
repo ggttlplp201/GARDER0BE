@@ -6,8 +6,8 @@ import Username from './Username';
 import FitLikeButton from './FitLikeButton';
 
 function fmtStats(count, value) {
-  const v = value >= 1000 ? Math.round(value / 1000) + 'K' : Math.round(value).toLocaleString();
-  return `${count} ITEMS · $${v}`;
+  // temporarily disabled: const v = value >= 1000 ? Math.round(value / 1000) + 'K' : Math.round(value).toLocaleString();
+  return `${count} ITEMS`;
 }
 
 function timeAgo(iso) {

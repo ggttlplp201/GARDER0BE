@@ -207,7 +207,7 @@ export default function WardrobeView({ items = [], loading, loadError, onRetry, 
               <div>TYPE · COND</div>
               <div>SIZE</div>
               <div>ACQ.</div>
-              <div style={{ textAlign: 'right' }}>PRICE</div>
+              <div style={{ textAlign: 'right' }}>{/* temporarily disabled: PRICE */}</div>
               <div />
             </div>
             {filtered.map(it => {
@@ -226,7 +226,7 @@ export default function WardrobeView({ items = [], loading, loadError, onRetry, 
                   <div className="list-meta">{it.type}{it.condition ? ` · ${it.condition}` : ''}</div>
                   <div className="list-meta">{it.size || '—'}</div>
                   <div className="list-meta">{dateStr}</div>
-                  <div className="list-price">{parseFloat(it.price) ? `$${parseFloat(it.price).toLocaleString()}` : 'N/A'}</div>
+                  <div className="list-price">{/* temporarily disabled: {parseFloat(it.price) ? `$${parseFloat(it.price).toLocaleString()}` : 'N/A'} */}</div>
                   <button
                     className={`rack-del${isPending ? ' confirming' : ''}`}
                     style={{ marginLeft: 8 }}

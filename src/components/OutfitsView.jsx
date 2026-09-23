@@ -196,10 +196,10 @@ async function renderFitCanvas(slots, fitName, username) {
   ctx.font = 'bold 26px "Courier New", monospace';
   ctx.fillText(fitName, 40, 58);
   const filled = slots.filter(Boolean);
-  const value = filled.reduce((s, i) => s + (parseFloat(i.price) || 0), 0);
+  // const value = filled.reduce((s, i) => s + (parseFloat(i.price) || 0), 0); // temporarily disabled
   ctx.fillStyle = 'rgba(0,0,0,0.4)';
   ctx.font = '13px "Courier New", monospace';
-  ctx.fillText(`${filled.length} PIECES  ·  $${Math.round(value).toLocaleString()}`, 40, 85);
+  ctx.fillText(`${filled.length} PIECES`, 40, 85); // temporarily disabled: `  ·  $${Math.round(value).toLocaleString()}`
 
   ctx.strokeStyle = 'rgba(0,0,0,0.12)';
   ctx.lineWidth = 1;
@@ -646,7 +646,7 @@ export default function OutfitsView({ items, user }) {
                 onChange={e => setFitName(e.target.value.toUpperCase())}
                 className="outfits-name-input"
               />
-              <span className="mono-dim" style={{ fontSize: 10 }}>{filled.length}/10 · ${Math.round(value).toLocaleString()}</span>
+              <span className="mono-dim" style={{ fontSize: 10 }}>{filled.length}/10{/* temporarily disabled: · ${Math.round(value).toLocaleString()} */}</span>
             </div>
 
             <div className="outfit-slots">
@@ -708,8 +708,10 @@ export default function OutfitsView({ items, user }) {
             <div className="outfit-stats">
               <span className="mono-dim">TOTAL PIECES</span>
               <strong>{filled.length}</strong>
+              {/* temporarily disabled:
               <span className="mono-dim">OUTFIT VALUE</span>
               <strong>${Math.round(value).toLocaleString()}</strong>
+              */}
               <span className="mono-dim">WT CLASS</span>
               <strong>{filled.length < 3 ? 'LIGHT' : filled.length < 5 ? 'STD' : 'LAYERED'}</strong>
             </div>

@@ -32,14 +32,14 @@ export default function TimelineView({ items, onItemClick }) {
           {months.map((m, mi) => {
             const [yr, mo] = m.split('.');
             const mItems = by[m].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-            const total = mItems.reduce((s, i) => s + (parseFloat(i.price) || 0), 0);
+            // const total = mItems.reduce((s, i) => s + (parseFloat(i.price) || 0), 0); // temporarily disabled
             return (
               <div key={m} style={{ marginTop: mi === 0 ? 16 : 40 }}>
                 <div className="timeline-month-header">
                   <div className="timeline-month-name">{MONTH_NAMES[mo]}</div>
                   <div style={{ flex: 1 }} />
                   <div className="timeline-month-meta" style={{ alignSelf: 'flex-end', paddingBottom: 6 }}>
-                    {yr} · {mItems.length} ENTR{mItems.length === 1 ? 'Y' : 'IES'} · ${Math.round(total).toLocaleString()} ↓
+                    {yr} · {mItems.length} ENTR{mItems.length === 1 ? 'Y' : 'IES'}{/* temporarily disabled: · ${Math.round(total).toLocaleString()} */} ↓
                   </div>
                 </div>
                 <div>
@@ -65,7 +65,7 @@ export default function TimelineView({ items, onItemClick }) {
                         </div>
                         <div className="mono-dim" style={{ fontSize: 11 }}>{it.condition || '—'}</div>
                         <div className="list-meta">{it.type || '—'}</div>
-                        <div className="timeline-price">{parseFloat(it.price) ? `$${parseFloat(it.price).toLocaleString()}` : 'N/A'}</div>
+                        <div className="timeline-price">{/* temporarily disabled: {parseFloat(it.price) ? `$${parseFloat(it.price).toLocaleString()}` : 'N/A'} */}</div>
                       </div>
                     );
                   })}
