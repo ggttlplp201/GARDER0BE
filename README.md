@@ -4,14 +4,14 @@ Your personal wardrobe, reimagined as a living archive — catalog everything yo
 outfits, track wishlist prices, and level up a full social + gamification layer with friends.
 Built as a passion project, fully functional and running in production.
 
-![Wardrobe museum view](docs/screenshots/museum.jpg)
-<sub>The Wardrobe as a walkable museum — your collection hung as gallery pieces.</sub>
+![Wardrobe gallery view](docs/screenshots/gallery.jpg)
+<sub>The Wardrobe as a walkable gallery — your collection hung as fine-art pieces.</sub>
 
 ---
 
 ## Highlights
 
-- **Museum wardrobe** — browse your collection as a 3D gallery, or switch to grid/list.
+- **Gallery wardrobe** — browse your collection as a 3D gallery, or switch to grid/list.
 - **AI auto-tagging** — upload a photo and name, brand, color, and type fill in automatically.
 - **In-browser background removal** — item photos get cleaned up client-side, no server round trip.
 - **Outfit builder** — assemble fits on a visual mannequin; save, shuffle, share.
@@ -56,7 +56,7 @@ by location.
 
 **Wardrobe**
 - Add items with photos (HEIC / JPEG / PNG), AI auto-tagging, and automatic background removal
-- Museum / grid / list views, filterable by type, color, and brand
+- Gallery / grid / list views, filterable by type, color, and brand
 - Item detail with wear logging, condition tracking, and pin-to-showcase
 
 **Outfits**
