@@ -1,0 +1,7 @@
+[lint]
+# Pin to ruff's classic default rule set (Pyflakes + core pycodestyle errors).
+# Without this, `ruff check` picks up whatever newer default rule sets ship
+# with each ruff release, which silently broke CI when the pip-installed
+# version bumped without any backend code change (see git history around
+# 2787c8f). This keeps lint scoped to real errors, not style opinions.
+select = ["E4", "E7", "E9", "F"]

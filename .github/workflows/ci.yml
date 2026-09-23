@@ -40,7 +40,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install dependencies
-        run: pip install -r backend/requirements.txt ruff
+        run: pip install -r backend/requirements.txt ruff==0.16.8
 
       - name: Lint
         run: ruff check backend/
