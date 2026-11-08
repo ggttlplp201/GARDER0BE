@@ -35,11 +35,14 @@ export default function AuthScreen({ authMode, setAuthMode, onLogin, onSignUp })
   const [focusCount, setFocus]  = useState(0);
   const [emailFocus, setEF]     = useState(false);
   const [pwFocus, setPF]        = useState(false);
+  const [near, setNear]         = useState(true);
   const veilRef  = useRef(null);
   const doorLRef = useRef(null);
   const doorRRef = useRef(null);
+  const formRef  = useRef(null);
 
   const anyFocus = focusCount > 0;
+  const formOn = near || anyFocus;
 
   useEffect(() => {
     const veil = veilRef.current;
@@ -50,6 +53,17 @@ export default function AuthScreen({ authMode, setAuthMode, onLogin, onSignUp })
       veil.style.transition = 'opacity 2.6s ease';
       veil.style.opacity = '0';
     }));
+  }, []);
+
+  // Glass panel fades when the cursor moves away from it
+  useEffect(() => {
+    const onMove = (e) => {
+      const f = formRef.current; if (!f) return;
+      const r = f.getBoundingClientRect(), pad = 60;
+      setNear(e.clientX > r.left - pad && e.clientX < r.right + pad && e.clientY > r.top - pad && e.clientY < r.bottom + pad);
+    };
+    window.addEventListener('mousemove', onMove);
+    return () => window.removeEventListener('mousemove', onMove);
   }, []);
 
   const onFocus  = useCallback(() => setFocus(n => n + 1), []);
@@ -105,15 +119,13 @@ export default function AuthScreen({ authMode, setAuthMode, onLogin, onSignUp })
     outline: 'none',
     transition: 'border-color 0.2s',
     boxSizing: 'border-box',
+    borderRadius: 0,
   });
-
-  // Last commit date — update when deploying
-  const lastUpdate = '05.12.26';
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: INK, color: PAPER, fontFamily: MONO, overflow: 'hidden' }}>
-      {/* ASCII animated background */}
-      <AsciiBackground opacity={0.05} persist={false} />
+      {/* ASCII grass + sky field (WebGL) */}
+      <AsciiBackground />
 
       {/* Fade-in veil */}
       <div ref={veilRef} style={{ position: 'absolute', inset: 0, background: INK, zIndex: 50, pointerEvents: 'none' }} />
@@ -122,26 +134,37 @@ export default function AuthScreen({ authMode, setAuthMode, onLogin, onSignUp })
       <div ref={doorLRef} className="auth-door" id="door-left" />
       <div ref={doorRRef} className="auth-door" id="door-right" />
 
-      {/* ASCII title — opacity lifts on focus */}
-      <div style={{ position: 'absolute', inset: 0, opacity: anyFocus ? 1 : 0.92, transition: 'opacity 0.2s' }}>
-        <AsciiTitle />
-      </div>
+      {/* ASCII title */}
+      <AsciiTitle />
 
-      {/* Top-left brand mark */}
-      <div className="auth-top-bar" style={{ position: 'absolute', top: 28, left: 0, right: 0, display: 'flex', justifyContent: 'space-between', padding: '0 36px', fontSize: 10, letterSpacing: '0.15em', opacity: 0.5 }}>
-        <span>/ ɡärd ˌrōb / <span style={{ marginLeft: 14 }}>ISSUE 05 · VOL. I</span></span>
+      {/* Top bar */}
+      <div className="auth-top-bar" style={{ position: 'absolute', top: 28, left: 0, right: 0, display: 'flex', justifyContent: 'space-between', gap: 16, padding: '0 36px', fontSize: 10, letterSpacing: '0.15em', zIndex: 2, textShadow: '0 1px 4px rgba(10,10,10,0.5)' }}>
+        <span>/ ɡärd ˌrōb /</span>
         <span className="auth-clock"><LiveClock /></span>
       </div>
 
-      {/* Centered form */}
-      <div style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', width: 'min(380px, calc(100vw - 48px))', zIndex: 10 }}>
-        <div style={{ fontSize: 9, letterSpacing: '0.2em', opacity: 0.5, marginBottom: 26, textAlign: 'center' }}>
+      {/* Centered glass form — fades when cursor is away */}
+      <div
+        ref={formRef}
+        style={{
+          position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)',
+          width: 'min(380px, calc(100vw - 48px))', zIndex: 10, boxSizing: 'border-box',
+          padding: '30px 28px 26px',
+          background: 'rgba(10,10,10,0.66)',
+          backdropFilter: formOn ? 'blur(8px)' : 'blur(1px)',
+          WebkitBackdropFilter: formOn ? 'blur(8px)' : 'blur(1px)',
+          border: '1px solid rgba(245,242,234,0.16)',
+          opacity: formOn ? 1 : 0.28,
+          transition: 'opacity 0.5s ease, backdrop-filter 0.5s ease',
+        }}
+      >
+        <div style={{ fontSize: 9, letterSpacing: '0.2em', opacity: 0.6, marginBottom: 26, textAlign: 'center' }}>
           ── ENTER THE ARCHIVE ──
         </div>
 
         {/* Email */}
         <div style={{ marginBottom: 22 }}>
-          <div style={{ fontSize: 9, letterSpacing: '0.18em', opacity: 0.55, marginBottom: 6 }}>EMAIL</div>
+          <div style={{ fontSize: 9, letterSpacing: '0.18em', opacity: 0.6, marginBottom: 6 }}>EMAIL</div>
           <input
             type="email"
             value={email}
@@ -156,7 +179,7 @@ export default function AuthScreen({ authMode, setAuthMode, onLogin, onSignUp })
 
         {/* Password */}
         <div style={{ marginBottom: 8 }}>
-          <div style={{ fontSize: 9, letterSpacing: '0.18em', opacity: 0.55, marginBottom: 6 }}>PASSWORD</div>
+          <div style={{ fontSize: 9, letterSpacing: '0.18em', opacity: 0.6, marginBottom: 6 }}>PASSWORD</div>
           <input
             type="password"
             value={password}
@@ -169,7 +192,6 @@ export default function AuthScreen({ authMode, setAuthMode, onLogin, onSignUp })
           />
         </div>
 
-        {/* Error / info */}
         {error && (
           <div style={{ fontSize: 9, letterSpacing: '0.15em', color: '#ff6b6b', marginTop: 8, marginBottom: 4 }}>
             ERROR · {error}
@@ -181,41 +203,32 @@ export default function AuthScreen({ authMode, setAuthMode, onLogin, onSignUp })
           </div>
         )}
 
-        {/* Cloudflare Turnstile */}
         <Turnstile
           siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
           onSuccess={setCaptchaToken}
           onExpire={() => setCaptchaToken('')}
           onError={() => setCaptchaToken('')}
-          options={{ theme: 'light' }}
+          options={{ theme: 'dark' }}
         />
 
-        {/* SIGN IN / CREATE — primary */}
         <button
           onClick={handleSubmit}
           disabled={loading}
           style={{ width: '100%', padding: '14px 0', background: 'transparent', color: PAPER, border: '1px solid rgba(245,242,234,0.4)', fontFamily: MONO, fontSize: 11, letterSpacing: '0.22em', cursor: 'pointer', marginTop: 16, opacity: loading ? 0.5 : 1 }}
         >{loading ? 'LOADING…' : isSignIn ? 'SIGN IN' : 'CREATE ACCOUNT'}</button>
 
-        {/* TRY DEMO — secondary */}
         <button
           onClick={fillDemo}
           style={{ width: '100%', padding: '14px 0', background: PAPER, color: INK, border: 'none', fontFamily: MONO, fontSize: 11, letterSpacing: '0.22em', cursor: 'pointer', fontWeight: 500, marginTop: 10 }}
         >TRY DEMO →</button>
 
-        {/* Toggle sign in / sign up */}
-        <div style={{ marginTop: 24, fontSize: 9, letterSpacing: '0.18em', opacity: 0.45, textAlign: 'center' }}>
-          {isSignIn ? 'NEW HERE? ' : 'HAVE AN ACCOUNT? '}
+        <div style={{ marginTop: 24, fontSize: 9, letterSpacing: '0.18em', textAlign: 'center' }}>
+          <span style={{ opacity: 0.6 }}>{isSignIn ? 'NEW HERE? ' : 'HAVE AN ACCOUNT? '}</span>
           <span
             onClick={() => { setAuthMode(isSignIn ? 'signup' : 'signin'); setError(''); setInfo(''); }}
-            style={{ borderBottom: `1px solid ${PAPER}`, opacity: 1, paddingBottom: 1, cursor: 'pointer' }}
+            style={{ borderBottom: `1px solid ${PAPER}`, paddingBottom: 1, cursor: 'pointer' }}
           >{isSignIn ? 'CREATE ACCOUNT' : 'SIGN IN'}</span>
         </div>
-      </div>
-
-      {/* Footer */}
-      <div style={{ position: 'absolute', bottom: 22, left: 0, right: 0, textAlign: 'center', fontSize: 9, letterSpacing: '0.2em', opacity: 0.4 }}>
-        LAST UPDATE {lastUpdate}
       </div>
     </div>
   );
