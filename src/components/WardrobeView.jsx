@@ -1,8 +1,8 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
-import { gsap } from 'gsap';
 import { parseImageUrls } from '../lib/imageUtils';
 import { ITEM_TYPES } from '../lib/constants';
-import ItemCard from './ItemCard';
+import { acquired, metaLine, serialFor } from '../lib/holoCard';
+import Binder from './Binder';
 import Museum from './Museum';
 
 function useConfirm() {
@@ -23,22 +23,26 @@ function catNum(idx) {
 
 const TYPES = ['ALL', ...ITEM_TYPES];
 
-export default function WardrobeView({ items = [], loading, loadError, onRetry, onItemClick, onAdd, onEdit, onRemove }) {
-  const [mode, setMode] = useState(() => sessionStorage.getItem('wardrobe-mode') || 'MUSEUM');
+// Museum view is temporarily switched off. Flip to true to bring it back;
+// its code path below is untouched.
+const MUSEUM_ENABLED = false;
+const MODES = MUSEUM_ENABLED ? ['MUSEUM', 'PORTFOLIO', 'LIST'] : ['PORTFOLIO', 'LIST'];
+
+export default function WardrobeView({ items = [], loading, loadError, onRetry, onItemClick, onAdd, onRemove }) {
+  const [mode, setMode] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem('wardrobe-mode');
+      return MODES.includes(saved) ? saved : 'PORTFOLIO';
+    } catch { return 'PORTFOLIO'; }
+  });
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState('ALL');
   const [museumProgress, setMuseumProgress] = useState(0);
   const [museumReady, setMuseumReady] = useState(false);
   const confirm = useConfirm();
-  const gridRef = useRef(null);
-
-  // Stagger cards in when grid first renders or mode switches to GRID
   useEffect(() => {
-    if (mode !== 'GRID' || loading || !gridRef.current) return;
-    const cards = gridRef.current.querySelectorAll('.holo-cell');
-    if (!cards.length) return;
-    gsap.from(cards, { opacity: 0, y: 18, duration: 0.28, stagger: 0.035, ease: 'power2.out', overwrite: true, clearProps: 'all' });
-  }, [mode, loading]);  
+    try { sessionStorage.setItem('wardrobe-mode', mode); } catch { /* Storage can be disabled. */ }
+  }, [mode]);
 
   const filtered = useMemo(() => items.filter(it => {
     if (search) {
@@ -74,6 +78,21 @@ export default function WardrobeView({ items = [], loading, loadError, onRetry, 
     [filtered, museumById],
   );
 
+  // Portfolio cards: the binder engine paints the grading label from these
+  // pre-formatted fields. Keyed off `items` so filtering keeps object identity.
+  const cardById = useMemo(() => {
+    const map = new Map();
+    items.forEach((item, i) => {
+      const acq = acquired(item);
+      map.set(item.id, { ...item, cat: catNum(i), meta: metaLine(item), acqDay: acq.day, acqYear: acq.year, serial: serialFor(item.id) });
+    });
+    return map;
+  }, [items]);
+  const binderItems = useMemo(
+    () => filtered.map(it => cardById.get(it.id)).filter(Boolean),
+    [filtered, cardById],
+  );
+
   const handleProgress = useCallback(({ progress }) => {
     setMuseumProgress(progress);
   }, []);
@@ -102,10 +121,10 @@ export default function WardrobeView({ items = [], loading, loadError, onRetry, 
   const hud = (
     <div className={`museum-hud${mode !== 'MUSEUM' ? ' museum-hud--static' : ''}`}>
       <div className="mode-toggle">
-        {['MUSEUM', 'GRID', 'LIST'].map((m, i, arr) => (
+        {MODES.map((m, i, arr) => (
           <button
             key={m}
-            onClick={() => { setMode(m); sessionStorage.setItem('wardrobe-mode', m); }}
+            onClick={() => setMode(m)}
             className={`mode-btn${mode === m ? ' active' : ''}${i < arr.length - 1 ? ' bd-r' : ''}`}
           >{m}</button>
         ))}
@@ -125,13 +144,13 @@ export default function WardrobeView({ items = [], loading, loadError, onRetry, 
           {TYPES.map(t => <option key={t}>{t}</option>)}
         </select>
       )}
-      {mode !== 'MUSEUM' && (
+      {mode === 'LIST' && (
         <button onClick={onAdd} className="museum-hud-add">+ ADD</button>
       )}
     </div>
   );
 
-  if (mode === 'MUSEUM') {
+  if (MUSEUM_ENABLED && mode === 'MUSEUM') {
     return (
       <div className="museum-wrap">
         {hud}
@@ -174,14 +193,14 @@ export default function WardrobeView({ items = [], loading, loadError, onRetry, 
     );
   }
 
-  // GRID / LIST modes
+  // PORTFOLIO / LIST modes
   const itemGlobalIdx = (id) => items.findIndex(i => i.id === id);
 
   return (
     <div className="v-screen">
       {hud}
-      <div className="v-body">
-        {loading && <div className="v-empty">LOADING…</div>}
+      <div className={`v-body${mode === 'PORTFOLIO' ? ' v-body--binder' : ''}`}>
+        {loading && mode === 'LIST' && <div className="v-empty">LOADING…</div>}
         {!loading && loadError && (
           <div className="v-empty" style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center' }}>
             <span>Failed to load items.</span>
@@ -189,14 +208,11 @@ export default function WardrobeView({ items = [], loading, loadError, onRetry, 
           </div>
         )}
 
-        {!loading && mode === 'GRID' && (
-          <div className="cards-grid holo-grid mob-pad" ref={gridRef} style={{ padding: '36px 36px 70px' }}>
-            {filtered.map(it => (
-              <ItemCard key={it.id} item={it} index={itemGlobalIdx(it.id)} onRemove={onRemove} onEdit={onEdit}
-                onClick={id => onItemClick(items.find(i => i.id === id))} />
-            ))}
-            {filtered.length === 0 && <div className="v-empty">No items match your filters.</div>}
-          </div>
+        {!loadError && mode === 'PORTFOLIO' && (
+          // Always the binder: an empty category or a fresh wardrobe shows empty
+          // pockets, each with a "+" to add an item.
+          // While items load the binder warms up WebGL behind one centred loader.
+          <Binder items={binderItems} pending={loading} onItemClick={onItemClick} onAdd={onAdd} />
         )}
 
         {!loading && mode === 'LIST' && (

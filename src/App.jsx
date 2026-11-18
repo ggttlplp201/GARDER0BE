@@ -368,6 +368,7 @@ export default function App() {
         gameState={game.gameState}
         wallet={game.wallet}
         equipped={game.equipped}
+        minimal={page === 'wardrobe'}
       />
 
       <div className="app-main" ref={mainRef}>

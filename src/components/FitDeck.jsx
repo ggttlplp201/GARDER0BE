@@ -69,10 +69,7 @@ function samplePool(items, forced = []) {
 }
 
 const W = 160, H = 224;
-const RING = [
-  [-3.75, 'rgba(160,176,190,.7)'], [-2.5, 'rgba(175,190,203,.7)'], [-1.25, 'rgba(190,204,215,.7)'], [0, 'rgba(200,213,223,.7)'],
-  [1.25, 'rgba(190,204,215,.7)'], [2.5, 'rgba(175,190,203,.7)'], [3.75, 'rgba(160,176,190,.7)'],
-];
+const RING_Z = [-3.75, -2.5, -1.25, 0, 1.25, 2.5, 3.75];
 const EASE_DRAW = 'cubic-bezier(.35,.6,.2,1)';
 const EASE_GLIDE = 'cubic-bezier(.65,0,.25,1)';
 const EASE_LIFT = 'cubic-bezier(.2,.8,.2,1)';
@@ -486,6 +483,17 @@ class DealController {
   }
 }
 
+function CaseFace({ back = false }) {
+  return (
+    <div className={`deal-case${back ? ' back' : ''}`}>
+      <div className="deal-well lab" />
+      <div className="deal-well crd" />
+      <div className="deal-gloss" />
+    </div>
+  );
+}
+
+// Card-in-case: a paper insert (label + card) floating inside a clear acrylic case.
 function DealCard({ item, cat, slotTag, ctlRef }) {
   const id = String(item.id);
   const img = parseImageUrls(item.image_url)[0];
@@ -503,12 +511,9 @@ function DealCard({ item, cat, slotTag, ctlRef }) {
         <div className="deal-swaptag"><span>↻ SWAP</span></div>
         <div className="deal-flip">
           <div className="deal-plate" />
-          {RING.map(([z, c]) => <div key={z} className="deal-dring" style={{ transform: `translateZ(${z}px)`, borderColor: c }} />)}
-          <div className="deal-glass front" />
-          <div className="deal-glass-glare" />
-          <div className="deal-glass back" />
+          {RING_Z.map(z => <div key={z} className="deal-dring" style={{ transform: `translateZ(${z}px)` }} />)}
 
-          <div className="deal-front">
+          <div className="deal-insert">
             <div className="deal-label">
               <div className="deal-label-main">
                 <div className="deal-mark"><span>GARDER0BE</span><span>№ {cat}</span></div>
@@ -522,27 +527,29 @@ function DealCard({ item, cat, slotTag, ctlRef }) {
                 {acq.year && <div className="deal-acq-y">{acq.year}</div>}
               </div>
             </div>
-            <div className="deal-well">
-              <div className="deal-item">
-                <div className="deal-photo">
-                  <div className="deal-photo-inset">
-                    {img ? <img src={img} alt={item.name || ''} draggable="false" /> : <span className="deal-photo-none">NO IMAGE</span>}
-                  </div>
-                  <div className="deal-slottag">{slotTag}</div>
+            <div className="deal-item">
+              <div className="deal-photo">
+                <div className="deal-photo-inset">
+                  {img ? <img src={img} alt={item.name || ''} draggable="false" /> : <span className="deal-photo-none">NO PHOTO</span>}
                 </div>
-                <div className="deal-meta"><span>{metaLine(item) || '—'}</span><span>{item.size || ''}</span></div>
-                <div className="deal-pearl" />
-                <div className="deal-sheen" data-glare="1" />
+                <div className="deal-slottag">{slotTag}</div>
               </div>
+              <div className="deal-meta"><span>{metaLine(item) || '—'}</span><span>{item.size || ''}</span></div>
+              <div className="deal-pearl" />
+              <div className="deal-sheen" data-glare="1" />
             </div>
           </div>
 
-          <div className="deal-backface">
-            <div className="deal-backface-panel" />
-            <div className="deal-pearl" />
-            <div className="deal-sheen" />
-            <div className="deal-backface-hair" />
+          <div className="deal-insert back">
+            <div className="deal-label blank" />
+            <div className="deal-item blank">
+              <div className="deal-backface-panel" />
+              <div className="deal-pearl" />
+            </div>
           </div>
+
+          <CaseFace />
+          <CaseFace back />
         </div>
       </div>
     </div>

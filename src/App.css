@@ -555,6 +555,15 @@ input[type=range].vol-slider::-webkit-slider-thumb { -webkit-appearance: none; a
 .page-outfits .app-header { display: none !important; }
 .page-outfits .v-screen-header { display: none !important; }
 
+/* Main (wardrobe) view: masthead removed, avatar floats in the toolbar row */
+.app-header.app-header--minimal {
+  position: absolute; top: 6px; right: 36px; z-index: 120;
+  padding: 0; background: none;
+}
+.app-header--minimal .app-avatar-btn { width: 36px; height: 36px; }
+.app-shell.page-wardrobe { position: relative; }
+.page-wardrobe .museum-hud--static { padding-right: 96px; }
+
 /* ── Header ── */
 .app-header {
   padding: 18px 36px 0;
@@ -1796,3 +1805,17 @@ body.museum-mode .app-nav .app-nav-value      { color: rgba(245,242,234,0.35); }
   .fitpost-image img { max-height: 40vh; }
   .fitpost-side { width: 100%; border-left: none; border-top: 1px solid var(--border-light); }
 }
+
+/* Main (wardrobe) view — minimal header on small screens */
+@media (max-width: 768px) {
+  .app-header.app-header--minimal { padding: 0; top: 6px; right: 16px; gap: 0; }
+  .page-wardrobe .museum-hud--static { padding-right: 64px; }
+}
+
+/* Main (wardrobe) view: top filter bar + binder controls share the binder's beige */
+html:not(.dark) .page-wardrobe { --binder-beige: #eeece7; }
+html:not(.dark) .page-wardrobe .museum-hud--static,
+html:not(.dark) .page-wardrobe .v-body--binder,
+html:not(.dark) .page-wardrobe .v-body--binder .binder-toolbar { background: var(--binder-beige); }
+html:not(.dark) .page-wardrobe .museum-hud--static .museum-hud-search,
+html:not(.dark) .page-wardrobe .museum-hud--static .museum-hud-select { background: transparent; }

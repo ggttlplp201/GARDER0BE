@@ -5,7 +5,7 @@ import { getLevelState } from '../lib/levels';
 import CoinIcon from './CoinIcon';
 import { frameOf } from '../lib/cosmetics';
 
-export default function AppHeader({ onDark, avatarUrl, location, userName, onProfileOpen, onViewProfile, gameState, wallet, equipped }) {
+export default function AppHeader({ onDark, avatarUrl, location, userName, onProfileOpen, onViewProfile, gameState, wallet, equipped, minimal = false }) {
   const [now, setNow] = useState(new Date());
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 1000);
@@ -17,6 +17,18 @@ export default function AppHeader({ onDark, avatarUrl, location, userName, onPro
   const zoneStr = tzAbbrev(null, now);
   const displayLocation = location?.toUpperCase() || Intl.DateTimeFormat().resolvedOptions().timeZone?.split('/').pop()?.replace(/_/g, ' ').toUpperCase() || 'LOCAL';
   const lvl = gameState ? getLevelState(gameState.total_xp) : null;
+
+  const avatar = (
+    <button className="app-avatar-btn" style={{ position: 'relative' }} onClick={onProfileOpen} aria-label="Profile">
+      {avatarUrl ? <img src={avatarUrl} alt="Profile" /> : null}
+      {equipped?.frame && equipped.frame !== 'thin_line' && (
+        <span className="cos-frame" dangerouslySetInnerHTML={{ __html: frameOf(equipped.frame).renderFrame(34) }} />
+      )}
+    </button>
+  );
+
+  // Main (wardrobe) view: no masthead, just the profile button floating top-right.
+  if (minimal) return <div className="app-header app-header--minimal">{avatar}</div>;
 
   return (
     <div className="app-header">
@@ -47,12 +59,7 @@ export default function AppHeader({ onDark, avatarUrl, location, userName, onPro
           <DesignHouseGlobe mini onViewProfile={onViewProfile} myLocation={location} />
         </div>
         <div className="app-header-controls">
-          <button className="app-avatar-btn" style={{ position: 'relative' }} onClick={onProfileOpen} aria-label="Profile">
-            {avatarUrl ? <img src={avatarUrl} alt="Profile" /> : null}
-            {equipped?.frame && equipped.frame !== 'thin_line' && (
-              <span className="cos-frame" dangerouslySetInnerHTML={{ __html: frameOf(equipped.frame).renderFrame(34) }} />
-            )}
-          </button>
+          {avatar}
           <button className="app-dark-btn" onClick={onDark} aria-label="Toggle dark mode">☾</button>
         </div>
       </div>
