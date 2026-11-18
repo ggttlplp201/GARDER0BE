@@ -1,15 +1,19 @@
 import { useRef, useState, useEffect } from 'react';
 import { parseImageUrls } from '../lib/imageUtils';
-import { gyroState, gyroCallbacks, isGyroActive } from '../lib/gyro';
 import { detailOrigin } from '../lib/detailOrigin';
+import { registerHoloCard } from '../lib/holoTicker';
+import { acquired, serialFor, metaLine, catNo } from '../lib/holoCard';
+import './holo.css';
 
-export default function ItemCard({ item, onRemove, onEdit, onClick }) {
-  const cardRef         = useRef(null);
-  const shineRef        = useRef(null);
-  const confirmTimer    = useRef(null);
-  const gyroCallbackRef = useRef(null);
-  const reducedMotion   = useRef(typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
-  const hasGyro         = useRef(typeof window !== 'undefined' && !!window.DeviceOrientationEvent);
+const RING_Z = [-10, -8.5, -7, -5.5, -4, -2.5, -1];
+
+// Holographic "graded slab" item card: acrylic case + grading label + recessed
+// item card with pearl foil, glare and pointer/gyro tilt (see holoTicker.js).
+export default function ItemCard({ item, index, onRemove, onEdit, onClick }) {
+  const wrapRef      = useRef(null);
+  const cardRef      = useRef(null);
+  const holoRef      = useRef(null);
+  const confirmTimer = useRef(null);
 
   const stripRef     = useRef(null);
   const imgIdxRef    = useRef(0);
@@ -22,9 +26,15 @@ export default function ItemCard({ item, onRemove, onEdit, onClick }) {
 
   const imgUrls  = parseImageUrls(item.image_url);
   const multiImg = imgUrls.length > 1;
-  const dateStr  = item.created_at
-    ? new Date(item.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-    : '';
+  const acq      = acquired(item);
+  const meta     = metaLine(item);
+
+  useEffect(() => {
+    holoRef.current = registerHoloCard(wrapRef.current, cardRef.current);
+    return () => { holoRef.current?.unregister(); holoRef.current = null; };
+  }, []);
+
+  useEffect(() => () => clearTimeout(confirmTimer.current), []);
 
   // Sync strip position when imgIdx changes (arrow buttons, etc.)
   useEffect(() => {
@@ -35,51 +45,16 @@ export default function ItemCard({ item, onRemove, onEdit, onClick }) {
     }
   }, [imgIdx]);
 
-  useEffect(() => {
-    if (!hasGyro.current || reducedMotion.current) return;
-    const card  = cardRef.current;
-    const shine = shineRef.current;
-    gyroCallbackRef.current = () => {
-      if (!card) return;
-      const x = Math.max(-1, Math.min(1, gyroState.x));
-      const y = Math.max(-1, Math.min(1, gyroState.y));
-      card.style.transform = `perspective(600px) rotateY(${x * 14}deg) rotateX(${-y * 14}deg) scale(1.02)`;
-      if (shine) {
-        const dk = document.documentElement.classList.contains('dark');
-        shine.style.opacity = dk ? '0.3' : '0.6';
-        shine.style.background = `linear-gradient(${115 + x * 30}deg, transparent 30%, rgba(255,255,255,${(0.15 + Math.abs(x) * 0.15) * (dk ? 0.4 : 1)}) 50%, transparent 70%)`;
-      }
-    };
-    gyroCallbacks.add(gyroCallbackRef.current);
-    return () => {
-      if (gyroCallbackRef.current) gyroCallbacks.delete(gyroCallbackRef.current);
-      if (card) card.style.transform = '';
-      if (shine) shine.style.opacity = '0';
-    };
-  }, []);
-
-  function handleMouseMove(e) {
-    if (reducedMotion.current || isGyroActive()) return;
-    const card = cardRef.current; if (!card) return;
-    const r = card.getBoundingClientRect();
-    const x = (e.clientX - r.left) / r.width  - 0.5;
-    const y = (e.clientY - r.top)  / r.height - 0.5;
-    card.style.transform = `perspective(500px) rotateY(${x * 16}deg) rotateX(${-y * 16}deg) scale(1.04) translateZ(10px)`;
-    if (shineRef.current) {
-      const dk = document.documentElement.classList.contains('dark');
-      shineRef.current.style.opacity = dk ? '0.4' : '1';
-      shineRef.current.style.background = `linear-gradient(${115 + x * 30}deg, transparent 30%, rgba(255,255,255,${(0.3 + Math.abs(x) * 0.3) * (dk ? 0.4 : 1)}) 50%, transparent 70%)`;
-    }
+  function handlePointerMove(e) {
+    if (e.pointerType === 'touch') return;
+    const r = wrapRef.current.getBoundingClientRect();
+    holoRef.current?.setPointer((e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height);
   }
-  function handleMouseLeave() {
-    if (isGyroActive()) return;
-    if (cardRef.current) cardRef.current.style.transform = '';
-    if (shineRef.current) shineRef.current.style.opacity = '0';
-  }
+  function handlePointerLeave() { holoRef.current?.release(); }
 
   function handleCardClick(e) {
     if (didSwipeRef.current) { didSwipeRef.current = false; return; }
-    if (e.target.closest('.card-remove-x') || e.target.closest('.edit-btn') || e.target.closest('.card-img-arrow')) return;
+    if (e.target.closest('.holo-x') || e.target.closest('.holo-edit') || e.target.closest('.card-img-arrow')) return;
     detailOrigin.rect = cardRef.current?.getBoundingClientRect() ?? null;
     onClick(item.id);
   }
@@ -98,26 +73,22 @@ export default function ItemCard({ item, onRemove, onEdit, onClick }) {
     didSwipeRef.current  = false;
     if (stripRef.current) stripRef.current.style.transition = 'none';
   }
-
   function onImgPointerMove(e) {
     if (!isDragRef.current || !stripRef.current) return;
     const dx = e.clientX - dragStartRef.current;
     stripRef.current.style.transform = `translateX(calc(${-imgIdxRef.current * 100}% + ${dx}px))`;
   }
-
   function onImgPointerUp(e) {
     if (!isDragRef.current) return;
     isDragRef.current = false;
-    const dx            = e.clientX - dragStartRef.current;
-    const containerW    = e.currentTarget.offsetWidth || 200;
-    const len           = imgUrls.length;
-    let newIdx          = imgIdxRef.current;
-
+    const dx         = e.clientX - dragStartRef.current;
+    const containerW = e.currentTarget.offsetWidth || 200;
+    const len        = imgUrls.length;
+    let newIdx       = imgIdxRef.current;
     if (Math.abs(dx) > containerW * 0.25) {
       newIdx = (imgIdxRef.current + (dx < 0 ? 1 : -1) + len) % len;
       didSwipeRef.current = true;
     }
-
     if (stripRef.current) {
       stripRef.current.style.transition = 'transform 0.22s ease';
       stripRef.current.style.transform  = `translateX(${-newIdx * 100}%)`;
@@ -126,70 +97,101 @@ export default function ItemCard({ item, onRemove, onEdit, onClick }) {
   }
 
   return (
-    <div
-      ref={cardRef}
-      className="item-card"
-      role="button"
-      tabIndex={0}
-      aria-label={item.name || 'Untitled item'}
-      onClick={handleCardClick}
-      onKeyDown={e => e.key === 'Enter' && handleCardClick(e)}
-      onMouseMove={handleMouseMove}
-      onMouseLeave={handleMouseLeave}
-    >
-      <button
-        className={`card-remove-x${confirming ? ' confirming' : ''}`}
-        aria-label={confirming ? 'Confirm delete' : 'Delete item'}
-        onClick={e => {
-          e.stopPropagation();
-          if (confirming) {
-            clearTimeout(confirmTimer.current);
-            onRemove(item.id);
-          } else {
-            setConfirming(true);
-            confirmTimer.current = setTimeout(() => setConfirming(false), 2500);
-          }
-        }}
-      >{confirming ? '?' : '×'}</button>
-
+    <div ref={wrapRef} className="holo-cell" onPointerMove={handlePointerMove} onPointerLeave={handlePointerLeave}>
       <div
-        className="card-image-area"
-        onPointerDown={multiImg ? onImgPointerDown : undefined}
-        onPointerMove={multiImg ? onImgPointerMove : undefined}
-        onPointerUp={multiImg ? onImgPointerUp : undefined}
-        onPointerCancel={multiImg ? onImgPointerUp : undefined}
-        style={multiImg ? { touchAction: 'pan-y' } : undefined}
+        ref={cardRef}
+        className="holo-card"
+        role="button"
+        tabIndex={0}
+        aria-label={item.name || 'Untitled item'}
+        onClick={handleCardClick}
+        onKeyDown={e => { if (e.key === 'Enter' && e.target === e.currentTarget) handleCardClick(e); }}
       >
-        {multiImg ? (
-          <div ref={stripRef} className="card-img-strip">
-            {imgUrls.map((url, i) => (
-              <div key={url + i} className="card-img-slot">
-                <img src={url} alt={item.name} draggable="false" />
-              </div>
-            ))}
-          </div>
-        ) : imgUrls.length ? (
-          <img src={imgUrls[0]} alt={item.name} />
-        ) : (
-          <span style={{ fontSize: 13, color: '#aaa' }}>No image</span>
-        )}
-        {multiImg && <>
-          <button className="card-img-arrow card-img-prev" aria-label="Previous image" onClick={e => nav(-1, e)}>‹</button>
-          <button className="card-img-arrow card-img-next" aria-label="Next image" onClick={e => nav(1, e)}>›</button>
-          <div className="card-img-counter">{imgIdx + 1}/{imgUrls.length}</div>
-        </>}
-        {dateStr && <div className="card-date">{dateStr}</div>}
-        <div ref={shineRef} className="card-shine" />
-      </div>
+        <div className="holo-back" />
+        {RING_Z.map(z => <div key={z} className="holo-ring" style={{ transform: `translateZ(${z}px)` }} />)}
 
-      <div className="card-info">
-        {item.status === 'wishlist' && <span className="card-status-badge">WISHLIST</span>}
-        <div className="card-name">{item.name || 'Untitled'}</div>
-        <div className="card-brand">{item.brand || '—'}</div>
-        <div className="card-type">{item.type}{item.condition ? ` · ${item.condition}` : ''}</div>
-        {item.size  && <div className="card-type">{item.size}</div>}
-        {/* temporarily disabled: {item.price > 0 && <div className="card-price">${parseFloat(item.price).toLocaleString()}</div>} */}
-        <button className="edit-btn" onClick={e => { e.stopPropagation(); onEdit(item.id); }}>EDIT</button>
+        <div className="holo-face">
+          <div className="holo-label">
+            <div className="holo-label-main">
+              <div className="holo-mark"><span>GARDER0BE</span><span className="holo-mark-no">№ {catNo(index)}</span></div>
+              <div className="holo-brand">{item.brand || '—'}</div>
+              <div className="holo-name">{item.name || 'Untitled'}</div>
+              <div className="holo-code">
+                <div className="holo-barcode" />
+                <span className="holo-serial">{serialFor(item.id)}</span>
+                <div className="holo-sticker" />
+              </div>
+            </div>
+            <div className="holo-acq">
+              <div className="holo-acq-k">ACQ.</div>
+              <div className="holo-acq-d">{acq.day}</div>
+              {acq.year && <div className="holo-acq-y">{acq.year}</div>}
+            </div>
+          </div>
+
+          <div className="holo-well">
+            <div className="holo-item">
+              <div
+                className="holo-photo"
+                onPointerDown={multiImg ? onImgPointerDown : undefined}
+                onPointerMove={multiImg ? onImgPointerMove : undefined}
+                onPointerUp={multiImg ? onImgPointerUp : undefined}
+                onPointerCancel={multiImg ? onImgPointerUp : undefined}
+                style={multiImg ? { touchAction: 'pan-y' } : undefined}
+              >
+                {multiImg ? (
+                  <div ref={stripRef} className="card-img-strip">
+                    {imgUrls.map((url, i) => (
+                      <div key={url + i} className="card-img-slot">
+                        <img src={url} alt={item.name} draggable="false" loading="lazy" />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="holo-photo-inset">
+                    {imgUrls.length
+                      ? <img src={imgUrls[0]} alt={item.name} draggable="false" loading="lazy" />
+                      : <span className="holo-noimg">NO IMAGE</span>}
+                  </div>
+                )}
+                {multiImg && <>
+                  <button className="card-img-arrow card-img-prev" aria-label="Previous image" onClick={e => nav(-1, e)}>‹</button>
+                  <button className="card-img-arrow card-img-next" aria-label="Next image" onClick={e => nav(1, e)}>›</button>
+                  <div className="card-img-counter">{imgIdx + 1}/{imgUrls.length}</div>
+                </>}
+              </div>
+
+              <div className="holo-info">
+                {item.status === 'wishlist' && <span className="holo-wish">WISHLIST</span>}
+                <div className="holo-meta">
+                  <span>{meta || '—'}</span>
+                  <span>{item.size || ''}</span>
+                </div>
+                <button className="holo-edit" onClick={e => { e.stopPropagation(); onEdit(item.id); }}>EDIT</button>
+              </div>
+
+              <div className="holo-foil" />
+              <div className="holo-spot" />
+              <button
+                className={`holo-x${confirming ? ' confirming' : ''}`}
+                aria-label={confirming ? 'Confirm delete' : 'Delete item'}
+                onClick={e => {
+                  e.stopPropagation();
+                  if (confirming) {
+                    clearTimeout(confirmTimer.current);
+                    onRemove(item.id);
+                  } else {
+                    setConfirming(true);
+                    confirmTimer.current = setTimeout(() => setConfirming(false), 2500);
+                  }
+                }}
+              >{confirming ? '?' : '×'}</button>
+            </div>
+          </div>
+        </div>
+
+        <div className="holo-glare" />
+        <div className="holo-rim" />
       </div>
     </div>
   );

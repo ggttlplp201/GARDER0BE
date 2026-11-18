@@ -35,7 +35,7 @@ export default function WardrobeView({ items = [], loading, loadError, onRetry, 
   // Stagger cards in when grid first renders or mode switches to GRID
   useEffect(() => {
     if (mode !== 'GRID' || loading || !gridRef.current) return;
-    const cards = gridRef.current.querySelectorAll('.item-card');
+    const cards = gridRef.current.querySelectorAll('.holo-cell');
     if (!cards.length) return;
     gsap.from(cards, { opacity: 0, y: 18, duration: 0.28, stagger: 0.035, ease: 'power2.out', overwrite: true, clearProps: 'all' });
   }, [mode, loading]);  
@@ -190,9 +190,9 @@ export default function WardrobeView({ items = [], loading, loadError, onRetry, 
         )}
 
         {!loading && mode === 'GRID' && (
-          <div className="cards-grid" ref={gridRef} style={{ padding: '16px 36px 24px' }}>
+          <div className="cards-grid holo-grid mob-pad" ref={gridRef} style={{ padding: '36px 36px 70px' }}>
             {filtered.map(it => (
-              <ItemCard key={it.id} item={it} onRemove={onRemove} onEdit={onEdit}
+              <ItemCard key={it.id} item={it} index={itemGlobalIdx(it.id)} onRemove={onRemove} onEdit={onEdit}
                 onClick={id => onItemClick(items.find(i => i.id === id))} />
             ))}
             {filtered.length === 0 && <div className="v-empty">No items match your filters.</div>}

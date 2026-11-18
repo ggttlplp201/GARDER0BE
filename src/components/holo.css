@@ -1,0 +1,377 @@
+/* ══════════════════════════════════════════════════════
+   HOLOGRAPHIC SLAB CARDS
+   Wardrobe GRID item card (.holo-*) + OOTD card-deal builder (.deal-*)
+   Spec: design_handoff_holo_cards/README.md
+   ══════════════════════════════════════════════════════ */
+
+/* ── Theme tokens (light) ── */
+.holo-grid, .holo-cell {
+  --holo-bg3: #f0f0f0;
+  --holo-card: #ffffff;
+  --holo-line: #000000;
+  --holo-ink: #000000;
+  --holo-ink3: #999999;
+  --holo-glass: linear-gradient(160deg, rgba(255,255,255,.92), rgba(232,236,240,.55) 45%, rgba(250,250,252,.85));
+  --holo-glass-edge: inset 0 0 0 1px rgba(70,85,98,.55), inset 0 2px 0 #fff, inset 2px 0 0 rgba(255,255,255,.75), inset 0 -2px 0 rgba(60,75,88,.28), inset -2px 0 0 rgba(60,75,88,.16), inset 0 0 16px rgba(255,255,255,.7);
+  --holo-acr: rgba(175,190,203,.7);
+  --holo-acr2: rgba(120,138,152,.6);
+  --holo-side: rgba(120,130,145,.08);
+  --holo-well: rgba(0,0,0,.045);
+  --holo-well-shadow: inset 0 2px 5px rgba(0,0,0,.2), inset 0 0 0 1px rgba(0,0,0,.09), 0 1px 0 #fff;
+  --holo-label: #ffffff;
+  --holo-g1: .55; --holo-g2: .3; --holo-edge: .3;
+  --holo-sh: rgba(0,0,0,.28);
+  --holo-blend: multiply; --holo-fop: .55; --holo-rest: .35;
+  --holo-foil: linear-gradient(rgba(255,255,255,.35), rgba(255,255,255,.35)),
+    repeating-linear-gradient(115deg, #fff 0%, hsl(330 85% 90%) 4.5%, #fff 8%, hsl(185 85% 88%) 12.5%, #f4fbff 16%, hsl(55 90% 88%) 20.5%, #fff 24%, hsl(265 85% 91%) 28.5%, #fff 32%);
+  --holo-fsize: 100% 100%, 260% 260%;
+  --e1: #fff; --e2: hsl(330 90% 88%); --e3: #fff; --e4: hsl(190 90% 85%); --e5: #fbfbff; --e6: hsl(55 95% 86%);
+}
+/* ── Theme tokens (dark) ── */
+html.dark .holo-grid, html.dark .holo-cell {
+  --holo-bg3: #1a1a1a;
+  --holo-card: #141414;
+  --holo-line: #3a3a3a;
+  --holo-ink: #e8e8e8;
+  --holo-ink3: #707070;
+  --holo-glass: linear-gradient(160deg, rgba(255,255,255,.13), rgba(255,255,255,.035) 45%, rgba(255,255,255,.09));
+  --holo-glass-edge: inset 0 0 0 1px rgba(255,255,255,.3), inset 0 2px 0 rgba(255,255,255,.6), inset 2px 0 0 rgba(255,255,255,.3), inset 0 -2px 0 rgba(0,0,0,.6), inset -2px 0 0 rgba(0,0,0,.35), inset 0 0 16px rgba(255,255,255,.05);
+  --holo-acr: rgba(200,212,225,.32);
+  --holo-acr2: rgba(220,230,240,.45);
+  --holo-side: rgba(190,200,220,.06);
+  --holo-well: rgba(0,0,0,.45);
+  --holo-well-shadow: inset 0 2px 7px rgba(0,0,0,.7), inset 0 0 0 1px rgba(255,255,255,.07), 0 1px 0 rgba(255,255,255,.08);
+  --holo-label: #ececea;
+  --holo-g1: .16; --holo-g2: .07; --holo-edge: .4;
+  --holo-sh: rgba(0,0,0,.75);
+  --holo-blend: screen; --holo-fop: .5; --holo-rest: .3;
+}
+
+/* ── Grid ── */
+.cards-grid.holo-grid { grid-template-columns: repeat(auto-fill, minmax(224px, 1fr)); gap: 30px 26px; }
+@media (max-width: 640px) {
+  .cards-grid.holo-grid { grid-template-columns: repeat(auto-fill, minmax(224px, 1fr)); gap: 24px 18px; }
+}
+
+/* ── Cell + card ── */
+.holo-cell { perspective: 900px; position: relative; }
+.holo-cell.is-active { z-index: 2; }
+.holo-card {
+  position: relative; border-radius: 12px; cursor: pointer;
+  transform-style: preserve-3d; will-change: transform;
+  transform: rotateX(5deg);
+  --shx: 0px; --shy: 22px; --shb: 34px;
+  outline: none;
+}
+.holo-card:focus-visible { outline: 2px solid var(--text); outline-offset: 4px; }
+
+/* Acrylic thickness */
+.holo-back, .holo-ring { position: absolute; inset: 0; border-radius: 12px; pointer-events: none; }
+.holo-back {
+  transform: translateZ(-11.5px);
+  background: var(--holo-side);
+  border: 1px solid var(--holo-acr2);
+  box-shadow: var(--shx) var(--shy) var(--shb) -14px var(--holo-sh);
+}
+.holo-ring { border: 1.5px solid var(--holo-acr); }
+
+/* Glass case face */
+.holo-face {
+  position: relative; border-radius: 12px; padding: 9px;
+  background: var(--holo-glass); box-shadow: var(--holo-glass-edge);
+  display: flex; flex-direction: column; gap: 8px;
+  transform-style: preserve-3d;
+}
+
+/* Grading label */
+.holo-label {
+  position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px;
+  background: var(--holo-label); color: #000; border: 1px solid #000; border-radius: 4px;
+  padding: 7px 8px 6px;
+  box-shadow: 0 1px 0 rgba(0,0,0,.12), inset 0 0 0 2px var(--holo-label), inset 0 0 0 2.5px rgba(0,0,0,.18);
+  transform: translateZ(2px);
+}
+.holo-label-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.holo-mark { display: flex; align-items: baseline; gap: 6px; font-family: var(--font-mono); font-size: 8.5px; font-weight: 700; letter-spacing: .2em; }
+.holo-mark-no { font-weight: 400; letter-spacing: .1em; color: #666; }
+.holo-brand { font-family: var(--font-mono); font-size: 9px; letter-spacing: .12em; text-transform: uppercase; color: #555; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.holo-name { font-family: var(--font-display); font-size: 12px; font-weight: 700; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.holo-code { display: flex; align-items: center; gap: 6px; margin-top: 3px; }
+.holo-barcode { height: 10px; width: 58px; flex-shrink: 0; background: repeating-linear-gradient(90deg, #000 0 1px, transparent 1px 2px, #000 2px 4px, transparent 4px 5px, #000 5px 6px, transparent 6px 8px, #000 8px 9px, transparent 9px 11px); }
+.holo-serial { font-family: var(--font-mono); font-size: 7.5px; letter-spacing: .08em; color: #555; white-space: nowrap; overflow: hidden; }
+.holo-sticker {
+  margin-left: auto; flex-shrink: 0; width: 22px; height: 12px; border-radius: 6px;
+  background-image: linear-gradient(110deg, #fff, hsl(330 85% 86%), #fff, hsl(185 85% 84%), #fff, hsl(55 90% 84%), #fff, hsl(265 85% 88%), #fff);
+  background-size: 300% 300%; background-position: var(--sx, 50%) 50%;
+  box-shadow: inset 0 0 0 .5px rgba(0,0,0,.25), inset 0 1px 1px rgba(255,255,255,.8);
+}
+.holo-acq { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-width: 42px; padding-left: 8px; border-left: 1px solid #000; }
+.holo-acq-k { font-family: var(--font-mono); font-size: 7px; letter-spacing: .14em; color: #666; }
+.holo-acq-d { font-family: var(--font-display); font-size: 15px; font-weight: 700; line-height: .9; letter-spacing: -.02em; white-space: nowrap; }
+.holo-acq-y { font-family: var(--font-mono); font-size: 8px; font-weight: 700; letter-spacing: .12em; }
+
+/* Recessed well + item card */
+.holo-well { position: relative; border-radius: 6px; padding: 7px; background: var(--holo-well); box-shadow: var(--holo-well-shadow); }
+.holo-item {
+  position: relative; border: 1.5px solid var(--holo-line); border-radius: 3px;
+  background: var(--holo-card); color: var(--holo-ink); overflow: hidden; isolation: isolate;
+}
+.holo-photo {
+  position: relative; width: 100%; aspect-ratio: 1 / 1; background: var(--holo-bg3);
+  border-bottom: 1.5px solid var(--holo-line); overflow: hidden;
+}
+.holo-photo-inset { position: absolute; inset: 7.5%; display: flex; align-items: center; justify-content: center; }
+.holo-photo-inset > img { width: 100%; height: 100%; object-fit: contain; display: block; -webkit-user-drag: none; user-select: none; }
+.holo-photo .card-img-strip { position: absolute; inset: 0; display: flex; will-change: transform; }
+.holo-photo .card-img-slot { flex-shrink: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none; padding: 7.5%; }
+.holo-photo .card-img-slot img { width: 100%; height: 100%; object-fit: contain; }
+.holo-photo .card-img-arrow { z-index: 7; border: 1px solid var(--holo-line); background: var(--holo-card); color: var(--holo-ink); }
+.holo-photo .card-img-counter { z-index: 7; }
+.holo-noimg { font-family: var(--font-mono); font-size: 10px; letter-spacing: .12em; color: var(--holo-ink3); }
+
+.holo-info { padding: 9px 10px 10px; display: flex; flex-direction: column; gap: 3px; }
+.holo-wish { align-self: flex-start; font-family: var(--font-mono); font-size: 9px; font-weight: 700; letter-spacing: .12em; border: 1.5px solid var(--holo-line); padding: 2px 6px; margin-bottom: 2px; }
+.holo-meta { display: flex; justify-content: space-between; gap: 8px; font-family: var(--font-mono); font-size: 10px; letter-spacing: .08em; color: var(--holo-ink3); margin-bottom: 8px; min-width: 0; }
+.holo-meta > span:first-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.holo-meta > span:last-child { flex-shrink: 0; }
+.holo-edit {
+  position: relative; z-index: 8; width: 100%; padding: 7px 0;
+  border: 1.5px solid var(--holo-line); background: var(--holo-card); color: var(--holo-ink);
+  font-family: var(--font-mono); font-size: 10px; font-weight: 700; letter-spacing: .16em; cursor: pointer;
+}
+.holo-edit:hover, .holo-x:hover, .holo-x.confirming { background: var(--holo-ink); color: var(--holo-card); }
+.holo-edit:focus-visible, .holo-x:focus-visible { outline: 2px solid var(--text); outline-offset: 1px; }
+.holo-x {
+  position: absolute; top: 6px; right: 6px; z-index: 9; width: 22px; height: 22px; padding: 0;
+  border: 1.5px solid var(--holo-line); background: var(--holo-card); color: var(--holo-ink);
+  font-size: 13px; font-weight: 700; line-height: 1; display: flex; align-items: center; justify-content: center; cursor: pointer;
+}
+
+/* Foil + spotlight */
+.holo-foil {
+  position: absolute; inset: 0; pointer-events: none; z-index: 5;
+  background-image: var(--holo-foil); background-size: var(--holo-fsize);
+  background-position: var(--bgx, 50%) var(--bgy, 50%);
+  mix-blend-mode: var(--holo-blend);
+  filter: saturate(1.3) contrast(1.05);
+  opacity: calc((var(--holo-rest) + var(--o, 0) * .78) * var(--holo-fop));
+  -webkit-mask-image: radial-gradient(farthest-corner circle at var(--mx, 50%) var(--my, 50%), #000 0%, rgba(0,0,0,.6) 40%, rgba(0,0,0,.18) 100%);
+          mask-image: radial-gradient(farthest-corner circle at var(--mx, 50%) var(--my, 50%), #000 0%, rgba(0,0,0,.6) 40%, rgba(0,0,0,.18) 100%);
+}
+.holo-spot {
+  position: absolute; inset: 0; pointer-events: none; z-index: 6;
+  background: radial-gradient(farthest-corner circle at var(--mx, 50%) var(--my, 50%), rgba(255,255,255,.55) 0%, rgba(255,255,255,.12) 30%, rgba(0,0,0,.12) 90%);
+  mix-blend-mode: overlay; opacity: var(--o, 0);
+}
+
+/* Glass glare + iridescent rim */
+.holo-glare, .holo-rim { position: absolute; inset: 0; border-radius: 12px; pointer-events: none; transform: translateZ(6px); }
+.holo-glare {
+  background-image: linear-gradient(var(--ang2, 118deg), transparent 16%, rgba(255,255,255,var(--holo-g1)) 24%, rgba(255,255,255,.04) 36%, transparent 44%, rgba(255,255,255,var(--holo-g2)) 62%, transparent 70%);
+  background-size: 220% 220%; background-position: var(--gx, 40%) var(--gy, 40%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.55), inset 1px 0 0 rgba(255,255,255,.18);
+}
+.holo-rim {
+  border: 1.5px solid transparent;
+  background: conic-gradient(from var(--ang, 200deg), var(--e1), var(--e2), var(--e3), var(--e4), var(--e5), var(--e6), var(--e1)) border-box;
+  -webkit-mask: linear-gradient(#000 0 0) padding-box, linear-gradient(#000 0 0) border-box;
+  -webkit-mask-composite: xor;
+          mask: linear-gradient(#000 0 0) padding-box exclude, linear-gradient(#000 0 0) border-box;
+  opacity: calc(var(--holo-edge) + var(--o, 0) * .65);
+}
+
+/* ══════════════════════════════════════════════════════
+   OOTD — CARD-DEAL FIT BUILDER
+   ══════════════════════════════════════════════════════ */
+.deal-screen { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
+.deal-header {
+  display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap;
+  padding: 22px 36px 14px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.deal-title { font-family: var(--font-display); font-size: 30px; font-weight: 700; letter-spacing: -.02em; line-height: 1; }
+.deal-btn-outline {
+  background: transparent; color: var(--text); border: 1px solid var(--border); padding: 7px 14px;
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: .15em; cursor: pointer;
+}
+.deal-btn-outline.active { background: var(--text); color: var(--bg); }
+.deal-body { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; }
+.deal-saved { padding: 18px 36px; border-bottom: 1px solid var(--border); }
+
+.deal-stage { position: relative; display: flex; flex-wrap: wrap; }
+.deal-left {
+  flex: 1 1 560px; min-width: 0; padding: 22px 36px 28px;
+  display: flex; flex-direction: column; gap: 18px; border-right: 1px solid var(--border);
+}
+.deal-right { flex: 1 1 460px; min-width: 0; padding: 22px 30px 28px; display: flex; flex-direction: column; }
+.deal-table { position: relative; flex: 1; min-height: 600px; }
+.deal-anchor { position: absolute; width: 1px; height: 1px; }
+.deal-anchor.deck { left: 50%; top: 46%; }
+.deal-anchor.fan { left: 50%; top: 44%; }
+.deal-anchor.deck-done { right: 58px; bottom: 78px; }
+.deal-empty {
+  position: absolute; left: 50%; top: 46%; transform: translate(-50%, -50%); width: min(280px, 90%);
+  text-align: center; font-family: var(--font-mono); font-size: 10px; letter-spacing: .12em; line-height: 1.6; color: var(--text3);
+}
+
+.deal-name-row { display: flex; align-items: baseline; gap: 12px; min-width: 0; }
+.deal-name-k { font-family: var(--font-mono); font-size: 10px; letter-spacing: .15em; color: var(--text3); flex-shrink: 0; }
+.deal-name {
+  font-family: var(--font-display); font-size: 22px; font-weight: 500; letter-spacing: -.01em;
+  border: none; border-bottom: 1px solid var(--border); padding: 0 60px 2px 0; background: transparent; color: var(--text);
+  outline: none; min-width: 0; width: 280px; max-width: 100%; border-radius: 0;
+}
+.deal-name:focus-visible { border-bottom-width: 2px; padding-bottom: 1px; }
+.deal-count { font-family: var(--font-mono); font-size: 10px; color: var(--text3); flex-shrink: 0; }
+
+/* Slot board */
+.deal-board { display: flex; justify-content: center; align-items: center; gap: 22px; padding: 8px 0; }
+.deal-acc-col { display: flex; flex-direction: column; gap: 8px; align-items: center; }
+.deal-acc-k { font-family: var(--font-mono); font-size: 8px; letter-spacing: .14em; color: var(--text3); }
+.deal-center-col { display: flex; flex-direction: column; gap: 6px; width: 240px; max-width: 46vw; }
+.deal-slot {
+  border: 1px dashed color-mix(in srgb, var(--text) 28%, transparent); border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-mono); font-size: 9px; letter-spacing: .12em; color: var(--text3);
+  transition: border-color .3s, color .3s;
+}
+.deal-slot.is-filled { color: transparent; }
+.deal-done .deal-slot { border-color: transparent; color: transparent; }
+.deal-slot.acc { width: 86px; height: 86px; }
+.deal-slot.hat { height: 84px; }
+.deal-slot.top { height: 214px; }
+.deal-slot.bottom { height: 224px; }
+.deal-slot.shoe { height: 134px; }
+.deal-slot.bag { width: 130px; height: 156px; }
+
+/* Action bar */
+.deal-actions { display: flex; border: 1px solid var(--border); }
+.deal-act {
+  flex: 1; padding: 11px 0; background: transparent; color: var(--text); border: none;
+  border-right: 1px solid var(--border);
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: .16em; cursor: pointer; white-space: nowrap;
+}
+.deal-act:last-child { border-right: none; }
+.deal-act:hover:not(:disabled) { background: color-mix(in srgb, var(--text) 5%, transparent); }
+.deal-act.primary { flex: 2; background: var(--text); color: var(--bg); font-weight: 700; }
+.deal-act.primary:hover:not(:disabled) { background: var(--text); opacity: .88; }
+.deal-act:disabled { opacity: .35; cursor: default; }
+.deal-act:focus-visible { outline: 2px solid var(--text); outline-offset: -3px; }
+
+/* Card overlay */
+.deal-layer { position: absolute; inset: 0; pointer-events: none; z-index: 5; }
+.deal-collage { position: absolute; left: 0; top: 0; width: 10px; height: 10px; opacity: 0; pointer-events: none; }
+.deal-collage img { width: 100%; height: 100%; object-fit: contain; display: block; -webkit-user-drag: none; }
+.deal-card {
+  position: absolute; left: 0; top: 0; width: 160px; height: 224px;
+  transform-origin: 50% 50%; will-change: transform; transform: translate(-999px, -999px);
+  pointer-events: none; -webkit-tap-highlight-color: transparent;
+}
+.deal-lift { position: absolute; inset: 0; perspective: 900px; transition: transform .22s cubic-bezier(.2,.8,.2,1); }
+.deal-swaptag {
+  position: absolute; left: 0; right: 0; top: -44px; height: 48px;
+  display: flex; justify-content: center; align-items: flex-start;
+  opacity: 0; transition: opacity .15s; pointer-events: none; cursor: pointer;
+}
+.deal-swaptag span {
+  background: #000; color: #fff; font-family: var(--font-mono); font-size: 11px; font-weight: 700;
+  letter-spacing: .16em; padding: 7px 12px; white-space: nowrap;
+}
+.deal-flip { position: absolute; inset: 0; transform-style: preserve-3d; transform: rotateY(180deg); }
+.deal-plate, .deal-dring, .deal-glass, .deal-glass-glare { position: absolute; inset: 0; border-radius: 13px; pointer-events: none; }
+.deal-plate { transform: translateZ(-5px); background: rgba(205,216,226,.35); border: 1px solid rgba(120,138,152,.6); box-shadow: 0 18px 30px -14px rgba(0,0,0,.45); }
+.deal-dring { border: 1.5px solid rgba(175,190,203,.7); }
+.deal-glass {
+  backface-visibility: hidden;
+  background: linear-gradient(150deg, rgba(255,255,255,.55), rgba(255,255,255,.08) 40%, rgba(255,255,255,0) 60%, rgba(255,255,255,.3));
+  box-shadow: inset 0 0 0 1px rgba(70,85,98,.55), inset 0 2px 0 #fff, inset 2px 0 0 rgba(255,255,255,.75), inset 0 -2px 0 rgba(60,75,88,.28), inset -2px 0 0 rgba(60,75,88,.16), inset 0 0 0 9px rgba(222,231,239,.5), inset 0 0 0 10px rgba(80,95,108,.28);
+}
+.deal-glass.front { transform: translateZ(5px); }
+.deal-glass.back { transform: rotateY(180deg) translateZ(5px); }
+.deal-glass-glare {
+  transform: translateZ(5px); backface-visibility: hidden;
+  background-image: linear-gradient(118deg, transparent 22%, rgba(255,255,255,.6) 30%, rgba(255,255,255,.05) 40%, transparent 48%);
+  background-size: 240% 240%; background-position: var(--px, 35%) var(--py, 40%);
+}
+
+/* Front face */
+.deal-front { position: absolute; inset: 7px; backface-visibility: hidden; transform: translateZ(3.5px); display: flex; flex-direction: column; gap: 5px; color: #000; }
+.deal-label {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 5px;
+  background: #fff; border: 1px solid #000; border-radius: 3px; padding: 4px 5px;
+  box-shadow: 0 1px 0 rgba(0,0,0,.12), inset 0 0 0 1.5px #fff, inset 0 0 0 2px rgba(0,0,0,.18);
+}
+.deal-label-main { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.deal-mark { display: flex; gap: 4px; font-family: var(--font-mono); font-size: 6px; font-weight: 700; letter-spacing: .18em; }
+.deal-mark span + span { font-weight: 400; color: #666; }
+.deal-brand { font-family: var(--font-mono); font-size: 6.5px; letter-spacing: .12em; text-transform: uppercase; color: #555; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.deal-iname { font-family: var(--font-display); font-size: 9px; font-weight: 700; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.deal-code { display: flex; align-items: center; gap: 4px; margin-top: 2px; }
+.deal-barcode { height: 6px; width: 36px; flex-shrink: 0; background: repeating-linear-gradient(90deg, #000 0 1px, transparent 1px 2px, #000 2px 3px, transparent 3px 4px, #000 4px 5px, transparent 5px 7px); }
+.deal-sticker {
+  margin-left: auto; flex-shrink: 0; width: 15px; height: 8px; border-radius: 4px;
+  background-image: linear-gradient(110deg, #fff, hsl(330 85% 86%), #fff, hsl(185 85% 84%), #fff, hsl(55 90% 84%), #fff, hsl(265 85% 88%), #fff);
+  background-size: 300% 300%; background-position: var(--px, 50%) 50%; box-shadow: inset 0 0 0 .5px rgba(0,0,0,.25);
+}
+.deal-acq { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding-left: 5px; border-left: 1px solid #000; }
+.deal-acq-k { font-family: var(--font-mono); font-size: 5.5px; letter-spacing: .14em; color: #666; }
+.deal-acq-d { font-family: var(--font-display); font-size: 9.5px; font-weight: 700; line-height: .9; white-space: nowrap; }
+.deal-acq-y { font-family: var(--font-mono); font-size: 6px; font-weight: 700; letter-spacing: .1em; }
+.deal-well { flex: 1; min-height: 0; border-radius: 4px; padding: 4px; background: rgba(0,0,0,.05); box-shadow: inset 0 2px 5px rgba(0,0,0,.2), inset 0 0 0 1px rgba(0,0,0,.09), 0 1px 0 #fff; }
+.deal-item { position: relative; height: 100%; display: flex; flex-direction: column; border: 1.5px solid #000; border-radius: 2px; background: #fff; overflow: hidden; isolation: isolate; }
+.deal-photo { position: relative; flex: 1; min-height: 0; background: #f0f0f0; border-bottom: 1.5px solid #000; }
+.deal-photo-inset { position: absolute; inset: 8%; display: flex; align-items: center; justify-content: center; }
+.deal-photo-inset img { width: 100%; height: 100%; object-fit: contain; display: block; -webkit-user-drag: none; }
+.deal-photo-none { font-family: var(--font-mono); font-size: 7px; letter-spacing: .12em; color: #999; }
+.deal-slottag { position: absolute; top: 3px; right: 3px; font-family: var(--font-mono); font-size: 6px; font-weight: 700; letter-spacing: .1em; background: #000; color: #fff; padding: 1px 3px; }
+.deal-meta { display: flex; justify-content: space-between; gap: 4px; padding: 4px 5px; font-family: var(--font-mono); font-size: 6.5px; letter-spacing: .06em; color: #999; }
+.deal-meta span:first-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.deal-meta span:last-child { flex-shrink: 0; }
+.deal-pearl {
+  position: absolute; inset: 0; pointer-events: none;
+  background-image: repeating-linear-gradient(115deg, #fff 0%, hsl(330 85% 90%) 4.5%, #fff 8%, hsl(185 85% 88%) 12.5%, #f4fbff 16%, hsl(55 90% 88%) 20.5%, #fff 24%, hsl(265 85% 91%) 28.5%, #fff 32%);
+  background-size: 260% 260%; background-position: var(--px, 50%) var(--py, 50%);
+  mix-blend-mode: multiply; opacity: .22;
+}
+.deal-sheen {
+  position: absolute; inset: 0; pointer-events: none;
+  background-image: linear-gradient(115deg, transparent 38%, rgba(255,255,255,.5) 48%, rgba(255,255,255,.1) 54%, transparent 62%);
+  background-size: 260% 260%; background-position: var(--px, 140%) var(--py, 50%); mix-blend-mode: soft-light;
+}
+
+/* Back face — no logo, no text */
+.deal-backface {
+  position: absolute; inset: 9px; backface-visibility: hidden; transform: rotateY(180deg) translateZ(3.5px);
+  border-radius: 5px; background: #fff; border: 1.5px solid #000; box-shadow: 0 1px 3px rgba(0,0,0,.25); padding: 5px; overflow: hidden;
+}
+.deal-backface-panel { position: relative; width: 100%; height: 100%; border: 1px solid #000; border-radius: 4px; background: #f0f0f0; }
+.deal-backface-panel::after { content: ''; position: absolute; inset: 5px; border: 1px solid rgba(0,0,0,.18); border-radius: 2px; }
+.deal-backface .deal-pearl { border-radius: 8px; opacity: .3; background-position: var(--px, 30%) var(--py, 50%); }
+.deal-backface .deal-sheen { border-radius: 8px; background-position: var(--px, 120%) var(--py, 50%); }
+.deal-backface-hair { position: absolute; inset: 0; pointer-events: none; border-radius: 8px; box-shadow: inset 0 0 0 1px rgba(255,255,255,.9), inset 0 0 0 2px rgba(0,0,0,.08); }
+
+/* Mobile: compact board, stacked panels */
+@media (max-width: 767px) {
+  .deal-header { padding: 14px 16px 10px; }
+  .deal-title { font-size: 26px; }
+  .deal-saved { padding: 14px 16px; }
+  .deal-left { padding: 14px 16px 18px; border-right: none; border-bottom: 1px solid var(--border); gap: 14px; }
+  .deal-right { padding: 10px 16px 18px; }
+  .deal-table { min-height: 440px; }
+  .deal-anchor.deck-done { right: 34px; bottom: 54px; }
+  .deal-board { gap: 10px; }
+  .deal-acc-col { gap: 6px; }
+  .deal-center-col { width: 168px; max-width: none; gap: 4px; }
+  .deal-slot.acc { width: 56px; height: 56px; }
+  .deal-slot.hat { height: 60px; }
+  .deal-slot.top { height: 150px; }
+  .deal-slot.bottom { height: 158px; }
+  .deal-slot.shoe { height: 94px; }
+  .deal-slot.bag { width: 84px; height: 100px; }
+  .deal-slot { font-size: 8px; }
+  .deal-name { font-size: 18px; width: 200px; padding-right: 24px; }
+  .deal-act { font-size: 9px; letter-spacing: .1em; padding: 11px 4px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .deal-lift, .deal-swaptag, .deal-slot { transition: none !important; }
+}

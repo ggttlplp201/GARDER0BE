@@ -178,11 +178,12 @@ export default function Inventory({ user, onSignOut, onTotalChange }) {
               <div key={group} className="brand-section">
                 <div className="brand-title">{group.toUpperCase()} ({groupItems.length})</div>
                 <hr className="brand-divider" />
-                <div className="cards-grid">
+                <div className="cards-grid holo-grid">
                   {groupItems.map(item => (
                     <ItemCard
                       key={item.id}
                       item={item}
+                      index={items.findIndex(i => i.id === item.id)}
                       onRemove={removeItem}
                       onEdit={id => setEditItem_(items.find(i => i.id === id))}
                       onClick={id => setLbItem(items.find(i => i.id === id))}
