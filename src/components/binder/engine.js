@@ -488,13 +488,21 @@ export function createBinder(host, callbacks = {}) {
         deform(leftLeaf, sheetPhase, pageTurnBaseZ(h.closed, h.left, sheetPhase, step));
         deform(rightLeaf, 0, h.right);
       }
+      // Mid-turn, the side receiving the under-leaf already sits at the next
+      // spread's height; its deck must follow, or the slab's top lands exactly on
+      // that leaf and z-fights with its cards.
+      const turnAnim = animation && animation.kind === 'page' ? animation : null;
+      const hNext = turnAnim ? heights(turnAnim.next) : h;
       for (const mesh of deckSlices) {
-        const count = mesh.userData.left ? spread : pageCount / 2 - spread - 1;
+        const left = mesh.userData.left;
+        const ahead = turnAnim && (left ? turnAnim.dir < 0 : turnAnim.dir > 0);
+        const s = ahead ? turnAnim.next : spread, hs = ahead ? hNext : h;
+        const count = left ? s : pageCount / 2 - s - 1;
         const depth = mesh.userData.depth;
-        mesh.visible = depth < Math.min(6, count) && (sheetPhase === 1 || !mesh.userData.left);
-        mesh.scale.z = h.deckThickness / 0.012;
-        const side = mesh.userData.left ? -1 : 1;
-        mesh.position.set(side * PAGE_WIDTH / 2, 0, (mesh.userData.left ? h.left : h.right) - (depth + 1) * step);
+        mesh.visible = depth < Math.min(6, count) && (sheetPhase === 1 || !left);
+        mesh.scale.z = hs.deckThickness / 0.012;
+        const side = left ? -1 : 1;
+        mesh.position.set(side * PAGE_WIDTH / 2, 0, (left ? hs.left : hs.right) - (depth + 1) * step);
       }
     }
     function rebuild() {
@@ -543,7 +551,7 @@ export function createBinder(host, callbacks = {}) {
       animation = { kind: 'page', start: performance.now(), duration: motionQuery.matches ? 0 : 1050, dir, next, fromZ: dir > 0 ? start.right : start.left, toZ: dir > 0 ? end.left : end.right };
       // Pose the new leaf before its first paint, including the reverse direction.
       deform(turningLeaf, dir > 0 ? 0 : 1, animation.fromZ);
-      state(); invalidate();
+      pose(); state(); invalidate();
     }
     // Pan only as far as the open book (~8.6 × 4.2 world units) overflows the view.
     function clampPan() {

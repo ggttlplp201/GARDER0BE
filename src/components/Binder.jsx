@@ -361,7 +361,7 @@ export default function Binder({ items = EMPTY_ITEMS, pending = false, onItemCli
             </div>
           </div>
           <div className="binder-toolbar">
-            <span className="binder-count">{pending ? '' : `${items.length} ${items.length === 1 ? 'ITEM' : 'ITEMS'}`}</span>
+            <span className="binder-count" aria-label={pending ? undefined : `${items.length} ${items.length === 1 ? 'item' : 'items'}`}>{pending ? '' : items.length}</span>
             <div className="binder-controls">
               <button type="button" className="binder-control" onClick={() => engineRef.current?.turn(-1)} disabled={previousDisabled} aria-label="Previous pages">←</button>
               <button type="button" className="binder-control binder-toggle" onClick={() => engineRef.current?.toggle()} disabled={showLoader || state.busy || !!picked} aria-expanded={state.open}>
