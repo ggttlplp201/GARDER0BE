@@ -4,17 +4,18 @@ Your personal wardrobe, reimagined as a living archive — catalog everything yo
 outfits, track wishlist prices, and level up a full social + gamification layer with friends.
 Built as a passion project, fully functional and running in production.
 
-![Wardrobe gallery view](docs/screenshots/gallery.jpg)
-<sub>The Wardrobe as a walkable gallery — your collection hung as fine-art pieces.</sub>
+![Wardrobe portfolio binder](docs/screenshots/binder.jpg)
+<sub>The Wardrobe as a 3D collector's binder — every piece slabbed as a graded card in its own sleeve.</sub>
 
 ---
 
 ## Highlights
 
-- **Gallery wardrobe** — browse your collection as a 3D gallery, or switch to grid/list.
+- **Portfolio binder** — your collection as a real-time 3D binder: turn pages, zoom, pan, and pull any card out to inspect it. Or switch to list.
+- **Holographic item cards** — every item is a graded-slab card with a label, serial, acquisition date, and iridescent foil.
 - **AI auto-tagging** — upload a photo and name, brand, color, and type fill in automatically.
 - **In-browser background removal** — item photos get cleaned up client-side, no server round trip.
-- **Outfit builder** — assemble fits on a visual mannequin; save, shuffle, share.
+- **OOTD card deal** — draw cards from your deck and deal them onto a fit board; save, reshuffle, share.
 - **Wishlist with live price tracking** — sources scraped and refreshed on a schedule with delta tracking.
 - **Full gamification** — XP, levels, coins, achievements, daily quests, and streaks.
 - **Cosmetics shop** — spend coins on profile frames and username effects that render everywhere you appear.
@@ -24,6 +25,20 @@ Built as a passion project, fully functional and running in production.
 ---
 
 ## Screens
+
+### Portfolio binder — inspect a card
+Click any card and it slides out of its sleeve into an inspector: drag to rotate it, flip it to
+the back, zoom in on the label, or jump to the item's details. Empty pockets show a **+** for adding
+a new piece right where it will live.
+
+![Card inspector](docs/screenshots/card-inspector.jpg)
+
+### OOTD — deal a fit
+Your wardrobe becomes a deck. Draw one card at a time or deal a whole fit, and each card lands in
+its slot on the board — hat, top, bottom, shoes, bag, and up to four accessories. Name it, save it,
+or reshuffle for a new look.
+
+![OOTD card deal](docs/screenshots/ootd.jpg)
 
 ### Progression — XP, levels, quests & achievements
 Earn XP for real activity (adding items, logging wears, saving fits, daily check-ins), level up
@@ -38,12 +53,6 @@ chat, and the activity feed.
 
 ![Cosmetics shop](docs/screenshots/shop.jpg)
 
-### Outfit builder
-Assemble a fit on the mannequin from your rack, see the total piece count and value, then save it
-or post it publicly.
-
-![Outfit builder](docs/screenshots/outfit-builder.jpg)
-
 ### Explore — people & the globe
 Discover public wardrobes, like profiles, and send friend requests; the header globe pins members
 by location.
@@ -56,11 +65,13 @@ by location.
 
 **Wardrobe**
 - Add items with photos (HEIC / JPEG / PNG), AI auto-tagging, and automatic background removal
-- Gallery / grid / list views, filterable by type, color, and brand
+- Portfolio (3D binder) and list views, with search and category filter; empty categories still show an empty binder
+- Binder controls: page turns (buttons, arrow keys, swipe), zoom (wheel, pinch, or − / + control), drag-to-pan when zoomed in
+- Card inspector with drag-to-rotate, flip, zoom, and a jump to item details
 - Item detail with wear logging, condition tracking, and pin-to-showcase
 
 **Outfits**
-- Visual mannequin builder with click-to-place; save, load, and shuffle fits
+- Card-deal fit builder: draw or deal cards from your wardrobe deck into hat / top / bottom / shoes / bag / accessory slots; save, load, and reshuffle fits
 - Post fits publicly to the Explore feed; export/share
 
 **Timeline & Wishlist**
@@ -87,7 +98,7 @@ by location.
 
 ## Tech stack
 
-**Frontend** — React (Vite), GSAP for motion, D3-geo + Canvas for the interactive globe,
+**Frontend** — React (Vite), three.js (WebGL) for the 3D binder and card inspector, GSAP and the Web Animations API for motion, D3-geo + Canvas for the interactive globe,
 `@imgly/background-removal` (in-browser ML) for photo cleanup, `heic2any` for iPhone photos.
 
 **Backend / data** — Supabase (Postgres, Auth with MFA, Realtime, Storage). The economy and
